@@ -32,6 +32,19 @@ class TestSequenceParsing(unittest.TestCase):
 class TestSequenceConcatenation(unittest.TestCase):
     """Tests '_cat_sequence_lists' function"""
 
+    def test_one_and_four(self):
+        """Tests combining two non-zero lists"""
+        one_seq_file = os.path.join(data_dir,'Hsap_AP1G_OneSeq.fa')
+        four_seqs_file = os.path.join(data_dir,'Hsap_AP1G_FourSeqs.fa')
+        one_record = sequence_file._get_sequences(one_seq_file)
+        four_records = sequence_file._get_sequences(four_seqs_file)
+        self.assertEqual(len(sequence_file._cat_sequence_lists(
+            one_record, four_records)), 5)
+
+
+class TestSequenceWriting(unittest.TestCase):
+    """Tests '_sequence_list_to_file' function"""
+
     def setUp(self):
         """Makes a temporary directory in 'tests/fixtures'"""
         self.tmpdir = os.path.join(data_dir, 'tmp')
@@ -43,8 +56,9 @@ class TestSequenceConcatenation(unittest.TestCase):
         four_seqs_file = os.path.join(data_dir,'Hsap_AP1G_FourSeqs.fa')
         one_record = sequence_file._get_sequences(one_seq_file)
         four_records = sequence_file._get_sequences(four_seqs_file)
-        new_seq_file = sequence_file._cat_sequence_lists(
-                self.tmpdir, one_record, four_records)
+        new_seq_file = sequence_file._sequence_list_to_file(
+                self.tmpdir,
+                sequence_file._cat_sequence_lists(one_record, four_records))
         # Parse created file and ensure it has five records
         new_records = [record for record in SeqIO.parse(new_seq_file, "fasta")]
         self.assertEqual(len(new_records), 5)

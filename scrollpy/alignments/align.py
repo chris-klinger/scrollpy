@@ -35,11 +35,18 @@ class Aligner:
             **kwargs: Additional parameters specified for the relevant
                 program (optional)
         """
-        self.method = method
-        self.cmd = cmd
-        self.inpath = inpath
-        self.outpath = outpath
+        if self._validate('method', method, self._validate_method):
+            self.method = method
+        if self._validate('command', cmd, self._validate_command,
+                method=method): # Should work; if not set, an Exception was raised
+            self.cmd = cmd
+        if self._validate('inpath', inpath, self._validate_command):
+            self.inpath = inpath
+        if self._validate('outpath', outpath, self._validate_command):
+            self.outpath = outpath
+        # Check logger eventually?
         self._logger = _logger
+        # Should eventually validate kwargs? Or leave for BioPython?
         self.kwargs = kwargs
 
 
@@ -58,23 +65,6 @@ class Aligner:
         Next, call the underlying method using BioPython commandline
         wrapper or internal method and handle stdout/stderr.
         """
-        # Validate all parts of the input
-        try:
-            self._validate_method()
-        except ValueError:
-            print("Could not validate method name") # TO-DO
-        try:
-            self._validate_command()
-        except ValueError:
-            print("Could not validate align command") # TO-DO
-        try:
-            self._validate_inpath()
-        except FileNotFoundError:
-            print("Could not validate inpath") # TO-DO
-        try:
-            self._validate_outpath()
-        except FileNotFoundError:
-            print("Could not validate outpath") # TO-DO
         # Either delegate call to BioPython or run internal method
         if self.method == 'Mafft':
             cmdline = Applications.MafftCommandline(
@@ -88,44 +78,63 @@ class Aligner:
         elif self.method == 'Generic':
             pass # To be implemented
 
-    def _validate_method(self):
-        """Raises ValueError if not valid method"""
-        if not self.method in ('Mafft', 'Generic'): # For now
-            raise ValueError
+    def _validate(self, name, value, validation_method, **kwargs):
+        """Calls other checking methods for each"""
+        if validation_method is not None: # was provided
+            # Should we keep validation inside class?
+            # "Self" argument here is implicit in passed function object
+            is_valid = validation_method(value, **kwargs) # May raise exception
+            if is_valid:
+                return True
+            if not is_valid in (0, 1, True, False): # Truthy values
+                raise ValueError("Result of {} check on {} is \
+                    an unexpected value".format(
+                        validation_method.__name__, value))
+            if not is_valid:
+                raise ValueError("Invalid parameter {} for {} while \
+                    calling alignment".format(value, name))
+        # Raise error if no method provided?
 
-    def _validate_command(self):
-        """Raises ValueError if not valid command"""
-        if self.method == 'Mafft':
+    def _validate_method(self, method_name):
+        """Returns True if method exists in class"""
+        if not method_name in ('Mafft', 'Generic'): # For now
+            return False
+        return True
+
+    def _validate_command(self, command, method=None):
+        """Returns True if command makes sense for method"""
+        if method == 'Mafft':
             path_char = os.sep
-            if path_char in self.cmd: # Full path given
-                cmd = os.path.dirname(self.cmd)
+            if path_char in command: # Full path given
+                cmd = os.path.dirname(command)
             else:
-                cmd = self.cmd
+                cmd = command
             if cmd not in ('mafft', 'mafft-linsi'):
-                raise ValueError
-        elif self.method == 'Generic':
-            if not self.cmd == 'None':
-                raise ValueError
+                return False
+        elif method == 'Generic':
+            if not command == 'None':
+                return False
+        return True
 
-    def _validate_inpath(self):
+    def _validate_inpath(self, inpath):
         """Raises FileNotFoundError if file does not exist"""
-        if not os.path.exists(self.inpath):
+        if not os.path.exists(inpath):
             raise FileNotFoundError(
                 errno.ENOENT, # File not found
                 os.strerror(errno.ENOENT), # Obtain right error message
-                self.inpath # File name
+                inpath # File name
                 )
 
-    def _validate_outpath(self):
+    def _validate_outpath(self, outpath):
         """Quits if directory is non-existent; Should log if file exists"""
-        out_dir = os.path.dirname(self.outpath)
+        out_dir = os.path.dirname(outpath)
         if not os.path.exists(out_dir):
             raise FileNotFoundError(
                 errno.ENOENT, # File not found
                 os.strerror(errno.ENOENT), # Obtain right error message
                 out_dir # Actual name
                 )
-        if os.path.exists(self.outpath):
+        if os.path.exists(outpath):
             pass # Will eventually hook this up to the logger
 
 

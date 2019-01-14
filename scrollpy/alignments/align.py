@@ -18,7 +18,8 @@ from Bio.Application import ApplicationError
 
 
 class Aligner:
-    def __init__(self, method, cmd, inpath=None, outpath=None, _logger=None, **kwargs):
+    def __init__(self, method, cmd, inpath=None, outpath=None,
+            _logger=None, **kwargs):
         """Class to handle farming out and managing alignments.
 
         Args:

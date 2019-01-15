@@ -40,9 +40,9 @@ class Aligner:
         if self._validate('command', cmd, self._validate_command,
                 method=method): # Should work; if not set, an Exception was raised
             self.cmd = cmd
-        if self._validate('inpath', inpath, self._validate_command):
+        if self._validate('inpath', inpath, self._validate_inpath):
             self.inpath = inpath
-        if self._validate('outpath', outpath, self._validate_command):
+        if self._validate('outpath', outpath, self._validate_outpath):
             self.outpath = outpath
         # Check logger eventually?
         self._logger = _logger
@@ -84,13 +84,13 @@ class Aligner:
             # Should we keep validation inside class?
             # "Self" argument here is implicit in passed function object
             is_valid = validation_method(value, **kwargs) # May raise exception
-            if is_valid:
-                return True
             if not is_valid in (0, 1, True, False): # Truthy values
                 raise ValueError("Result of {} check on {} is \
                     an unexpected value".format(
                         validation_method.__name__, value))
-            if not is_valid:
+            elif is_valid:
+                return True
+            elif not is_valid: # Could just be "else"?
                 raise ValueError("Invalid parameter {} for {} while \
                     calling alignment".format(value, name))
         # Raise error if no method provided?
@@ -106,7 +106,7 @@ class Aligner:
         if method == 'Mafft':
             path_char = os.sep
             if path_char in command: # Full path given
-                cmd = os.path.dirname(command)
+                cmd = os.path.basename(command)
             else:
                 cmd = command
             if cmd not in ('mafft', 'mafft-linsi'):

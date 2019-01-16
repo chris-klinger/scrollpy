@@ -53,7 +53,8 @@ def _cat_sequence_lists(*seq_lists):
         combined.extend(seq_list)
     return combined
 
-def _sequence_list_to_file(out_dir, seq_list):
+# Might not need this function anymore
+def _sequence_list_to_dir(out_dir, seq_list):
     """Simple function to write SeqRecord objects to file.
 
     Uses Bio.SeqIO to write a list of SeqRecord objects to a file in
@@ -71,4 +72,22 @@ def _sequence_list_to_file(out_dir, seq_list):
     with open(out_path, 'w') as o:
         SeqIO.write(seq_list, o, "fasta")
     return out_path
+
+# New function; assumes outpath is specified and doesn't worry about timestamp
+def _sequence_list_to_file(seq_list, outpath):
+    """Simple function to write ScrollSeq objects to file.
+
+    Uses Bio.SeqIO to write associated ScrollSeq.SeqRecord objects
+    to a file in FASTA format.
+
+    Arguments:
+        seq_list (list): List of ScrollSeq objects
+        outpath (str): Full outfile path
+
+    Returns:
+        None
+    """
+    with open(outpath, 'w') as o: # Assume outpath is already checked
+        for seq_object in seq_list:
+            SeqIO.write(seq_object._record, o, "fasta")
 

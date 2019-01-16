@@ -30,3 +30,18 @@ def file_exists(file_path):
         if os.path.isfile(file_path):
             return True
         return False
+
+
+def non_blank_lines(file_handle):
+    """Function to generate lines with characters.
+
+    Args:
+        file_handle (str): Path to file (not open file object)
+
+    Returns:
+        iterator of all lines that are not '\n'.
+    """
+    with open(file_handle,'r') as i:
+        for line in i:
+            if line: # blank lines are not truthy
+                yield line

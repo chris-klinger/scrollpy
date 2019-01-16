@@ -1,0 +1,52 @@
+
+
+This is RAxML version 8.1.17 released by Alexandros Stamatakis on February 5 2015.
+
+With greatly appreciated code contributions by:
+Andre Aberer      (HITS)
+Simon Berger      (HITS)
+Alexey Kozlov     (HITS)
+Kassian Kobert    (HITS)
+David Dao         (KIT and HITS)
+Nick Pattengale   (Sandia)
+Wayne Pfeiffer    (SDSC)
+Akifumi S. Tanabe (NRIFS)
+
+Alignment has 1222 distinct alignment patterns
+
+Proportion of gaps and completely undetermined characters in this alignment: 29.13%
+
+RAxML Computation of pairwise distances
+
+Using 1 distinct models/data partitions with joint branch length optimization
+
+
+All free model parameters will be estimated by RAxML
+GAMMA model of rate heteorgeneity, ML estimate of alpha-parameter
+
+GAMMA Model parameters will be estimated up to an accuracy of 0.1000000000 Log Likelihood units
+
+Partition: 0
+Alignment Patterns: 1222
+Name: No Name Provided
+DataType: AA
+Substitution Matrix: LG
+Using fixed base frequencies
+
+
+
+
+RAxML was called as follows:
+
+/Users/cklinger/src/standard-RAxML-8.1.17/raxmlHPC-AVX -f x -p 12345 -s Hsap_AP_EGADEZ.mfa -m PROTGAMMALG -n test_dist 
+
+
+
+Log Likelihood Score after parameter optimization: -12759.676969
+
+
+Computing pairwise ML-distances ...
+
+Time for pair-wise ML distance computation of 10 distances: 0.008602 seconds
+
+Distances written to file: /Users/cklinger/git/scrollpy/tests/fixtures/RAxML_distances.test_dist

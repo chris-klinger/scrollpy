@@ -89,5 +89,21 @@ def _sequence_list_to_file(seq_list, outpath):
     """
     with open(outpath, 'w') as o: # Assume outpath is already checked
         for seq_object in seq_list:
-            SeqIO.write(seq_object._record, o, "fasta")
+            seq_object._write(o)
+            #SeqIO.write(seq_object._record, o, "fasta")
 
+def _sequence_list_to_file_by_id(seq_list, outpath):
+    """Writes ScrollSeq objects to file using ID instead of description.
+
+    No longer uses Bio.SeqIO but rather a simple FASTA-based formatter.
+
+    Arguments:
+        seq_list (list): List of ScrollSeq objects
+        outpath (str): Full outfile path
+
+    Returns:
+        None
+    """
+    with open(outpath, 'w') as o:
+        for seq_object in seq_list:
+            seq_object._write_by_id(o)

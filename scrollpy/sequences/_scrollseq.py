@@ -8,17 +8,22 @@ the top-level ScrollPy object uses memoization to ensure that each
 ScrollSeq object is referred to by a single unique ID.
 """
 
+from Bio import SeqIO
+
+from scrollpy.util._util import split_input
 
 class ScrollSeq:
     """A basic sequence representation.
 
     Args:
+        id_num (int): Unique ID number to assign to instance
         infile (str): full path to file of origin
         group (str): group to which the sequence belongs
         SeqRecord (obj): BioPython object (default: None)
     """
-    def __init__(self, infile, group, SeqRecord=None,
+    def __init__(self, id_num, infile, group, SeqRecord=None,
             accession=None, name=None, description=None, seq=None): # property attrs
+        self._id = id_num
         self._infile = infile
         self._group = group
         self._distance = 0.0 # Initialize float counter for distance
@@ -50,6 +55,35 @@ class ScrollSeq:
         return self
 
     # TO-DO: maybe implement lt/gt/etc. to allow for sorting?
+
+    def _write(self, file_obj):
+        """Writes internal sequence object as per Bio.SeqIO"""
+        SeqIO.write(self._record, file_obj, "fasta")
+
+    def _write_by_id(self, file_obj):
+        """Writes internal sequence object using ID for header"""
+        header = '>' + str(self.id_num)
+        seq = str(self.seq)
+        file_obj.write(header + '\n')
+        for chunk in split_input(seq):
+            file_obj.write(chunk + '\n')
+
+    @property
+    def id_num(self):
+        """Ensure ID is set, raise AttributeError if not"""
+        if not self._id:
+            raise AttributeError(
+                "Missing ID for ScrollSeq object {}.".format(
+                    self.accession))
+        return int(self._id)
+
+    @id_num.setter
+    def id_num(self):
+        raise AttributeError("Cannot change ScrollSeq ID after instantiation")
+
+    @id_num.deleter
+    def id_num(self):
+        raise AttributeError("Cannot delete ScollSeq ID")
 
     @property
     def accession(self):

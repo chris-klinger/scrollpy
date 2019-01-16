@@ -26,7 +26,14 @@ def file_exists_user_spec(file_path):
 
 
 def file_exists(file_path):
-        """For a given path, checks whether it is a file"""
+        """Checks whether a file exists
+
+        Args:
+            file_path (str): Full path to file to check
+
+        Returns:
+            True if file exists; False otherwise
+        """
         if os.path.isfile(file_path):
             return True
         return False
@@ -45,3 +52,26 @@ def non_blank_lines(file_handle):
         for line in i:
             if line: # blank lines are not truthy
                 yield line
+
+def split_input(string, chunk_size=80):
+    """Splits a string into a series of substrings.
+
+    Args:
+        string (str): String to split
+        chunk_size (int): Length of sub-strings to return. Returns the
+            original string if greater than the strings length. If not,
+            the final sub-string is at most chunk_size long. Default:80.
+
+    Returns:
+        A list of sub-strings.
+    """
+    num_chunks = len(string)//chunk_size # // floor division to emulate python 2 behaviour
+    if (len(string) % chunk_size != 0):
+        # This last chunk is not the same size, but string
+        # slicing takes care of the details for us
+        num_chunks += 1
+    output = []
+    for i in range(0, num_chunks):
+        output.append(string[chunk_size*i:chunk_size*(i+1)])
+    return output
+

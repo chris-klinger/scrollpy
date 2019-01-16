@@ -124,6 +124,9 @@ class Aligner:
                 os.strerror(errno.ENOENT), # Obtain right error message
                 inpath # File name
                 )
+        elif os.path.isdir(inpath):
+            raise AttributeError("Cannot align {}; directory")
+        return True
 
     def _validate_outpath(self, outpath):
         """Quits if directory is non-existent; Should log if file exists"""
@@ -136,5 +139,6 @@ class Aligner:
                 )
         if os.path.exists(outpath):
             pass # Will eventually hook this up to the logger
+        return True
 
 

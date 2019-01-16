@@ -20,8 +20,11 @@ class TestScrollSeq(unittest.TestCase):
         one_seq_file_path = os.path.join(data_dir, 'Hsap_AP1G_OneSeq.fa')
         with open(one_seq_file_path, 'r') as i:
             self.SeqRecord = SeqIO.read(i, "fasta")
-        self.seq_object = _scrollseq.ScrollSeq(one_seq_file_path, 'one',
-                self.SeqRecord)
+        self.seq_object = _scrollseq.ScrollSeq(
+                1, # ID
+                one_seq_file_path, # inpath
+                'one', # group
+                self.SeqRecord) # SeqRecord
 
     # Test incrementing distance
     def test_iadd_float(self):
@@ -56,6 +59,7 @@ class TestScrollSeq(unittest.TestCase):
     # Test accessing and altering accession (SeqRecord.id)
     def test_accession_access(self):
         """Tests initial setting/retrieval through property"""
+        print(self.seq_object._record.id)
         self.assertEqual(self.seq_object.accession, "NP_001025178.1")
 
     def test_accession_setting(self):

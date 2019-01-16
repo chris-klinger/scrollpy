@@ -22,7 +22,7 @@ from Bio.Application import ApplicationError
 
 
 class DistanceCalc:
-    def __init__(self, method, cmd, inpath=None, outpath=None,
+    def __init__(self, method, cmd, model=None, inpath=None, outpath=None,
             _logger=None, **kwargs):
         """Class to handle farming out and managing distance calculations.
 
@@ -43,6 +43,7 @@ class DistanceCalc:
         if self._validate('command', cmd, self._validate_command,
                 method=method):
             self.cmd = cmd
+        self.model = model
         if self._validate('inpath', inpath, self._validate_inpath):
             self.inpath = inpath
         if self._validate('outpath', outpath, self._validate_outpath):
@@ -68,6 +69,8 @@ class DistanceCalc:
         """
         # Depending on method, delegate or handle
         if self.method == 'RAxML':
+            # Specify distance calculation
+            self.kwargs['-f'] = 'x'
             # Convert in and out file paths to RAxML arguments
             # Should eventually have a method to validate these
             self.kwargs['-s'] = self.inpath
@@ -75,8 +78,11 @@ class DistanceCalc:
             dirname, outname = os.path.split(self.outpath)
             self.kwargs['-w'] = dirname
             self.kwargs['-n'] = outname
+            self.kwargs['-m'] = self.model
             cmdline = Applications.RaxmlCommandline(
                 self.cmd, **self.kwargs)
+            #print()
+            #print(cmdline)
             try:
                 stdout, stderr = cmdline() # Log stderr eventually
             except ApplicationError: # Raised if subprocess return code != 0

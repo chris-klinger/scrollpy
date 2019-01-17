@@ -18,7 +18,7 @@ def parse_distance_file(file_path, file_type):
             the distances. For details, see DistanceCalc class.
 
     Returns:
-        List of tuples: ('name1', 'name2', 'distance')
+        Dictionary of <name> : <distance> pairs
     """
     if file_type == 'RAxML':
         return _parse_raxml_distances(file_path)
@@ -38,12 +38,18 @@ def _parse_raxml_distances(file_path):
         file_path (str): Path to file with distances to parse.
 
     Returns:
-        List of tuples: ('name1', 'name2', 'distance')
+        Dictionary of <name> : <distance> pairs
     """
-    distances = []
+    distances = {}
     for line in non_blank_lines(file_path): # Generator
         n1,n2,d = line.strip('\n').split()
-        distances.append((n1,n2,d)) # Nested
+        for key in n1,n2:
+            try:
+                # Cast as INT because using ScrollSeq.id_num for now
+                # UPDATE eventually if more than one usage case arises
+                distances[int(key)] += float(d)
+            except KeyError: # first time seeing the key
+                distances[int(key)] = float(d)
     return distances
 
 def _parse_phyml_distances(file_path):

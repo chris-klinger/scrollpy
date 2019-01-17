@@ -49,7 +49,7 @@ class ScrollCollection:
         self._dist_method = dist_method
         self._dist_model = dist_model
         self._dist_path = None # Path to the distance file
-        self._dist_list = None # Parsed distance file list
+        self._dist_dict = None # Parsed distance file list
         self._opt_group = opt_group
         self._inpath = inpath # Means we don't need to create
 
@@ -122,11 +122,17 @@ class ScrollCollection:
         distances = parser.parse_distance_file(
                 self._dist_path,
                 self._dist_method) # Tells the parser what type of file it is
-        self._dist_list = distances # List of tuples
+        self._dist_dict = distances # List of tuples
 
     def _increment_seq_distances(self):
         """Internal function to update list of SeqObjs"""
-        pass
+        #print()
+        #print(self._dist_dict)
+        #print()
+        for seq_obj in self.seq_list:
+            #print(seq_obj.id_num)
+            # Seqs written by ID, can modify if written by acc/desc later
+            seq_obj += self._dist_dict[seq_obj.id_num]
 
     def _get_outpath(self, out_type):
         """A function to return full paths to files based on what the

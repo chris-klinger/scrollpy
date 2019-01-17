@@ -7,7 +7,7 @@ from itertools import combinations
 
 from scrollpy.files import sequence_file as sf
 from scrollpy.sequences._scrollseq import ScrollSeq
-from scrollpy.sequence._collection import ScrollCollection
+from scrollpy.sequences._collection import ScrollCollection
 #from scrollpy.util import _util
 
 class ScrollPy:
@@ -40,21 +40,36 @@ class ScrollPy:
 
     """
 
-    def __init__(self, target_dir, align_method, dist_method,
-            pre_filter=False, filter_method=None, pre_split=False,
-            file_format="fasta", *infiles):
+    def __init__(self, target_dir, align_method, dist_method, *infiles, **kwargs):
+            #pre_filter=False, filter_method=None, pre_split=False,
+            #file_format="fasta", *infiles):
+        # Required
         self.target_dir = target_dir
         self.align_method = align_method
         self.dist_method = dist_method
-        self.pre_filter = pre_filter
-        self.filter_method = filter_method
-        self.pre_split = pre_split
-        self.file_format = file_format
+        #print(infiles)
         if len(infiles) > 0:
-            self.infiles = list(infiles)
+            self.infiles = infiles
         else:
-            pass
-            #raise some Error
+            pass # raise an Error?
+        # Optional
+        try:
+            self._pre_filter = kwargs['pre_filter']
+        except KeyError:
+            self._pre_filter = None
+        try:
+            self._filter_method = kwargs['filter_method']
+        except KeyError:
+            self._filter_method = None
+        try:
+            self._pre_split = kwargs['pre_split']
+        except KeyError:
+            self._pre_split = None
+        try:
+            self._file_format = kwargs['file_format']
+        except KeyError:
+            self._file_format = "fasta"
+        # Internal defaults
         self._seq_dict = {}
         self._ordered_seqs = []
         self._groups = []
@@ -74,7 +89,21 @@ class ScrollPy:
 
     def __call__(self):
         """Runs Scrollsaw"""
-        pass # TO-DO
+        # parse input files
+        self._parse_infiles()
+        # filter for length, if requested
+        if self._pre_filter:
+            pass # TO-DO
+        # split sequences into smaller groups, if requested
+        if self._pre_split:
+            pass # TO-DO
+        # make collection objects
+        self._make_collections()
+        # actually run alignment/distance calculations
+        for collection in self._collections:
+            collection()
+        # finally, sort objects
+        self._sort_distances()
 
 
     def _parse_infiles(self):
@@ -92,8 +121,9 @@ class ScrollPy:
         for file_path in self.infiles:
             group = os.path.basename(file_path).split('.',1)[0]
             if not len(group) > 0: # This should never happen in reality
-                group = self._group_counter
+                group = str(self._group_counter)
                 self._group_counter += 1
+            assert isinstance(group, str)
             # Files are unique, but need to check groups; two different
             # filepaths could lead to the same group name
             group = self._unique_group_name(group)
@@ -117,19 +147,22 @@ class ScrollPy:
         if group not in self._groups:
             return group
         else:
+            if counter == 1: # First time, add
+                group = group + '.' + str(counter)
+            if counter > 1:
+                group_basename = group.split('.',1)[0] # In case it is an int
+                group = group_basename + '.' + str(counter) # <group>.<num>
             counter += 1
-            group_basename = group.split('_',1)[0]
-            group = str(group_basename) + '_' + str(counter) # <group>_<num>
             return self._unique_group_name(group, counter)
 
 
-    def _make_scroll_seqs(self, infile, group, *records):
+    def _make_scroll_seqs(self, infile, group, records):
         """Converts a series of SeqRecord objects into ScrollSeq objects.
 
         Args:
             infile (str): full path to the file of origin
             group (str): group to which the sequence belongs
-            *records: iterable of SeqRecord objects to create ScrollSeq objects
+            records: iterable of SeqRecord objects to create ScrollSeq objects
 
         Returns:
             list of ScrollSeq objects
@@ -205,9 +238,12 @@ class ScrollPy:
         """Sorts all objects in an internal list.
 
         Args:
-            (self._collections)
+            (self._seq_dict)
 
         Returns:
-            A sorted list of ScrollSeq objects.
+            Creates an ordered list of ScrollSeq objects (self._ordered_seqs)
         """
-        pass
+        all_seqs = []
+        for k,v in self._seq_dict.items():
+            all_seqs.extend(v)
+        self._ordered_seqs = sorted(all_seqs) # Sorts on ScrollSeq._distance

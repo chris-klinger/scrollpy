@@ -8,10 +8,13 @@ the top-level ScrollPy object uses memoization to ensure that each
 ScrollSeq object is referred to by a single unique ID.
 """
 
+from functools import total_ordering
+
 from Bio import SeqIO
 
 from scrollpy.util._util import split_input
 
+@total_ordering
 class ScrollSeq:
     """A basic sequence representation.
 
@@ -54,7 +57,11 @@ class ScrollSeq:
         self._distance += distance # Assuming no Error, increment counter
         return self
 
-    # TO-DO: maybe implement lt/gt/etc. to allow for sorting?
+    def __lt__(self, other):
+        return self._distance < other
+
+    def __eq__(self, other):
+        return self._distance == other
 
     def _write(self, file_obj):
         """Writes internal sequence object as per Bio.SeqIO"""

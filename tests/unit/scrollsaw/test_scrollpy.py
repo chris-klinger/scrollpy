@@ -24,8 +24,10 @@ class TestScrollPyOneFile(unittest.TestCase):
             os.makedirs(self.tmpdir)
         except FileExistsError:
             pass
+
+        # CHANGE ME TO CHANGE TEST
         #######################################
-        self.infile = 'Hsap_AP1G_FourSeqs.fa' # CHANGE ME TO CHANGE TEST
+        self.infile = 'Hsap_AP1G_FourSeqs.fa' #
         #######################################
 
         self.infile_base = self.infile.split('.')[0]
@@ -160,9 +162,10 @@ class TestScrollPyTwoFiles(unittest.TestCase):
         except FileExistsError:
             pass
 
+        # CHANGE ME TO CHANGE TEST
         ########################################
-        self.infile1 = 'Hsap_AP1G_FourSeqs.fa' # CHANGE ME TO CHANGE TEST
-        self.infile2 = 'Tgon_AP1_FourSeqs.fa'  # CHANGE ME TO CHANGE TEST
+        self.infile1 = 'Hsap_AP1G_FourSeqs.fa' #
+        self.infile2 = 'Tgon_AP1_FourSeqs.fa'  #
         ########################################
 
         self.infile1_base = self.infile1.split('.',1)[0]
@@ -200,6 +203,66 @@ class TestScrollPyTwoFiles(unittest.TestCase):
         shutil.rmtree(self.tmpdir)
 
 
-#class TestScrollPyThreeFiles(unittest.TestCase):
-#    """Tests each individual method with three files"""
-#    pass
+class TestScrollPyThreeFiles(unittest.TestCase):
+    """Tests each individual method with three files"""
+
+    def setUp(self):
+        """Creates a new ScrollPy Object"""
+        self.tmpdir = os.path.join(data_dir, 'ss-tmp3')
+        try:
+            os.makedirs(self.tmpdir)
+        except FileExistsError:
+            pass
+
+        # CHANGE ME TO CHANGE TEST
+        ########################################
+        self.infile1 = 'Hsap_AP1G_FourSeqs.fa' #
+        self.infile2 = 'Tgon_AP1_FourSeqs.fa'  #
+        self.infile3 = 'Ngru_AP1_FourSeqs.fa'  #
+        ########################################
+
+        self.infile1_base = self.infile1.split('.',1)[0]
+        self.inpath1 = os.path.join(data_dir, self.infile1)
+
+        self.infile2_base = self.infile2.split('.',1)[0]
+        self.inpath2 = os.path.join(data_dir, self.infile2)
+
+        self.infile3_base = self.infile3.split('.',1)[0]
+        self.inpath3 = os.path.join(data_dir, self.infile3)
+
+        self.sp = ScrollPy(
+                self.tmpdir, # target_dir
+                'Mafft', # align_method
+                'RAxML', # dist_method
+                *(self.inpath1,
+                    self.inpath2,
+                    self.inpath3,
+                ))
+
+
+    def test_infile_parsing(self):
+        """Tests that the infiles are correctly parsed"""
+        self.sp._parse_infiles()
+        self.assertEqual(self.sp._groups,
+            [self.infile1_base,
+            self.infile2_base,
+            self.infile3_base,
+            ])
+        file1_ids = [o.id_num for o in self.sp._seq_dict[self.infile1_base]]
+        file2_ids = [o.id_num for o in self.sp._seq_dict[self.infile2_base]]
+        file3_ids = [o.id_num for o in self.sp._seq_dict[self.infile3_base]]
+        self.assertEqual(file1_ids, [1,2,3,4])
+        self.assertEqual(file2_ids, [5,6,7,8])
+        self.assertEqual(file3_ids, [9,10,11,12])
+
+
+    def test_actual_call(self):
+        """Tests whether a call to ScrollPy with two objects works"""
+        self.sp()
+        self.assertEqual(len(self.sp._ordered_seqs), 12)
+
+
+    def tearDown(self):
+        """Remove tmp dir and all files"""
+        shutil.rmtree(self.tmpdir)
+

@@ -6,12 +6,12 @@ import os, unittest, shutil
 
 from Bio import SeqIO
 
+from scrollpy.scrollsaw._scrollpy import ScrollPy
+
+
 cur_dir = os.path.dirname(os.path.realpath(__file__)) # /files/
 # cleaner to use realpath due to relative path
 data_dir = os.path.realpath(os.path.join(cur_dir, '../../fixtures')) # /tests/
-
-
-from scrollpy.scrollsaw._scrollpy import ScrollPy
 
 
 class TestScrollPyOneFile(unittest.TestCase):

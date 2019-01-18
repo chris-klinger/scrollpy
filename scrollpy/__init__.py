@@ -1,3 +1,10 @@
+
+############################
+# Populate Package Namespace
+############################
+
+from scrollpy.config._config import config
+
 ####################
 # PACKAGE METADATA
 

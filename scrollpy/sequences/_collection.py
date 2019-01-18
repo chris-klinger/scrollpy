@@ -9,7 +9,8 @@ import os
 from scrollpy.files import sequence_file as sf
 from scrollpy.alignments import align
 from scrollpy.distances import distance, parser
-from scrollpy.config._config import config
+#from scrollpy.config._config import config
+from scrollpy import config
 
 
 class ScrollCollection:

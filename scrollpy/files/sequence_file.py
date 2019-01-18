@@ -74,7 +74,7 @@ def _sequence_list_to_dir(out_dir, seq_list):
     return out_path
 
 # New function; assumes outpath is specified and doesn't worry about timestamp
-def _sequence_list_to_file(seq_list, outpath):
+def _sequence_list_to_file(seq_list, outpath, outfmt = "fasta"):
     """Simple function to write ScrollSeq objects to file.
 
     Uses Bio.SeqIO to write associated ScrollSeq.SeqRecord objects
@@ -89,7 +89,7 @@ def _sequence_list_to_file(seq_list, outpath):
     """
     with open(outpath, 'w') as o: # Assume outpath is already checked
         for seq_object in seq_list:
-            seq_object._write(o)
+            seq_object._write(o, outfmt)
             #SeqIO.write(seq_object._record, o, "fasta")
 
 def _sequence_list_to_file_by_id(seq_list, outpath):

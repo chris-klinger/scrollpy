@@ -106,6 +106,11 @@ class ScrollPy:
         self._sort_distances()
 
 
+    def return_ordered_seqs(self):
+        """Returns all ScrollSeq objects in order as a list."""
+        return self._ordered_seqs
+
+
     def _parse_infiles(self):
         """Reads infiles to create ScrollSeq objects.
 

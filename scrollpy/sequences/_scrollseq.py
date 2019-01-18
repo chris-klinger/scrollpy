@@ -44,9 +44,9 @@ class ScrollSeq:
         else:
             pass # TO-DO
 
-    def __repr__(self):
-        """Probably need something here, not just parsed object"""
-        pass # TO-DO
+    #def __repr__(self):
+    #    """Probably need something here, not just parsed object"""
+    #    pass # TO-DO
 
     def __iadd__(self, other):
         """Adds distance to internal float"""
@@ -63,9 +63,9 @@ class ScrollSeq:
     def __eq__(self, other):
         return self._distance == other
 
-    def _write(self, file_obj):
+    def _write(self, file_obj, outfmt = "fasta"):
         """Writes internal sequence object as per Bio.SeqIO"""
-        SeqIO.write(self._record, file_obj, "fasta")
+        SeqIO.write(self._record, file_obj, outfmt)
 
     def _write_by_id(self, file_obj):
         """Writes internal sequence object using ID for header"""

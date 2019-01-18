@@ -68,12 +68,12 @@ class TestScrollCollection(unittest.TestCase):
         self.collection._get_alignment()
         self.collection._get_distances()
         self.collection._parse_distances()
-        self.assertTrue(len(self.collection._dist_list) > 0)
+        self.assertTrue(len(self.collection._dist_dict.keys()) > 0)
 
     def test_collection_call(self):
         """Tests that call properly executes all of the above"""
         self.collection()
-        self.assertTrue(len(self.collection._dist_list) > 0)
+        self.assertTrue(len(self.collection._dist_dict.keys()) > 0)
 
     def tearDown(self):
         """Remove temporary directory"""

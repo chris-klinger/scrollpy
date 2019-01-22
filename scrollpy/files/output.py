@@ -107,14 +107,19 @@ class SeqWriter(BaseWriter):
     def _get_filepath(self, group):
         """Returns an appropriate filepath"""
         # Probably just use an external method once that is written?
-        no_clobber = bool(config['ARGS']['no-clobber'])
+        no_clobber = bool(config['ARGS']['no_clobber'])
         sep = config['ARGS']['filesep']
         suffix = config['ARGS']['suffix']
-        if not suffix:
-            suffix = ''
+        sformat = config['ARGS']['seqfmt']
         #assert isinstance(group, str) # this should eventually be a string!
-        basename = sep.join((str(group), 'sequences', suffix))
-        basename = basename + '.fa' # Need to make more flexible eventually
+        if (suffix == '') or (not isinstance(suffix, str)):
+            basename = sep.join((str(group), 'sequences'))
+        else:  # It is a string
+            basename = sep.join((str(group), 'sequences', suffix))
+        if sformat == 'fasta':
+            basename = basename + '.fa' # Need to make more flexible eventually
+        else:
+            pass  # TO-DO!!!
         filepath = os.path.join(self.out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
@@ -145,12 +150,13 @@ class TableWriter(BaseWriter):
     """
     def __init__(self, sp_object, out_path):
         BaseWriter.__init__(self, sp_object, out_path)
+        self._tblsep = ','
 
 
     def write(self):
         """Writes values to file"""
-        lines = self._return()
-        with open(self.out_path,'w') as o:
+        lines = self._filter()
+        with open(self._get_filepath(),'w') as o:
             for line in lines:
                 o.write(line + "\n")
 
@@ -158,16 +164,34 @@ class TableWriter(BaseWriter):
     def _filter(self):
         """Fetches object values and returns a formatted list"""
         to_write = []
-        sep = config['ARGS']['tblsep']
+        tblfmt = config['ARGS']['tblfmt']
+        if tblfmt == 'csv':
+            tblsep = ','
+        elif tblfmt == 'space-delim':
+            tblsep = ' '
+        elif tblfmt == 'tab-delim':
+            tblsep = '\t'
+        else:
+            if tblfmt == 'sep':
+                tblsep = config['ARGS']['tblsep']
+                if not isinstance(tblsep, str):  # Invalid value for sep
+                    # Log this eventually?!
+                    tblsep = ','
+            else:
+                tblsep = ','
+        self._tblsep = tblsep
         for obj in self.sp_object.return_ordered_seqs():
             header = obj.description
             group = obj._group # Problem to access directly?
             dist = obj._distance
             linevals = (header, group, dist)
             # Change values if they contain <sep>
-            filtered = self._modify_values_based_on_sep(sep, *linevals)
+            filtered = self._modify_values_based_on_sep(
+                    self._tblsep,
+                    *linevals,
+                    )
             # Join values safely using <sep>
-            to_write.append(sep.join(filtered))
+            to_write.append(self._tblsep.join(filtered))
         return to_write
 
 
@@ -182,8 +206,33 @@ class TableWriter(BaseWriter):
                 replace_char = char
                 break
         for arg in args:
+            arg = str(arg)  # Needed for 'in' and also for writing
             if sep in arg:
                 arg = re.sub(to_replace, replace_char, arg)
             new_values.append(arg)
         return new_values
+
+
+    def _get_filepath(self):
+        """Returns an appropriate filepath"""
+        # Probably just use an external method once that is written?
+        no_clobber = bool(config['ARGS']['no_clobber'])
+        sep = config['ARGS']['filesep']
+        suffix = config['ARGS']['suffix']  # default ''
+        #assert isinstance(group, str) # this should eventually be a string!
+        if (suffix == '') or (not isinstance(suffix, str)):
+            basename = sep.join(('scrollpy', 'table'))
+        else:  # It is a string
+            basename = sep.join(('scrollpy', 'table', suffix))
+        if self._tblsep == ',':
+            basename = basename + '.csv'
+        else:
+            basename = basename + '.txt' # Need to make more flexible eventually
+        filepath = os.path.join(self.out_path, basename)
+        if os.path.exists(filepath):
+            if no_clobber:
+                pass # DO SOMETHING
+            else:
+                pass # DO SOMETHING ELSE
+        return filepath
 

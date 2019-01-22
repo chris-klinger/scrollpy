@@ -4,6 +4,10 @@
 ############################
 
 from scrollpy.config._config import config
+from scrollpy.util import _util as util
+from scrollpy.scrollsaw._scrollpy import ScrollPy
+from scrollpy.files.output import SeqWriter
+from scrollpy.files.output import TableWriter
 
 ####################
 # PACKAGE METADATA

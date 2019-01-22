@@ -3,6 +3,7 @@ This module contains the main ScrollPy object.
 """
 
 import os
+import tempfile
 from itertools import combinations
 
 from scrollpy.files import sequence_file as sf
@@ -36,11 +37,11 @@ class ScrollPy:
 
         file_format (str): Format for input files
 
-        *infiles (list): one or more files to use.
+        infiles (list): one or more files to use.
 
     """
 
-    def __init__(self, target_dir, align_method, dist_method, *infiles, **kwargs):
+    def __init__(self, target_dir, align_method, dist_method, infiles, **kwargs):
             #pre_filter=False, filter_method=None, pre_split=False,
             #file_format="fasta", *infiles):
         # Required
@@ -91,18 +92,28 @@ class ScrollPy:
         """Runs Scrollsaw"""
         # parse input files
         self._parse_infiles()
-        # filter for length, if requested
-        if self._pre_filter:
-            pass # TO-DO
-        # split sequences into smaller groups, if requested
-        if self._pre_split:
-            pass # TO-DO
-        # make collection objects
-        self._make_collections()
-        # actually run alignment/distance calculations
-        for collection in self._collections:
-            collection()
-        # finally, sort objects
+        # If no tmpdir is None, make a temporary directory
+        if not self.target_dir:
+            target_dir = tempfile.tempfile.TemporaryDirectory()
+        else:
+            target_dir = self.target_dir
+        # Try to run all steps; any uncaught errors close tmpdir
+        try:
+            # filter for length, if requested
+            if self._pre_filter:
+                pass # TO-DO
+            # split sequences into smaller groups, if requested
+            if self._pre_split:
+                pass # TO-DO
+            # make collection objects
+            self._make_collections()
+            # actually run alignment/distance calculations
+            for collection in self._collections:
+                collection()
+        finally:
+            if not self.target_dir:
+                target_dir.cleanup()  # Remove temporary directory
+        # If all steps ran, sort internal objects
         self._sort_distances()
 
 

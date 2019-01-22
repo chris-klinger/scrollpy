@@ -9,36 +9,55 @@ import sys
 import argparse
 
 
-import scrollpy
-#from config._config import config
+from scrollpy import config
+from scrollpy import util
+from scrollpy import ScrollPy
+from scrollpy import SeqWriter
+from scrollpy import TableWriter
+# Import lookups
+from scrollpy import __project__
+from scrollpy import __version__
+from scrollpy import __author__
+from scrollpy import __license__
+from scrollpy import __citation__
+
+# Useful global
+current_dir = os.getcwd()
 
 ###########################
 # Format header description
 ###########################
 
-_name = scrollpy.__project__
-_version = scrollpy.__version__
-_author = scrollpy.__author__
-_license = scrollpy.__license__
-_citation = scrollpy.__citation__
+_name = __project__
+_version = __version__
+_author = __author__
+_license = __license__
+_citation = __citation__
 
-_formatted_desc = "" # TO-DO
+_formatted_desc = ""  # TO-DO
 
 ###############################
 # Write out project information
 ###############################
 
+
+# Might not need this after all?
 def _write_project_information():
     """Writes out information about the project"""
     pass
+
 
 ########################
 # Write out sample usage
 ########################
 
-def _write_sample_usage():
-    """Writes out some sample usage examples"""
-    pass
+
+# def _write_sample_usage():
+#    """Writes out some sample usage examples"""
+#    pass
+
+_usage = "Usage message"
+
 
 def main():
     ##############
@@ -53,7 +72,7 @@ def main():
 
     parser = argparse.ArgumentParser(
             description = _formatted_desc,
-            formatter_class = argparse.HelpFormatter, # TO-DO
+            formatter_class = argparse.HelpFormatter,  # TO-DO
             #add_help = False, # is this what we want?
         )
     # Options for files
@@ -106,14 +125,26 @@ def main():
             default = None,
             help = (
                 "Target directory for output files. If the target directory "
-                "does not exist, it is created unless the '--nocreate' flag "
+                "does not exist, it is created unless the '--no-create' flag "
                 "is set. If target directory is not specified, or directory "
                 "creation fails, defaults to the current directory."
+                ))
+    file_options.add_argument("--tmpout",
+            nargs = '?',
+            metavar = "Keep Temporary Output",
+            default = None,
+            help = (
+                "Target directory for intermediate run files. If specified "
+                "and does not exist, it is created unless the '--no-create' "
+                "flag is set. If creation fails, tries to create /tmp/ in the "
+                "current directory instead. If not specified, or if all creation "
+                "attempts fail, a temporary directory is used and removed "
+                "following execution."
                 ))
     file_options.add_argument("--suffix",
             nargs = '?',
             metavar = "Output File Suffix",
-            default = None,
+            default = '',
             help = (
                 "Optional argument to specify a common suffix to be added to "
                 "all output files. This will be added to the default names "
@@ -159,12 +190,14 @@ def main():
     file_options.add_argument("--filesep",
             nargs = '?',
             metavar = "Filepath Separator",
+            default = '_',
             help = (
                 "Allows to set the delimiter in output filepaths."
                 ))
     file_options.add_argument("--tblsep",
             nargs = '?',
             metavar = "Table Column Separator",
+            default = ',',
             help = (
                 "Allows to set the delimiter for output table columns."
                 ))
@@ -209,6 +242,7 @@ def main():
     run_options.add_argument("-d", "--distance",
             nargs = '?',
             choices = ["PhyML", "RAxML", "Generic"], # TO-DO
+            default = "RAxML",
             metavar = "Distance Method",
             help = (
                 "Method to use for calculating distances. Any other options than "
@@ -313,7 +347,7 @@ def main():
                 "more information, whereas '3' also logs output from external "
                 "program calls (default)."
                 ))
-    log_options.add_argument("--no-sum",
+    log_options.add_argument("--no-summ",
             action = "store_true",
             help = (
                 "This option turns off the automatic summary file generated on "
@@ -347,19 +381,121 @@ def main():
     #for arg in args:
     #    print(arg)
 
+    # Check to see if any of 'citation'/'usage'/'version' present
+    if args.version:
+        print(_version)  # Move to logging!
+        sys.exit (0)
+    if args.citation:
+        print(_citation)  # Move to logging!
+        sys.exit(0)
+    if args.usage:
+        print(_usage)
+        sys.exit(0)
 
+    # Check the filepaths for appropriateness
+    all_paths = []
+    if args.infiles:  # Nonetype if not called at all
+        if len(args.infiles) > 0:  # list; zero-length if none specified
+            for path in args.infiles:
+                # os.path ensures correct full path
+                real_path = os.path.realpath(os.path.join(current_dir,path))
+                all_paths.append(real_path)
+    if args.treefile:  # Nonetype if not called at all
+        real_path = os.path.realpath(os.path.join(current_dir,path))
+        all_paths.append(real_path)  # Only one file
+    # Quit if no paths specified
+    if len(all_paths) == 0: # No input files!
+        print("No input files detected; please try again")  # Print something useful!
+        sys.exit(0)
+    # Check for duplicates and quit if any exist
+    duplicates = util.check_duplicate_paths(*all_paths)
+    if len(duplicates) > 0:
+        for path in duplicates:
+            print("Duplicate path {} detected in input".format(path))  # Logging!
+        sys.exit(0)
+    # Check to make sure all paths are good!
+    non_existent = util.check_input_paths(*all_paths)
+    if len(non_existent) > 0:
+        for path in non_existent:
+            print("Apparent non-existent file {}".format(path)) # Logging!
+        sys.exit(0)
 
+    # Check whether the output directory exists; if not, try to make it
+    if not args.out:
+        args.out = current_dir
+    else:
+        if not args.no_create:
+            try:
+                util.ensure_dir_exists(args.out)
+            except OSError:
+                # Make a note in the log file(s)!
+                args.out = current_dir
+        else:
+            args.out = current_dir
 
-# CODE FOR VALIDATING INPUT FILES
-#seen = set()
-#        duplicates = []
-#        non_existent = set()
-#        for file_path in self.infiles:
-#            if file_path in seen:
-#                duplicates.append(file_path)
-#            if not _util.file_exists(file_path):
-#                non_existent.add(file_path)
-#        if
+    # Check whether temporary output is specified
+    if args.tmpout:  # None otherwise
+        if not args.no_create:
+            try:
+                util.ensure_dir_exists(args.tmpout)
+            except OSError:
+                # Logging!
+                new_tmp = os.path.join(current_dir, '/tmp/')
+                try:
+                    util.ensure_dir_exists(new_tmp)
+                except OSError:
+                    args.tmpout = None  # Fall back to tmp dir
+
+    # Need to check all other parameters here...
+
+    # ADD PARAMS TO CONFIGS IF NECESSARY!!!
+    config.add_section("ARGS")
+    vargs = vars(args)  # make dict-like for iter
+    for arg,val in vargs.items():
+        if arg not in ('infiles','treefile'):
+            sarg = str(arg)  # ConfigParser demands strings
+            sval = str(val)  # ConfigParser demands strings
+            config.set("ARGS", sarg, sval)  # Assign to config dictionary!
+#    print("Config Arguments")
+#    for key in config["ARGS"]:
+#        print("{} : {}".format(key, config["ARGS"][key]))
+#    print("Config Alignment")
+#    for key in config["ALIGNMENT"]:
+#        print("{} : {}".format(key, config["ALIGNMENT"][key]))
+#    print("Config Distance")
+#    for key in config["DISTANCE"]:
+#        print("{} : {}".format(key, config["DISTANCE"][key]))
+
+    # Actual program execution
+    if not args.treefile:  # Sequence-based analysis
+        RunObj = ScrollPy(
+                args.tmpout,  # Actual program run uses tmp dir!
+                args.align,
+                args.distance,
+                args.infiles)
+        # Run Scrollsaw itself
+        RunObj()
+        # Write to outfile(s); config handles gritty details
+        # Write table file no matter what
+        Writer = TableWriter(
+                RunObj,    # object to use
+                args.out,  # specified output location
+                )
+        #try:
+        Writer.write()
+        #except:  # Dangerous; Change!!!
+        #    print("Unexpected error when writing table file")
+        # Write sequences, if requested
+        if args.seqout:  # User requested sequences
+            Writer = SeqWriter(
+                    RunObj,    # object to use
+                    args.out,  # specified output location
+                    )
+            #try:
+            Writer.write()
+            #except:  # Dangerous; Change!!!
+            #    print("Unexpected error when writing sequence files")  # Logging!
+        # Something about a summary file? -> TO_DO
 
 
 if __name__ == '__main__':

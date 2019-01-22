@@ -2,7 +2,9 @@
 Module to hold utility functions.
 """
 
-import os, sys
+import os
+import sys
+import errno
 
 
 def file_exists_user_spec(file_path):
@@ -34,9 +36,63 @@ def file_exists(file_path):
         Returns:
             True if file exists; False otherwise
         """
-        if os.path.isfile(file_path):
+        if os.path.isfile(file_path):  # Specifically a FILE
             return True
         return False
+
+
+def ensure_dir_exists(dir_path):
+    """Given a path, try to make it; quit execution if not possible.
+
+    Args:
+        dir_path (str): Full path to directory to make
+
+    Returns:
+        None; may raise OSError
+    """
+    try:
+        os.makedirs(dir_path)
+    except OSError as e:
+        if e.errno == errno.EEXIST:  # code 17; exists already
+            if not os.path.isdir(dir_path):  # Somehow, is a file
+                raise
+        else:
+            raise  # re-raise on any other kind of error
+
+
+def check_input_paths(*paths):
+    """Checks a series of paths for existence.
+
+    Args:
+        *paths (str): One or more (full) paths to check
+
+    Returns:
+        (Possibly empty) list of non-existent filepaths
+    """
+    bad_paths = []
+    for path in paths:
+        if not file_exists(path):
+            bad_paths.append(path)
+    return bad_paths
+
+
+def check_duplicate_paths(*paths):
+    """Checks a series of paths for duplicates.
+
+    Args:
+        *paths (str): One or more (full) paths to check
+
+    Returns:
+        (Possibly empty) list of duplicate filepaths
+    """
+    seen = set()
+    duplicates = []
+    for path in paths:
+        if path in seen:
+            duplicates.append(path)
+        else:
+            seen.add(path)
+    return duplicates
 
 
 def non_blank_lines(file_handle):
@@ -52,6 +108,7 @@ def non_blank_lines(file_handle):
         for line in i:
             if line: # blank lines are not truthy
                 yield line
+
 
 def split_input(string, chunk_size=80):
     """Splits a string into a series of substrings.

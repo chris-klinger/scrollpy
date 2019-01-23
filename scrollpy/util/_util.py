@@ -8,37 +8,51 @@ import errno
 
 
 def file_exists_user_spec(file_path):
-        """If a file already exists that would be created, should warn the user
-        and give them the option to either delete the old file or keep it.
+    """If a file already exists that would be created, should warn the user
+    and give them the option to either delete the old file or keep it.
 
-        Alternatively, if the file exists, could just quit instead?
+    Alternatively, if the file exists, could just quit instead?
 
-        For now, provide all the options?
-        """
-        good_input = False
-        while not good_input:
-            spec = input("Target file {} exists; overwrite? (y/Y/n/N/q/Q) --> ".format(
-                file_path))
-            spec = spec.strip() # Remove all whitespace
-            if spec in ('y','Y','n','N','q','Q'):
-                break
-        if spec in ('q','Q'): # Exit requested, do immediately
-            sys.exit("Quit execution; {} exists".format(file_path))
-        return spec # Otherwise, let caller decide what to do
+    For now, provide all the options?
+    """
+    good_input = False
+    while not good_input:
+        spec = input("Target file {} exists; overwrite? (y/Y/n/N/q/Q) --> ".format(
+            file_path))
+        spec = spec.strip() # Remove all whitespace
+        if spec in ('y','Y','n','N','q','Q'):
+            break
+    if spec in ('q','Q'): # Exit requested, do immediately
+        sys.exit("Quit execution; {} exists".format(file_path))
+    return spec # Otherwise, let caller decide what to do
 
 
 def file_exists(file_path):
-        """Checks whether a file exists
+    """Checks whether a file exists
 
-        Args:
-            file_path (str): Full path to file to check
+    Args:
+        file_path (str): Full path to file to check
 
-        Returns:
-            True if file exists; False otherwise
-        """
-        if os.path.isfile(file_path):  # Specifically a FILE
-            return True
-        return False
+    Returns:
+        True if file exists; False otherwise
+    """
+    if os.path.isfile(file_path):  # Specifically a FILE
+        return True
+    return False
+
+
+def dir_exists(dir_path):
+    """Checks whether a directory exists
+
+    Args:
+        dir_path (str): Full path to dir to check
+
+    Returns:
+        True if dir exists; False otherwise
+    """
+    if os.path.isdir():  # Specifically a DIR
+        return True
+    return False
 
 
 def ensure_dir_exists(dir_path):
@@ -58,6 +72,32 @@ def ensure_dir_exists(dir_path):
                 raise
         else:
             raise  # re-raise on any other kind of error
+
+
+def get_nonredundant_filepath(dir_path, filename, suffix=1):
+    """Given a directory and a filename, return a unique filename.
+
+    Args:
+        dir_path (str): full path to the directory
+
+        filename (str): name of file to check
+
+        suffix (int): integer value to append to create unique filenames
+
+    Returns:
+        Full path to unique filename
+    """
+    test_path = os.path.join(dir_path, filename)
+    if not os.path.isfile(test_path):
+        return test_path  # Base case
+    else:
+        if suffix = 1:  # First time through
+            _filename = filename + '.' + str(suffix)
+        else:
+            _filename = filename.split('.',1)[0]  # May be other periods
+            _filename = filename + '.' + str(suffix)
+        suffix += 1
+        return get_nonredundant_filepath(dir_path, _filename, suffix)  # Recur
 
 
 def check_input_paths(*paths):

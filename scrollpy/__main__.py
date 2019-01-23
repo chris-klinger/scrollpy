@@ -7,10 +7,13 @@ Runs the main scrollpy program.
 import os
 import sys
 import argparse
+import datetime
+import logging
 
 
 from scrollpy import config
 from scrollpy import util
+from scrollpy import logging
 from scrollpy import ScrollPy
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
@@ -24,9 +27,9 @@ from scrollpy import __citation__
 # Useful global
 current_dir = os.getcwd()
 
-###########################
-# Format header description
-###########################
+##################################################################################
+# FORMAT HEADER DESCRIPTION
+##################################################################################
 
 _name = __project__
 _version = __version__
@@ -36,21 +39,18 @@ _citation = __citation__
 
 _formatted_desc = ""  # TO-DO
 
-###############################
-# Write out project information
-###############################
-
+##################################################################################
+# PROJECT USAGE
+##################################################################################
 
 # Might not need this after all?
 def _write_project_information():
     """Writes out information about the project"""
     pass
 
-
-########################
-# Write out sample usage
-########################
-
+##################################################################################
+# SAMPLE USAGE
+##################################################################################
 
 # def _write_sample_usage():
 #    """Writes out some sample usage examples"""
@@ -60,15 +60,15 @@ _usage = "Usage message"
 
 
 def main():
-    ##############
+    ##############################################################################
     # BEGIN TIMING
-    ##############
+    ##############################################################################
 
-    # TO-DO
+    main_start = datetime.datetime.now()
 
-    ########################
-    # Command line arguments
-    # ######################
+    ##############################################################################
+    # COMMAND LINE ARGUMENT
+    ##############################################################################
 
     parser = argparse.ArgumentParser(
             description = _formatted_desc,
@@ -378,8 +378,53 @@ def main():
     # Parse all arguments
     args = parser.parse_args()
 
-    #for arg in args:
-    #    print(arg)
+    #############################################################################
+    # CONFIGURE LOGGING
+    #############################################################################
+    name = __name__
+    logfile_path = scroll_log.get_logfile(
+            args.no_log,      # Whether to log to file
+            args.logfile,     # Logfile name/path
+            args.out,         # Output directory
+            args.no_create,   # Directory creation
+            args.no_clobber,  # Replace existing file
+            args.filesep,     # Separator for files
+            )
+    # Get loggers and configure each; default level is 'INFO'
+    # Configure console handler
+    console_handler = logging.StreamHandler(stream = sys.stderr)
+    console_handler.setFormatter(scroll_log.raw_format)
+    console_handler.addFilter(
+            scroll_log.ConsoleFilter(args.verbosity))
+    # Create console logger and add handler to it
+    console_logger = scroll_log.get_console_logger(name)
+    console_logger.addHandler(console_handler)
+
+    # Configure file handler
+    file_handler = logging.FileHandler(filename = logfile_path)  # mode='a'
+    file_handler.setFormatter(scroll_log.rich_format)
+    file_handler.addFilter(
+            scroll_log.FileFilter(args.log_level),
+            args.no_log,  # If set, no output will be logged
+            )
+    # Create file logger and add handler to it
+    file_logger = scroll_log.get_file_logger(name)
+    file_logger.addHandler(console_handler)
+
+    # Configure output handler
+    output_handler = logging.FileHandler(filename = logfile_path)  # Same as file
+    output_handler.setFormatter(scroll_log.raw_format)
+    output_handler.addFilter(
+            scroll_log.OutputFilter(args.log_level),
+            args.no_log,  # If set, no output will be logged
+            )
+    # Create output logger and add handler to it
+    output_logger = scroll_log.get_file_logger(name)
+    output_logger.addHandler(output_handler)
+
+    #############################################################################
+    # SIMPLE USE CASES
+    #############################################################################
 
     # Check to see if any of 'citation'/'usage'/'version' present
     if args.version:
@@ -391,6 +436,10 @@ def main():
     if args.usage:
         print(_usage)
         sys.exit(0)
+
+    ##############################################################################
+    # PARAMETER VALIDATION
+    ##############################################################################
 
     # Check the filepaths for appropriateness
     all_paths = []
@@ -448,6 +497,10 @@ def main():
 
     # Need to check all other parameters here...
 
+    ##############################################################################
+    # POPULATE GLOBAL CONFIG
+    ##############################################################################
+
     # ADD PARAMS TO CONFIGS IF NECESSARY!!!
     config.add_section("ARGS")
     vargs = vars(args)  # make dict-like for iter
@@ -465,6 +518,10 @@ def main():
 #    print("Config Distance")
 #    for key in config["DISTANCE"]:
 #        print("{} : {}".format(key, config["DISTANCE"][key]))
+
+    ##############################################################################
+    # ACTUAL PROGRAM EXECUTION
+    ##############################################################################
 
     # Actual program execution
     if not args.treefile:  # Sequence-based analysis

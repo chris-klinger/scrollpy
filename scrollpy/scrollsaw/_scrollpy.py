@@ -78,6 +78,7 @@ class ScrollPy:
         self._removed = [] # list of ScrollSeq objects removed
         self._id_counter = 1 # counter for creating unique sequence ids
         self._collections = []
+        self._remove_tmp = False
 
 
     #def __str__(self):
@@ -94,9 +95,13 @@ class ScrollPy:
         self._parse_infiles()
         # If no tmpdir is None, make a temporary directory
         if not self.target_dir:
-            target_dir = tempfile.tempfile.TemporaryDirectory()
-        else:
-            target_dir = self.target_dir
+            self._remove_tmp = True  # Signal for removal
+            # Var creation stalls garbage collection?
+            tmp_dir = tempfile.TemporaryDirectory()
+            #print("Target directory is: {}".format(tmp_dir.name))
+            self.target_dir = tmp_dir.name
+        #else:
+        #    target_dir = self.target_dir
         # Try to run all steps; any uncaught errors close tmpdir
         try:
             # filter for length, if requested
@@ -111,8 +116,8 @@ class ScrollPy:
             for collection in self._collections:
                 collection()
         finally:
-            if not self.target_dir:
-                target_dir.cleanup()  # Remove temporary directory
+            if self._remove_tmp:
+                tmp_dir.cleanup()  # Remove temporary directory
         # If all steps ran, sort internal objects
         self._sort_distances()
 

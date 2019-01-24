@@ -91,7 +91,7 @@ def get_nonredundant_filepath(dir_path, filename, suffix=1):
     if not os.path.isfile(test_path):
         return test_path  # Base case
     else:
-        if suffix = 1:  # First time through
+        if suffix == 1:  # First time through
             _filename = filename + '.' + str(suffix)
         else:
             _filename = filename.split('.',1)[0]  # May be other periods

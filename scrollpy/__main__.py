@@ -12,8 +12,9 @@ import logging
 
 
 from scrollpy import config
+from scrollpy import load_config_file
 from scrollpy import util
-from scrollpy import logging
+from scrollpy import scroll_log
 from scrollpy import ScrollPy
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
@@ -381,11 +382,21 @@ def main():
     #############################################################################
     # CONFIGURE LOGGING
     #############################################################################
-    name = __name__
+
+    # Add logging preferences to global config
+    config.add_section("ARGS")
+    config.set("ARGS", 'log_level', str(args.log_level))
+    config.set("ARGS", 'verbosity', str(args.verbosity))
+
+    # Set up loggers
+    #name = __name__
+    name = 'scrollpy'  # can't use __name__ since it becomes __main__
+#    print("Name of main module is: {}".format(name))
+    out = args.out if args.out else current_dir
     logfile_path = scroll_log.get_logfile(
             args.no_log,      # Whether to log to file
             args.logfile,     # Logfile name/path
-            args.out,         # Output directory
+            out,         # Output directory
             args.no_create,   # Directory creation
             args.no_clobber,  # Replace existing file
             args.filesep,     # Separator for files
@@ -404,23 +415,32 @@ def main():
     file_handler = logging.FileHandler(filename = logfile_path)  # mode='a'
     file_handler.setFormatter(scroll_log.rich_format)
     file_handler.addFilter(
-            scroll_log.FileFilter(args.log_level),
+            scroll_log.FileFilter(args.log_level,
             args.no_log,  # If set, no output will be logged
-            )
+            ))
     # Create file logger and add handler to it
     file_logger = scroll_log.get_file_logger(name)
-    file_logger.addHandler(console_handler)
+    file_logger.addHandler(file_handler)
 
     # Configure output handler
     output_handler = logging.FileHandler(filename = logfile_path)  # Same as file
     output_handler.setFormatter(scroll_log.raw_format)
     output_handler.addFilter(
-            scroll_log.OutputFilter(args.log_level),
+            scroll_log.OutputFilter(args.log_level,
             args.no_log,  # If set, no output will be logged
-            )
+            ))
     # Create output logger and add handler to it
-    output_logger = scroll_log.get_file_logger(name)
+    output_logger = scroll_log.get_output_logger(name)
     output_logger.addHandler(output_handler)
+
+    # Simple message regarding starting time to the user
+#    scroll_log.log_message(
+#            scroll_log.BraceMessage("Initialized at {} \n", main_start),  # msg
+#            2,  # verbosity level of message
+#            'INFO',  # level
+#            console_logger, file_logger  # loggers
+#            )
+#
 
     #############################################################################
     # SIMPLE USE CASES
@@ -502,13 +522,17 @@ def main():
     ##############################################################################
 
     # ADD PARAMS TO CONFIGS IF NECESSARY!!!
-    config.add_section("ARGS")
+    #config.add_section("ARGS")
     vargs = vars(args)  # make dict-like for iter
     for arg,val in vargs.items():
         if arg not in ('infiles','treefile'):
             sarg = str(arg)  # ConfigParser demands strings
             sval = str(val)  # ConfigParser demands strings
             config.set("ARGS", sarg, sval)  # Assign to config dictionary!
+
+    # Load from config file
+    # Call this later so that we can configure logging first!
+    load_config_file()
 #    print("Config Arguments")
 #    for key in config["ARGS"]:
 #        print("{} : {}".format(key, config["ARGS"][key]))

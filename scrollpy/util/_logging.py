@@ -19,45 +19,50 @@ import datetime
 
 
 from scrollpy import util
+from scrollpy import config
 
 
 rich_format = logging.Formatter(
-        fmt = "{} | {} | {} | {}".format(asctime, name, levelname, message),
+        # :^<N> centers in a space of N chars long
+        fmt = "{asctime} | {name:^35} | {levelname:^10} | {message}",
         datefmt = '%Y-%m-%d %H:%M:%S',
         style = '{',
         )
-basic_format = logging.Formatter(
-        fmt = "{} | {}".format(levelname, message),
-        style = '{',
-        )
+#basic_format = logging.Formatter(
+#        fmt = "{levelname:8s} | {message}",
+#        style = '{',
+#        )
 raw_format = logging.Formatter(
-        fmt = "{}".format(message),
+        fmt = "{message}",
         style = '{',
         )
 
 
 def get_console_logger(name):
     """Convenience function to return based on __name__"""
-    name = "console." + str(name)
+    name = "C." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    return logger
 
 
 def get_file_logger(name):
     """Convenience function to return based on __name__"""
-    name = "file." + str(name)
+    name = "F." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    return logger
 
 
 def get_output_logger(name):
     """Convenience function to return based on __name__"""
-    name = "output." + str(name)
+    name = "O." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    return logger
 
 
-def get_logfile(logging=True, logpath=None, outdir=None,
+def get_logfile(not_logging=False, logpath=None, outdir=None,
         create_dirs=True, no_clobber=False, sep='_'):
     """Returns the name to the logfile
 
@@ -84,10 +89,12 @@ def get_logfile(logging=True, logpath=None, outdir=None,
     Returns:
         path to logfile; may be an instance of tempfile.TemporaryFile
     """
-    if not logging:
+    if not_logging:
+        print("Not using logging")
         return _get_temp_log_path()
     else:
         if logpath:
+            print(logpath)
             # Whether a name or a path, of.path.join() takes care of details
             _logpath = os.path.join(outdir, logpath)
             if util.file_exists(_logpath):  # It is a file that exists; dirname also exists
@@ -137,9 +144,44 @@ def _get_temp_log_path():
 def _get_generic_logname(sep='_'):
     """Returns a string that should be unique"""
     now = datetime.datetime.now()
-    date,time = ("{0:%Y-%m-%d}".format(now),
-            "{%H-%M:%S}".format(now))
-    return sep.join(("scrollpy","date","time","log.txt"))
+    fmtnow = ("{0:%Y-%m-%d-%H-%M-%S}".format(now))
+    return sep.join(("scrollpy",fmtnow,"log.txt"))
+
+
+def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
+    """Log a message object to any number of loggers.
+
+    Args:
+        msg_obj (obj): BraceMessage obj to log
+
+        level (string): Logging module level name, one of:
+            'DEBUG','INFO','WARNING','ERROR','CRITICAL'
+
+        *loggers (obj): one or more loggers to log the msg_obj
+
+        exc_info (tuple): exception information
+    """
+    if exc_info:  # logging an exception
+        for logger in loggers:
+            logger.exception(msg_obj,
+                    exc_info=exc_info,
+                    extra={'vlevel':verbosity})
+    elif level == 'DEBUG':
+        for logger in loggers:
+            logger.debug(msg_obj,
+                    extra={'vlevel':verbosity})
+    elif level == 'INFO':
+        for logger in loggers:
+            logger.info(msg_obj,
+                    extra={'vlevel':verbosity})
+    elif level == 'WARNING':
+        for logger in loggers:
+            logger.warning(msg_obj,
+                    extra={'vlevel':verbosity})
+    elif level == 'ERROR':
+        for logger in loggers:
+            logger.error(msg_obj,
+                    extra={'vlevel':verbosity})
 
 
 class BraceMessage:
@@ -151,19 +193,25 @@ class BraceMessage:
     When logged, the __str__ method is called in place of
     trying to format a plain string message.
     """
-    def __init__(self, msg, lines=[], *args, **kwargs):
+    def __init__(self, msg, *args, lines=[], **kwargs):
         self.msg = msg
         self.lines = lines
         self.args = args
         self.kwargs = kwargs
-        self.formatted = None  # Initialize to an empty string
+        self.wrapped = None  # Initialize to an empty string
 
     def __str__(self):
         """Writes formatted string if possible; msg if not"""
-        if self.formatted:
-            return self.formatted.format(*self.args, **self.kwargs)
+        if self.wrapped:
+            #return self.formatted.format(*self.args, **self.kwargs)
+            return self.wrapped
         else:
             return self.msg.format(*self.args, **self.kwargs)
+
+
+    def format_string(self, string):
+        """Applies formatting and returns resulting string"""
+        return string.format(*self.args, **self.kwargs)
 
 
     def get_msg(self):
@@ -171,9 +219,9 @@ class BraceMessage:
         return self.msg
 
 
-    def add_formatted(self, msg):
-        """Adds a single string formatted message to self"""
-        self.formatted = msg
+    def add_wrapped(self, msg):
+        """Adds a single wrapped message to self"""
+        self.wrapped = msg
 
     def has_lines(self):
         """Hide underlying interface"""
@@ -210,30 +258,26 @@ class GenericFilter:
         """Filter message based on set verbosity"""
         if self.silent:
             return False
-        elif record.vlevel >= self.verbosity:
-            self._modify_message(self,record)  # Try to format!
+        elif record.vlevel <= self.verbosity:  # Opposite of logging levels
+            self._modify_message(record)  # Try to format!
             return True
         return False
 
 
     def _modify_message(self, record):
-        """Modify message in LogRecord, if necessary, and return
-
-        Implement in subclass
-        """
-        pass
+        """Modify message in LogRecord, if necessary, and return"""
+        raise AttributeError("Implement in subclass")
 
 
     def _format_message(self, record):
-        """Format message; specially handles exc_info if present.
-
-        Implement in subclass
-        """
-        pass
+        """Format message; specially handles exc_info if present"""
+        raise AttributeError("Implement in subclass")
 
 
-    def _get_text_wrapper(self, self.width, header='ScrollPy'):
+    def _get_text_wrapper(self, width=None, header='ScrollPy'):
         """Returns a wrapper for subsequent use on text"""
+        if not width:
+            width = self.width
         return textwrap.TextWrapper(
                 width=width,         # normal term width?
                 initial_indent='',   # first line
@@ -242,14 +286,14 @@ class GenericFilter:
                 )
 
 
-    def _log_lines(self, lines):
+    def _format_lines(self, lines):
         """Useful for exception or other collection-based messages"""
-        pass
+        raise AttributeError("Implement in sublass")
 
 
-    def _log_exception(self, record):
+    def _format_exception(self, record):
         """Takes captured traceback info and formats it nicely"""
-        pass
+        raise AttributeError("Implement in sublass")
 
 
 class ConsoleFilter(GenericFilter):
@@ -284,12 +328,13 @@ class ConsoleFilter(GenericFilter):
 
     def _format_message(self, record):
         """Add a nice header to each message for console output"""
-        message = record.msg.get_msg()
+        _message = record.msg.get_msg()
+        message = record.msg.format_string(_message)
         # Add header in front
-        header,new_msg = _add_header(record.levelname, message)
+        header,new_msg = self._add_header(record.levelname, message)
         # Wrap to return a single string
-        record.msg.add_formatted = _get_text_wrapper(
-                header=header).fill(new_msg)
+        record.msg.add_wrapped(self._get_text_wrapper(
+                header=header).fill(new_msg))
 
 
     def _add_header(self, level, string):
@@ -301,7 +346,7 @@ class ConsoleFilter(GenericFilter):
         elif level == 'ERROR':  # But no exception info
             header = 'ScrollPy [ERROR]: '
         # Add header in front
-        formatted = ' '.join(header, string)
+        formatted = ' '.join((header, string))
         return (header,formatted)
 
 
@@ -310,17 +355,19 @@ class ConsoleFilter(GenericFilter):
         firstline = True
         to_join = []
         for line in record.msg.get_lines():
+            line = record.msg.format_string(line)
             if firstline:
                 header,new_msg = _add_header(record.levelname, line)
                 to_join.append(new_msg)
             else:
                 to_join.append(line)
+            firstline = False
         joined = ' '.join(to_join)
-        record.msg.add_formatted = _get_text_wrapper(
-                header=header).fill(joined)
+        record.msg.add_wrapped(self._get_text_wrapper(
+                header=header).fill(joined))
 
 
-    def _log_exception(self, ex_info):
+    def _format_exception(self, ex_info):
         """Takes captured traceback info and formats it nicely"""
         pass
 
@@ -354,12 +401,13 @@ class FileFilter(GenericFilter):
 
     def _format_message(self, record):
         """Simply wraps the message"""
-        message = record.msg.get_msg()
+        _message = record.msg.get_msg()
+        message = record.msg.format_string(_message)
         # Figure out what the header is
         header = self._get_header(record)
         # Wrap to return a single string
-        record.msg.add_formatted = _get_text_wrapper(
-                header=header).fill(message)
+        record.msg.add_wrapped(self._get_text_wrapper(
+                header=header).fill(message))
 
 
     def _get_header(self, record):
@@ -374,15 +422,15 @@ class FileFilter(GenericFilter):
         Base it only on name? All output from one module will be at the
         same indentation level.
         """
-        return self.record.name
+        return record.name
 
 
     def _format_lines(self, record):
         """Useful for exception or other collection-based messages"""
         header = _get_header(record)
         joined = ' '.join(record.msg.get_lines())
-        record.msg.add_formatted = _get_text_wrapper(
-                header=header).fill(joined)
+        record.msg.add_wrapped(self._get_text_wrapper(
+                header=header).fill(joined))
 
 
     def _format_exception(self, ex_info):
@@ -402,5 +450,6 @@ class OutputFilter(GenericFilter):
 
     def _modify_message(self, record):
         """Even simpler than FileFilter, just return"""
-        message = record.msg.get_msg()  # Should be piped output
-        record.msg.add_formated(message)
+        #message = record.msg.get_msg()  # Should be piped output
+        #record.msg.add_wrapped(message)
+        pass

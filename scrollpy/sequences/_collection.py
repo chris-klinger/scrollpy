@@ -38,7 +38,7 @@ class ScrollCollection:
     def __init__(self, outdir, seq_list, group, align_method,
             dist_method, opt_group=None, inpath=None,
             align_model=None, # Need to add this eventually
-            dist_model='PROTGAMMALG' # Need to deal with this eventually
+            dist_model=None # Need to deal with this eventually
             ):
         self._outdir = outdir
         self.seq_list = seq_list
@@ -48,7 +48,8 @@ class ScrollCollection:
         self._align_model = align_model
         self._align_path = None # Path to the aligned file
         self._dist_method = dist_method
-        self._dist_model = dist_model
+        if not dist_model:
+            self._dist_model = config['ARGS']['dist_matrix']
         self._dist_path = None # Path to the distance file
         self._dist_dict = None # Parsed distance file list
         self._opt_group = opt_group
@@ -106,7 +107,7 @@ class ScrollCollection:
         dist_path = self._get_outpath('distance')
         distcalc = distance.DistanceCalc(self._dist_method,
                 config['DISTANCE'][self._dist_method], # Cmd to execute
-                self._dist_model, # Model to use for distance
+                model = self._dist_model, # Model to use for distance
                 inpath = self._align_path,
                 outpath = dist_path)
         distcalc() # Actually calculates distances; may raise ApplicationError

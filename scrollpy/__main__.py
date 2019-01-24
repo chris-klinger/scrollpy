@@ -394,7 +394,8 @@ def main():
 #    print("Name of main module is: {}".format(name))
     out = args.out if args.out else current_dir
     logfile_path = scroll_log.get_logfile(
-            args.no_log,      # Whether to log to file
+            #args.no_log,      # Whether to log to file
+            True,  # JUST FOR TESTING
             args.logfile,     # Logfile name/path
             out,         # Output directory
             args.no_create,   # Directory creation

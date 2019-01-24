@@ -22,7 +22,7 @@ from Bio.Application import ApplicationError
 
 
 class DistanceCalc:
-    def __init__(self, method, cmd, model=None, inpath=None, outpath=None,
+    def __init__(self, method, cmd, model, inpath=None, outpath=None,
             _logger=None, **kwargs):
         """Class to handle farming out and managing distance calculations.
 
@@ -30,11 +30,16 @@ class DistanceCalc:
             method (str): Name of method to use to calculate distances.
                 Accepted values are `RAxML`, `PhyML`, `Generic`. Additional
                 support for other formats might be extended later.
+
             cmd (str): Command (if executable is on system PATH) or full
                 path to the relevant executable.
+
             inpath (str): Full path to input file
+
             outpath (str): Full path to dump distances to
+
             _logger (obj): Reference to a logger for logging (optional)
+
             **kwargs: Additional parameters specified for the relevant
                 program (optional?)
         """
@@ -78,11 +83,15 @@ class DistanceCalc:
             dirname, outname = os.path.split(self.outpath)
             self.kwargs['-w'] = dirname
             self.kwargs['-n'] = outname
-            self.kwargs['-m'] = self.model
+            # Change model input to a usable command
+            self.kwargs['-m'] = self._modify_model_name(self.model,'RAxML')
+            # If a nuc model is specified other than GTR, need to add to kwargs
+            if self.model in ['JC','K80','HKY85']:
+                arg_string = '--' + self.model
+                self.kwargs[arg_string] = ''  # just need to add the arg itself
+            # Finally, call command line
             cmdline = Applications.RaxmlCommandline(
                 self.cmd, **self.kwargs)
-            #print()
-            #print(cmdline)
             try:
                 stdout, stderr = cmdline() # Log stderr eventually
             except ApplicationError: # Raised if subprocess return code != 0
@@ -124,7 +133,7 @@ class DistanceCalc:
             raxml_pattern = re.compile(r"""raxml       # raxml
                                             HPC ?      # may not have this
                                             [-_|]      # should be a hyphen
-                                            AVX|     # one of AVX/PTHREADS/SSE3
+                                            AVX|       # one of AVX/PTHREADS/SSE3
                                             PTHREADS|
                                             SSE3""",
                                             flags = re.X|re.I) # verbose/case-insensitive
@@ -160,3 +169,12 @@ class DistanceCalc:
         return True
 
 
+    def _modify_model_name(self, model, program):
+        """Returns an appropriate string for a model depending on program"""
+        prot_models = ['LG', 'WAG']
+        nuc_models = ['GTR','JC69','HKY85']
+
+        if program == 'RAxML':
+            if model in prot_models:  # Or use input alphabet variable?!
+                return ''.join(('PROTGAMMA',model))
+            return 'GTRGAMMA'  # This is true even for other nuc models!

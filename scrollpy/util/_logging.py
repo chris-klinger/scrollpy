@@ -90,11 +90,9 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
         path to logfile; may be an instance of tempfile.TemporaryFile
     """
     if not_logging:
-        print("Not using logging")
         return _get_temp_log_path()
     else:
         if logpath:
-            print(logpath)
             # Whether a name or a path, of.path.join() takes care of details
             _logpath = os.path.join(outdir, logpath)
             if util.file_exists(_logpath):  # It is a file that exists; dirname also exists

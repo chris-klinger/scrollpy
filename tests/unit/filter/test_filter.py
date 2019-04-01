@@ -33,8 +33,14 @@ data = _mock_data()
 class TestFilterZScore(unittest.TestCase):
     """Tests the base implementation with Z-scores"""
 
-    def setUp(self):
-        """Create data and
+    @classmethod
+    def setUpClass(TestFilterZScore):
+        """Mock data and call an instance"""
+        seq_dict = {}
+        for i in range(4):
+            label = "group" + str(i+1)
+            seq_dict[label] = data
+
 
 
 if __name__ == '__main__':

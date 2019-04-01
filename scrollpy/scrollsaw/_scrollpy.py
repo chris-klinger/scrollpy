@@ -6,9 +6,11 @@ import os
 import tempfile
 from itertools import combinations
 
+from scrollpy import config
 from scrollpy.files import sequence_file as sf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._collection import ScrollCollection
+from scrollpy.filter._filter import Filter
 #from scrollpy.util import _util
 
 class ScrollPy:
@@ -57,11 +59,11 @@ class ScrollPy:
         try:
             self._pre_filter = kwargs['pre_filter']
         except KeyError:
-            self._pre_filter = None
+            self._pre_filter = config['ARGS']['filter']
         try:
             self._filter_method = kwargs['filter_method']
         except KeyError:
-            self._filter_method = None
+            self._filter_method = config['ARGS']['filter_method']
         try:
             self._pre_split = kwargs['pre_split']
         except KeyError:
@@ -106,7 +108,9 @@ class ScrollPy:
         try:
             # filter for length, if requested
             if self._pre_filter:
-                pass # TO-DO
+                self._filter_sequences(
+                        self._filter_method,  # This should already by specified
+                        )
             # split sequences into smaller groups, if requested
             if self._pre_split:
                 pass # TO-DO
@@ -125,6 +129,14 @@ class ScrollPy:
     def return_ordered_seqs(self):
         """Returns all ScrollSeq objects in order as a list."""
         return self._ordered_seqs
+
+
+    def return_removed_seqs(self):
+        """Returns all removed ScrollSeq objects as a list (arbitrary order)"""
+        all_seqs = []
+        for k,v in self._removed.items():
+            all_seqs.extend(v)
+        return all_seqs
 
 
     def _parse_infiles(self):
@@ -149,8 +161,15 @@ class ScrollPy:
             # filepaths could lead to the same group name
             group = self._unique_group_name(group)
             # Now get SeqRecords using BioPython
-            records = sf._get_sequences(file_path, self._file_format)
-            scroll_seqs = self._make_scroll_seqs(file_path, group, records)
+            records = sf._get_sequences(
+                    file_path,
+                    self._file_format,
+                    )
+            scroll_seqs = self._make_scroll_seqs(
+                    file_path,
+                    group,
+                    records,
+                    )
             # Update internal objects
             self._groups.append(group)
             self._seq_dict[group] = scroll_seqs
@@ -208,7 +227,14 @@ class ScrollPy:
         Returns:
             modifies internal _seq_dict and _removed variables
         """
-        pass # TO BE IMPLEMENTED
+        SeqFilter = Filter(
+                self._seq_dict,
+                filter_method=self._filter_method,
+                )
+        new_seq_dict,removed_seqs = SeqFilter()  # Run filtering
+        # Returns two dicts, set to internal variables
+        self._seq_dict = new_seq_dict
+        self._removed = removed_seqs
 
 
     def _split_sequences(self):

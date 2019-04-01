@@ -24,29 +24,34 @@ class ScrollSeq:
         group (str): group to which the sequence belongs
         SeqRecord (obj): BioPython object (default: None)
     """
-    def __init__(self, id_num, infile, group, SeqRecord=None,
-            accession=None, name=None, description=None, seq=None): # property attrs
+    def __init__(self, id_num, infile, group, SeqRecord=None):
+            #accession=None, name=None, description=None, seq=None): # property attrs
         self._id = id_num
         self._infile = infile
         self._group = group
         self._distance = 0.0 # Initialize float counter for distance
         self._record = SeqRecord
         # All remaining attributes are internal properties
-        self._accession = accession
-        self._name = name
-        self._description = description
-        self._seq = seq
+        #self._accession = accession
+        #self._name = name
+        #self._description = description
+        #self._seq = seq
 
     def __str__(self):
         """Default to BioPython str if present; otherwise basic"""
         if self._record:
-            return self._record.__str__ # Does this work?
+            return self._record.__str__()  # Does this work?
         else:
             pass # TO-DO
 
-    #def __repr__(self):
-    #    """Probably need something here, not just parsed object"""
-    #    pass # TO-DO
+
+    def __repr__(self):
+        """Probably need something here, not just parsed object"""
+        if self._record:
+            return self._record.__repr__()  # Does this work?
+        else:
+            pass # TO-DO
+
 
     def __iadd__(self, other):
         """Adds distance to internal float"""
@@ -99,6 +104,7 @@ class ScrollSeq:
     def accession(self):
         """Use SeqRecord.id, if it exists"""
         if not self._record:
+            print("Returning None")
             return None
         return self._record.id
 

@@ -35,8 +35,8 @@ class BaseWriter:
                 raises NotImplementedError (sublass overrides)
     """
     def __init__(self, sp_object, out_path):
-        self.sp_object = sp_object
-        self.out_path = out_path
+        self._sp_object = sp_object
+        self._out_path = out_path
 
 
     def write(self):
@@ -67,44 +67,71 @@ class SeqWriter(BaseWriter):
                 returns a list of [group,[ScrollSeqObjs]] pairs to use
                     for writing.
     """
-    def __init__(self, sp_object, out_path):
+    def __init__(self, sp_object, out_path, sequences=False, removed=False):
         BaseWriter.__init__(self, sp_object, out_path)
+        self._sequences = sequences  # Whether or not to write output sequences
+        self._removed = removed  # Whether or not to add in removed seqs
 
 
     def write(self):
         """Filters sequences and writes to one or more files."""
-        write_list = self._filter()
-        for group,seqs in write_list:
-            outfile = self._get_filepath(group)
-            sequence_file._sequence_list_to_file(
-                    seqs,
-                    outfile,
-                    config['ARGS']['seqfmt']) # User-specified
+        if self._sequences:
+            write_list = self._filter()
+            for group,seqs in write_list:
+                outfile = self._get_filepath(group)
+                sequence_file._sequence_list_to_file(
+                        seqs,
+                        outfile,
+                        config['ARGS']['seqfmt'],  # User-specified
+                        )
+        if self._removed:  # Repeat a second time for removed sequences
+            removed_list = self._filter(removed=True)
+            print(removed_list)
+            if removed_list:  # Not empty; filtering might not remove any
+                for group,seqs in removed_list:
+                    outfile = self._get_filepath(
+                            group,
+                            removed=True,
+                            )
+                    sequence_file._sequence_list_to_file(
+                            seqs,
+                            outfile,
+                            config['ARGS']['seqfmt'],
+                            )
 
 
-    def _filter(self):
+    def _filter(self, removed=False):
         """Returns only a number of sequences as specified by the user."""
-        counts = {}
         seqs = {}
-        num_seqs = int(config['ARGS']['number']) # configparser uses ALL strings
-        for obj in self.sp_object.return_ordered_seqs():
-            group = obj._group
-            try:
-                counts[group] += 1
-                count = counts[group]
-            except KeyError:
-                count = 1 # first time
-                counts[group] = count
-            if count <= num_seqs:
+        if removed:  # Simply want ALL removed sequences
+            for obj in self._sp_object.return_removed_seqs():
+                group = obj._group
                 try:
                     seqs[group].append(obj)
                 except KeyError:
                     seqs[group] = []
                     seqs[group].append(obj)
+        if not removed:
+            counts = {}
+            num_seqs = int(config['ARGS']['number']) # configparser uses ALL strings
+            for obj in self._sp_object.return_ordered_seqs():
+                group = obj._group
+                try:
+                    counts[group] += 1
+                    count = counts[group]
+                except KeyError:
+                    count = 1 # first time
+                    counts[group] = count
+                if count <= num_seqs:
+                    try:
+                        seqs[group].append(obj)
+                    except KeyError:
+                        seqs[group] = []
+                        seqs[group].append(obj)
         return [(group,objs) for group,objs in seqs.items()]
 
 
-    def _get_filepath(self, group):
+    def _get_filepath(self, group, removed=False):
         """Returns an appropriate filepath"""
         # Probably just use an external method once that is written?
         no_clobber = bool(config['ARGS']['no_clobber'])
@@ -113,14 +140,20 @@ class SeqWriter(BaseWriter):
         sformat = config['ARGS']['seqfmt']
         #assert isinstance(group, str) # this should eventually be a string!
         if (suffix == '') or (not isinstance(suffix, str)):
-            basename = sep.join((str(group), 'sequences'))
+            if removed:
+                basename = sep.join((str(group),'removed'))
+            else:
+                basename = sep.join((str(group),'sequences'))
         else:  # It is a string
-            basename = sep.join((str(group), 'sequences', suffix))
+            if removed:
+                basename = sep.join((str(group),'removed',suffix))
+            else:
+                basename = sep.join((str(group),'sequences',suffix))
         if sformat == 'fasta':
             basename = basename + '.fa' # Need to make more flexible eventually
         else:
             pass  # TO-DO!!!
-        filepath = os.path.join(self.out_path, basename)
+        filepath = os.path.join(self._out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
                 pass # DO SOMETHING
@@ -180,7 +213,7 @@ class TableWriter(BaseWriter):
             else:
                 tblsep = ','
         self._tblsep = tblsep
-        for obj in self.sp_object.return_ordered_seqs():
+        for obj in self._sp_object.return_ordered_seqs():
             header = obj.description
             group = obj._group # Problem to access directly?
             dist = obj._distance
@@ -221,14 +254,14 @@ class TableWriter(BaseWriter):
         suffix = config['ARGS']['suffix']  # default ''
         #assert isinstance(group, str) # this should eventually be a string!
         if (suffix == '') or (not isinstance(suffix, str)):
-            basename = sep.join(('scrollpy', 'table'))
+            basename = sep.join(('scrollpy','table'))
         else:  # It is a string
-            basename = sep.join(('scrollpy', 'table', suffix))
+            basename = sep.join(('scrollpy','table',suffix))
         if self._tblsep == ',':
             basename = basename + '.csv'
         else:
             basename = basename + '.txt' # Need to make more flexible eventually
-        filepath = os.path.join(self.out_path, basename)
+        filepath = os.path.join(self._out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
                 pass # DO SOMETHING

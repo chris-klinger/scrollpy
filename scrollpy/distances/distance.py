@@ -15,11 +15,12 @@ it is implemented, internal distance method can interface directly with
 this class without first having to write to a file(?)
 """
 
-import os,errno,re
+import os,errno,re,glob
 
 from Bio.Phylo import Applications
 from Bio.Application import ApplicationError
 
+from scrollpy import config
 
 class DistanceCalc:
     def __init__(self, method, cmd, model, inpath=None, outpath=None,
@@ -74,28 +75,50 @@ class DistanceCalc:
         """
         # Depending on method, delegate or handle
         if self.method == 'RAxML':
-            # Specify distance calculation
-            self.kwargs['-f'] = 'x'
-            # Convert in and out file paths to RAxML arguments
-            # Should eventually have a method to validate these
-            self.kwargs['-s'] = self.inpath
-            # RAxML is weird; if not curdir for outpath must specify using -w
+            # Should we run?
+            run = True
+            # Check if files are already present from previous run
             dirname, outname = os.path.split(self.outpath)
-            self.kwargs['-w'] = dirname
-            self.kwargs['-n'] = outname
-            # Change model input to a usable command
-            self.kwargs['-m'] = self._modify_model_name(self.model,'RAxML')
-            # If a nuc model is specified other than GTR, need to add to kwargs
-            if self.model in ['JC','K80','HKY85']:
-                arg_string = '--' + self.model
-                self.kwargs[arg_string] = ''  # just need to add the arg itself
-            # Finally, call command line
-            cmdline = Applications.RaxmlCommandline(
-                self.cmd, **self.kwargs)
-            #try:
-            stdout, stderr = cmdline() # Log stderr eventually
-            #except ApplicationError: # Raised if subprocess return code != 0
-            #    print("Failed to run RAxML") # TO-DO
+            if os.path.exists(
+                    os.path.join(
+                        dirname,
+                        ('RAxML_distances.' + outname),
+                        )
+                    ):  # Already present
+                if config['ARGS']['no_clobber'] == 'True':  # String
+                    run = False  # No need to run again
+                else:  # Delete files before re-running
+                    raxml_pattern = os.path.join(
+                            dirname,
+                            'RAxML*',
+                            )
+                    raxml_files = glob.glob(raxml_pattern)
+                    for rfile in raxml_files:
+                        os.remove(rfile)
+            if run:
+                # Specify distance calculation
+                self.kwargs['-f'] = 'x'
+                # Convert in and out file paths to RAxML arguments
+                # Should eventually have a method to validate these
+                self.kwargs['-s'] = self.inpath
+                # RAxML is weird; if not curdir for outpath must specify using -w
+                self.kwargs['-w'] = dirname
+                self.kwargs['-n'] = outname
+                # Change model input to a usable command
+                self.kwargs['-m'] = self._modify_model_name(self.model,'RAxML')
+                # If a nuc model is specified other than GTR, need to add to kwargs
+                if self.model in ['JC','K80','HKY85']:
+                    arg_string = '--' + self.model
+                    self.kwargs[arg_string] = ''  # just need to add the arg itself
+                # Finally, call command line
+                cmdline = Applications.RaxmlCommandline(
+                    self.cmd,
+                    **self.kwargs,
+                    )
+                #try:
+                stdout, stderr = cmdline() # Log stderr eventually
+                #except ApplicationError: # Raised if subprocess return code != 0
+                #    print("Failed to run RAxML") # TO-DO
         # TO-DO: write for others!
         elif self.method == 'Generic':
             pass # TO-DO

@@ -253,6 +253,7 @@ def main():
     run_options.add_argument("--dist-matrix",
             nargs = '?',
             choices = ["WAG", "LG", "JC"], # TO-DO
+            default = "LG",
             metavar = "Distance Matrix",
             help = (
                 "Specify a substitution matrix for distance calculations. If "
@@ -273,8 +274,8 @@ def main():
                 ))
     run_options.add_argument("--filter-method",  # TO-DO
             nargs = '?',
-            choices = ["one", "two"],
-            default = "one",
+            choices = ["zscore", "mad"],
+            default = "zscore",
             metavar = "Filtering Method",
             help = (
                 "HELP TEXT FOR FILTERING METHOD"
@@ -568,10 +569,12 @@ def main():
         #except:  # Dangerous; Change!!!
         #    print("Unexpected error when writing table file")
         # Write sequences, if requested
-        if args.seqout:  # User requested sequences
+        if args.seqout or args.filter_out:  # User requested sequences
             Writer = SeqWriter(
                     RunObj,    # object to use
                     args.out,  # specified output location
+                    args.seqout,  # Output sequences
+                    args.filter_out,  # Removed/filtered sequences
                     )
             #try:
             Writer.write()

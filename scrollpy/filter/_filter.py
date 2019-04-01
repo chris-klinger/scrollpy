@@ -39,7 +39,23 @@ class Filter:
 
     def __call__(self):
         """Filter and return"""
-        pass
+        # First, filter
+        if self._method == 'zscore':
+            self._create_lengths()
+            self._remove_by_zscore()
+        elif self._method == 'METHODHERE':
+            pass
+        # Then, return actual sequences remaining
+        #print()
+        #for k,slist in self._seq_dict.items():
+        #    print(k)
+        #    for v in slist:
+        #        print(v)
+        #print()
+        #for k,v in self._removed.items():
+        #    print(k)
+        #    print(v)
+        return (self._seq_dict,self._removed)
 
 
     def _create_lengths(self, ordered=False):
@@ -49,8 +65,10 @@ class Filter:
             for group,seq_objs in self._seq_dict.items():
                 for obj in seq_objs:
                     unordered.append([group,obj,len(obj)])
-                self._indices = sorted(unordered,
-                        key=lambda x:x[2])  # sort by sequence length
+                self._indices = sorted(
+                        unordered,
+                        key=lambda x:x[2],  # sort by sequence length
+                        )
                 self._lengths = [x[2] for x in self._indices]
         else:
             for group,seq_objs in self._seq_dict.items():
@@ -62,9 +80,14 @@ class Filter:
 
     def _remove_by_index(self, index):
         """Remove specified index item if possible"""
+        #print(self._indices)
         group = self._indices[index][0]
+        #print(group)
         if self._group_lengths_ok(group):
             obj = self._indices[index][1]
+            #print(obj)
+            #print(obj._id)
+            #print(obj.accession)
             # Add to 'removed'
             try:
                 self._removed[group].append(obj)
@@ -74,8 +97,16 @@ class Filter:
             # Delete from all other internals
             for l in (self._indices,self._lengths):
                 del l[index]
-            del self._indices
-            self._seq_dict[group].remove(obj)
+            #del self._indices
+            seq_list = self._seq_dict[group]
+            for i,SeqObj in enumerate(seq_list):
+                if SeqObj._id == obj._id:
+                    #print(i)
+                    #print(SeqObj)
+                    #print(obj)
+                    del seq_list[i]
+            #del self._seq_dict[group][index]
+            self._seq_dict[group] = seq_list
         else:
             raise ValueError  # Can't remove list item
 
@@ -97,17 +128,22 @@ class Filter:
         return False
 
 
-    def _recursive_remove(values, threshold, above=None):
+    def _recursive_remove(self, values, threshold, above=None):
         """Recursively remove from a list"""
         if not above:
             above = [v for v in values if v>=threshold]
         if not above:
+            #print("Out of values to remove")
             return
         else:
             try:
+                #print(values)
+                #print(above)
                 i = values.index(above[0])  # works even if two values are the same
+                #print(i)
                 self._remove_by_index(i)
                 del values[i]
+                del above[0]
                 self._recursive_remove(values, threshold, above)
             except ValueError:
                 pass  # print something?
@@ -116,7 +152,7 @@ class Filter:
     def _remove_by_zscore(self, threshold=None):
         """Calculates z-scores and removes all above a given threshold"""
         if not threshold:
-            threshold = 3
+            threshold = 2
         zscores = calculate_zscores(self._lengths)
         self._recursive_remove(zscores, threshold)
 
@@ -128,9 +164,9 @@ class Filter:
 
 def calculate_zscores(values):
     """Return an n-length list of z-scores"""
-    mean = mean(values)
+    smean = mean(values)
     s = std(values)
-    return [((abs(x-mean))/s) for x in values]
+    return [((abs(x-smean))/s) for x in values]
 
 
 def calculate_MAD(values):

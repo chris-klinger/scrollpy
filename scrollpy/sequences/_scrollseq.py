@@ -63,6 +63,9 @@ class ScrollSeq:
     def __eq__(self, other):
         return self._distance == other
 
+    def __len__(self):
+        return len(self.seq)
+
     def _write(self, file_obj, outfmt = "fasta"):
         """Writes internal sequence object as per Bio.SeqIO"""
         SeqIO.write(self._record, file_obj, outfmt)
@@ -149,3 +152,4 @@ class ScrollSeq:
     @seq.deleter
     def seq(self):
         raise AttributeError
+

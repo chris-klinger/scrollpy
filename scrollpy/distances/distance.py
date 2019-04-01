@@ -92,10 +92,10 @@ class DistanceCalc:
             # Finally, call command line
             cmdline = Applications.RaxmlCommandline(
                 self.cmd, **self.kwargs)
-            try:
-                stdout, stderr = cmdline() # Log stderr eventually
-            except ApplicationError: # Raised if subprocess return code != 0
-                print("Failed to run RAxML") # TO-DO
+            #try:
+            stdout, stderr = cmdline() # Log stderr eventually
+            #except ApplicationError: # Raised if subprocess return code != 0
+            #    print("Failed to run RAxML") # TO-DO
         # TO-DO: write for others!
         elif self.method == 'Generic':
             pass # TO-DO

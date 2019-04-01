@@ -74,9 +74,9 @@ class ScrollPy:
         self._seq_dict = {}
         self._ordered_seqs = []
         self._groups = []
-        self._group_counter = 1 # (possibly unused) counter for group IDs
-        self._removed = [] # list of ScrollSeq objects removed
-        self._id_counter = 1 # counter for creating unique sequence ids
+        self._group_counter = 1  # (possibly unused) counter for group IDs
+        self._removed = {}       # dict of ScrollSeq objects removed
+        self._id_counter = 1     # counter for creating unique sequence ids
         self._collections = []
         self._remove_tmp = False
 

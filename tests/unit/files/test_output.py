@@ -9,6 +9,7 @@ from configparser import DuplicateSectionError
 
 from scrollpy.files import output
 from scrollpy import config
+from scrollpy import load_config_file
 from scrollpy.scrollsaw._scrollpy import ScrollPy
 
 
@@ -41,11 +42,23 @@ class TestSeqWriterOneFile(unittest.TestCase):
     def setUp(self):
         """Create necessary objects"""
         # Make dir
-        self.tmpdir = os.path.join(data_dir, 'out-tmp')
+        self.tmpdir = os.path.join(data_dir, 'out-seq')
         try:
             os.makedirs(self.tmpdir)
         except FileExistsError:
+            print("Failed to make target directory")
             pass
+        # Populate ARGS values of config file
+        load_config_file()
+        try:
+            config.add_section('ARGS')
+        except DuplicateSectionError:
+            pass
+        # Now provide sufficient arg defaults
+        config['ARGS']['filter'] = 'False'
+        config['ARGS']['filter_method'] = 'zscore'
+        config['ARGS']['dist_matrix'] = 'LG'
+        config['ARGS']['no_clobber'] = 'True'
         # Make ScrollPy object
         # CHANGE ME TO CHANGE TEST
         #######################################
@@ -57,7 +70,8 @@ class TestSeqWriterOneFile(unittest.TestCase):
                 self.tmpdir, #target dir
                 'Mafft', # align_method
                 'RAxML', # dist_method
-                self.inpath)
+                (self.inpath,),
+                )
         self.sp() # Run internal methods
         # Make SeqWriter object
         self.writer = output.SeqWriter(
@@ -115,6 +129,7 @@ class TestSeqWriterOneFile(unittest.TestCase):
         config.set('ARGS', 'no-clobber', 'False')
         config.set('ARGS', 'filesep', '_')
         config.set('ARGS', 'suffix', 'awesome')
+        config.set('ARGS', 'seqfmt', 'fasta')
         # Call and test
         outpath = self.writer._get_filepath("group")
         self.assertEqual(outpath,
@@ -132,7 +147,7 @@ class TestTableWriter(unittest.TestCase):
     def setUp(self):
         """Create necessary objects"""
         # Make dir
-        self.tmpdir = os.path.join(data_dir, 'out-tmp')
+        self.tmpdir = os.path.join(data_dir, 'out-table')
         try:
             os.makedirs(self.tmpdir)
         except FileExistsError:

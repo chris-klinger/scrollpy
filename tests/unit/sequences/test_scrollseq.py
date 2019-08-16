@@ -59,7 +59,7 @@ class TestScrollSeq(unittest.TestCase):
     # Test accessing and altering accession (SeqRecord.id)
     def test_accession_access(self):
         """Tests initial setting/retrieval through property"""
-        print(self.seq_object._record.id)
+        #print(self.seq_object._record.id)
         self.assertEqual(self.seq_object.accession, "NP_001025178.1")
 
     def test_accession_setting(self):

@@ -24,12 +24,12 @@ class TestDistance(unittest.TestCase):
     def test_raxml_egadez(self):
         """Tests raxml call if data is appropriate"""
         method = "RAxML"
-        cmd = "/Users/cklinger/src/standard-RAxML-8.1.17/raxmlHPC-AVX"
+        cmd = "raxmlHPC-PTHREADS-AVX"
         outpath = os.path.join(self.tmpdir, 'test')
         options = {'-f':'x', # calculate distance
                 '-p':12345, # parsimony seed
                 '-m':'PROTGAMMALG'} # LG model
-        raxml_dist = distance.DistanceCalc(method, cmd, self.inpath,
+        raxml_dist = distance.DistanceCalc(method, cmd, 'LG', self.inpath,
                 outpath, **options)
         raxml_dist()
         # To test, make sure file is not empty

@@ -3,7 +3,10 @@ Tests /sequences/_collection.py
 """
 
 import os, unittest, shutil
+from configparser import DuplicateSectionError
 
+from scrollpy import config
+from scrollpy import load_config_file
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._collection import ScrollCollection
 from scrollpy.files import sequence_file as sf
@@ -18,6 +21,19 @@ class TestScrollCollection(unittest.TestCase):
 
     def setUp(self):
         """Creates a new ScrollCollection Object"""
+        # Populate ARGS values of config file
+        load_config_file()
+        try:
+            config.add_section('ARGS')
+        except DuplicateSectionError:
+            pass
+        # Now provide sufficient arg defaults
+        config['ARGS']['filter'] = 'False'
+        config['ARGS']['filter_method'] = 'zscore'
+        config['ARGS']['dist_matrix'] = 'LG'
+        config['ARGS']['no_clobber'] = 'True'
+
+
         ids = (1,2,3,4)
         infile = os.path.join(data_dir, 'Hsap_AP1G_FourSeqs.fa')
         records = sf._get_sequences(infile)

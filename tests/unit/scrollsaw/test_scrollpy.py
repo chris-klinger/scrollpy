@@ -3,9 +3,12 @@ Module containging test code for the main ScrollPy object.
 """
 
 import os, unittest, shutil
+from configparser import DuplicateSectionError
 
 from Bio import SeqIO
 
+from scrollpy import config
+from scrollpy import load_config_file
 from scrollpy.scrollsaw._scrollpy import ScrollPy
 
 
@@ -24,6 +27,17 @@ class TestScrollPyOneFile(unittest.TestCase):
             os.makedirs(self.tmpdir)
         except FileExistsError:
             pass
+        # Populate ARGS values of config file
+        load_config_file()
+        try:
+            config.add_section('ARGS')
+        except DuplicateSectionError:
+            pass
+        # Now provide sufficient arg defaults
+        config['ARGS']['filter'] = 'False'
+        config['ARGS']['filter_method'] = 'zscore'
+        config['ARGS']['dist_matrix'] = 'LG'
+        config['ARGS']['no_clobber'] = 'True'
 
         # CHANGE ME TO CHANGE TEST
         #######################################
@@ -37,7 +51,8 @@ class TestScrollPyOneFile(unittest.TestCase):
                 self.tmpdir, # target_dir
                 'Mafft', # align_method
                 'RAxML', # dist_method
-                self.inpath)
+                (self.inpath,),
+                )
 
 
     # Testing Utility function(s)
@@ -178,7 +193,8 @@ class TestScrollPyTwoFiles(unittest.TestCase):
                 self.tmpdir, # target_dir
                 'Mafft', # align_method
                 'RAxML', # dist_method
-                *(self.inpath1,self.inpath2))
+                (self.inpath1,self.inpath2),
+                )
 
 
     def test_infile_parsing(self):
@@ -234,10 +250,11 @@ class TestScrollPyThreeFiles(unittest.TestCase):
                 self.tmpdir, # target_dir
                 'Mafft', # align_method
                 'RAxML', # dist_method
-                *(self.inpath1,
+                (self.inpath1,
                     self.inpath2,
                     self.inpath3,
-                ))
+                ),
+                )
 
 
     def test_infile_parsing(self):

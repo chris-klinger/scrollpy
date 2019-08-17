@@ -46,15 +46,6 @@ class Filter:
         elif self._method == 'METHODHERE':
             pass
         # Then, return actual sequences remaining
-        #print()
-        #for k,slist in self._seq_dict.items():
-        #    print(k)
-        #    for v in slist:
-        #        print(v)
-        #print()
-        #for k,v in self._removed.items():
-        #    print(k)
-        #    print(v)
         return (self._seq_dict,self._removed)
 
 
@@ -80,14 +71,9 @@ class Filter:
 
     def _remove_by_index(self, index):
         """Remove specified index item if possible"""
-        #print(self._indices)
         group = self._indices[index][0]
-        #print(group)
         if self._group_lengths_ok(group):
             obj = self._indices[index][1]
-            #print(obj)
-            #print(obj._id)
-            #print(obj.accession)
             # Add to 'removed'
             try:
                 self._removed[group].append(obj)
@@ -97,15 +83,10 @@ class Filter:
             # Delete from all other internals
             for l in (self._indices,self._lengths):
                 del l[index]
-            #del self._indices
             seq_list = self._seq_dict[group]
             for i,SeqObj in enumerate(seq_list):
                 if SeqObj._id == obj._id:
-                    #print(i)
-                    #print(SeqObj)
-                    #print(obj)
                     del seq_list[i]
-            #del self._seq_dict[group][index]
             self._seq_dict[group] = seq_list
         else:
             raise ValueError  # Can't remove list item
@@ -137,10 +118,7 @@ class Filter:
             return
         else:
             try:
-                #print(values)
-                #print(above)
                 i = values.index(above[0])  # works even if two values are the same
-                #print(i)
                 self._remove_by_index(i)
                 del values[i]
                 del above[0]

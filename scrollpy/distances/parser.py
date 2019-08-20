@@ -44,12 +44,16 @@ def _parse_raxml_distances(file_path):
     for line in non_blank_lines(file_path): # Generator
         n1,n2,d = line.strip('\n').split()
         for key in n1,n2:
+            #try:
+            #    # Cast as INT because using ScrollSeq.id_num for now
+            #    # UPDATE eventually if more than one usage case arises
+            #    distances[int(key)] += float(d)
+            #except KeyError: # first time seeing the key
+            #    distances[int(key)] = float(d)
             try:
-                # Cast as INT because using ScrollSeq.id_num for now
-                # UPDATE eventually if more than one usage case arises
-                distances[int(key)] += float(d)
-            except KeyError: # first time seeing the key
-                distances[int(key)] = float(d)
+                distances[key] += float(d)
+            except KeyError:
+                distances[key] = float(d)
     return distances
 
 def _parse_phyml_distances(file_path):

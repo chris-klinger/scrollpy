@@ -86,7 +86,7 @@ class SeqWriter(BaseWriter):
                         )
         if self._removed:  # Repeat a second time for removed sequences
             removed_list = self._filter(removed=True)
-            print(removed_list)
+            #print(removed_list)
             if removed_list:  # Not empty; filtering might not remove any
                 for group,seqs in removed_list:
                     outfile = self._get_filepath(

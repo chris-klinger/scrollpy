@@ -108,9 +108,7 @@ class ScrollPy:
         try:
             # filter for length, if requested
             if self._pre_filter:
-                self._filter_sequences(
-                        self._filter_method,  # This should already by specified
-                        )
+                self._filter_sequences()
             # split sequences into smaller groups, if requested
             if self._pre_split:
                 pass # TO-DO
@@ -218,7 +216,7 @@ class ScrollPy:
         return scroll_seqs
 
 
-    def _filter_sequences(self, filter_method):
+    def _filter_sequences(self):
         """Calls the relevant filter_method on input sequences.
 
         Args:

@@ -95,10 +95,12 @@ class ScrollCollection:
     def _get_alignment(self):
         """Convenience function"""
         msa_path = self._get_outpath('align')
-        aligner = align.Aligner(self._align_method,
+        aligner = align.Aligner(
+                self._align_method,
                 config['ALIGNMENT'][self._align_method], # Cmd to execute
                 inpath = self._seq_path,
-                outpath = msa_path)
+                outpath = msa_path,
+                )
         aligner() # Actually perform alignment; may raise ApplicationError
         self._align_path = msa_path # No errors -> assign to self for later
 
@@ -134,7 +136,7 @@ class ScrollCollection:
         for seq_obj in self.seq_list:
             #print(seq_obj.id_num)
             # Seqs written by ID, can modify if written by acc/desc later
-            seq_obj += self._dist_dict[seq_obj.id_num]
+            seq_obj += self._dist_dict[str(seq_obj.id_num)]
 
     def _get_outpath(self, out_type):
         """A function to return full paths to files based on what the

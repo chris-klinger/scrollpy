@@ -5,6 +5,7 @@ Module to hold utility functions.
 import os
 import sys
 import errno
+import itertools
 
 
 def file_exists_user_spec(file_path):
@@ -171,4 +172,46 @@ def split_input(string, chunk_size=80):
     for i in range(0, num_chunks):
         output.append(string[chunk_size*i:chunk_size*(i+1)])
     return output
+
+
+def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
+    """Recursively flatten a list of tuple identifiers to find all those that
+    are at least <threshold> percent identical to at least one other member of
+    the same set.
+    """
+    # Recurred versions or initialize new set
+    old_set_of_tuples = old_set_of_tuples if old_set_of_tuples else set()
+    merged = merged if merged else set()
+    # Basecase 1
+    if len(set_of_tuples) == 1:
+        return set_of_tuples
+    elif set_of_tuples == old_set_of_tuples:
+        return set_of_tuples
+    else:  # Do some work
+        new_set_of_tuples = set()
+        for tup1,tup2 in itertools.combinations(
+                set_of_tuples,
+                2,  # Pairwise combinations
+                ):
+            merge = False
+            for header1,header2 in itertools.product(tup1,tup2):
+                if header1 == header2:
+                    merge = True
+                    break
+            if merge:
+                new_tup = set()
+                for tup in (tup1,tup2):
+                    merged.add(tuple(sorted(tup)))  # Sort to avoid redundancy
+                    try:
+                        new_set_of_tuples.remove(tup)
+                    except KeyError:
+                        pass  # Not already in new set
+                    for item in tup:
+                        new_tup.add(item)
+                new_set_of_tuples.add(tuple(sorted(new_tup)))
+            else:
+                for tup in (tup1,tup2):
+                    if not tup in merged:
+                        new_set_of_tuples.add(tuple(sorted(tup)))
+        return decompose_sets(new_set_of_tuples,set_of_tuples,merged)  # Recur
 

@@ -5,6 +5,7 @@ return a dictionary of header:sequence pairs
 
 from scrollpy.util._util import non_blank_lines
 
+from Bio import AlignIO
 
 def parse_alignment_file(file_path, file_type):
     """Opens and parses an alignment file depending on file type.
@@ -21,7 +22,7 @@ def parse_alignment_file(file_path, file_type):
         A dict of <header> : <sequence> pairs
     """
     try:
-        alignment =  Bio.AlignIO.read(file_path)
+        alignment =  AlignIO.read(file_path,file_type)
     except ValueError:  # Not parsable
         pass  # Try to parse on our own eventually
     # Eventually should get down to here

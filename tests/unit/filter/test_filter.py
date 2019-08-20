@@ -11,7 +11,7 @@ from numpy import mean,median,std
 from numpy import append as np_append
 from numpy.random import seed,randn
 
-from scrollpy.filter._filter import Filter
+from scrollpy.filter._filter import Filter,LengthFilter,IdentityFilter
 
 # Need to mock some data
 class MockSeq:

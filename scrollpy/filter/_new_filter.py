@@ -11,12 +11,18 @@ object assuming the group has enough members to support removal
 
 """
 
+import os
+import contextlib
+import itertools
 
 # NumPy will be installed anyway...
 from numpy import mean,median,std
 
 
 from scrollpy import config
+from scrollpy.alignments import align,parser
+from scrollpy.files import sequence_file as sf
+from scrollpy.util._util import decompose_sets
 
 
 class Filter:
@@ -35,7 +41,7 @@ class Filter:
 
     def __init__(self, seq_dict, **kwargs):
         self._seq_dict = seq_dict
-        for setting in ("filter_method","by_group","outdir"):
+        for setting in ("filter_method","filter_by_group","filter_threshold"):
             try:
                 value = kwargs[setting]
             except KeyError:
@@ -73,7 +79,6 @@ class Filter:
             removal_indices = filterer(
                     seq_list,
                     self._filter_method,
-                    self._outdir,
                     )
             self._to_remove.extend(removal_indices)
         # Then actually remove stuff
@@ -83,11 +88,12 @@ class Filter:
 
 
     def _remove_by_list(self):
-        """Given a list of (<group>,<SeqObj>,<score>) tuples to remove,
+        """Given a list of (<SeqObj>,<score>) tuples to remove,
         try to remove each from internal dict and add to removal dict;
         fails only if too many entries for a given group exist.
         """
-        for group,r_obj,score in self._to_remove:  # Assume subclass returns sorted
+        for r_obj,score in self._to_remove:  # Assume subclass returns sorted
+            group = self._get_group_for_seq_obj(r_obj)
             if self._group_lengths_ok(group):  # Still enough objects in group
                 # Add to removal dict
                 try:
@@ -103,6 +109,16 @@ class Filter:
                 self._seq_dict[group] = seq_list  # Replace old list
             else:
                 pass  # Log something here
+
+
+    def _get_group_for_seq_obj(self, seq_obj):
+        """Iters through internal dict until found"""
+        group=None
+        for group,objs in self._seq_dict.items():
+            if seq_obj in objs:
+                group=group
+                break
+        return group
 
 
     def _group_lengths_ok(self, group):
@@ -122,14 +138,13 @@ class GenericFilter:
         a single list of (<group>,<SeqObj>,<value>) members for use in
         parent classes removal methods.
     """
-    def __init__(self, group_name, seq_list, method, **kwargs):
-        self._name = group_name
+    def __init__(self, seq_list, method, **kwargs):
         self._seq_list = seq_list
         self._method = method
         try:
-            self._filter_threshold = kwargs["filter_threshold"]
+            self._filter_score = kwargs["filter_score"]
         except KeyError:
-            self._filter_threshold = config["ARGS"]["filter_method"]
+            self._filter_score = config["ARGS"]["filter_score"]
         # Internal defaults
         self._indices = []
         self._to_remove = []
@@ -161,7 +176,7 @@ class LengthFilter(GenericFilter):
         """Populate internal _lengths and _indices"""
         unordered = []
         for seq_obj in self._seq_list:  # ScrollSeq objects
-            unordered.append([obj,len(obj)])
+            unordered.append([seq_obj,len(seq_obj)])
         if ordered:  # Some methods require sorted lengths
             self._indices = sorted(
                     unordered,
@@ -174,16 +189,16 @@ class LengthFilter(GenericFilter):
 
     def _get_removal_indices(self, values):
         """Add to internal list if values are above a threshold"""
-        above = [(i,v) for i,v in enumerate(values) if v>=self._filter_threshold]
-        for i,z-score in above:  # Index matches the original length and indices lists
+        above = [(i,v) for i,v in enumerate(values) if v>=self._filter_score]
+        for i,zscore in above:  # Index matches the original length and indices lists
             seq_obj,length = self._indices[i]
-            self._to_remove.append(
-                    self._name,  # Name of the actual group
+            self._to_remove.append((
                     seq_obj,
-                    z-score,  # Scoring metric
-                    )
-        self._to_remove = sorted(self._to_remove,
-                lambda x:x[2],
+                    zscore,  # Scoring metric
+                    ))
+        self._to_remove = sorted(
+                self._to_remove,
+                key=lambda x:x[1],
                 reverse=True,  # Highest z-score removed first; furthest from average
                 )
 
@@ -198,8 +213,6 @@ class LengthFilter(GenericFilter):
 
     def _remove_by_zscore(self):
         """Calculates z-scores and removes all above a given threshold"""
-        if not threshold:
-            threshold = 2
         zscores = calculate_zscores(self._lengths)
         self._get_removal_indices(zscores)
 
@@ -218,6 +231,20 @@ class LengthFilter(GenericFilter):
 class IdentityFilter(GenericFilter):
     """Subclass for filtering by inter-sequence similarity.
     """
+    def __init__(self, seq_list, method, outdir=None, **kwargs):
+        super().__init__(seq_list, method, **kwargs)
+        if not outdir:
+            import tempfile
+            tmp_dir = tempfile.TemporaryDirectory()
+            self._target_dir = tmp_dir.name  # TO-DO: give user option to keep?
+        else:
+            self._target_dir = outdir
+        try:
+            self._align_method = kwargs['align_method']
+        except KeyError:
+            self._align_method = config['ARGS']['align']
+
+
     def __call__(self):
         """Create a list of tuples and then reduce down to those to be
         removed; add to internal list and then return.
@@ -228,6 +255,9 @@ class IdentityFilter(GenericFilter):
         self._align_seqs()
         # Calculate identities and objects to remove
         self._remove_by_identity()
+        # Remove temporary directory, if it still exists
+        with contextlib.suppress(FileNotFoundError):
+            self._target_dir.cleanup()
         # Return values to parent object
         return self._to_remove
 
@@ -244,7 +274,7 @@ class IdentityFilter(GenericFilter):
         """Calls alignment program on temporary sequence file
         """
         msa_path = self._get_filter_outpath('align')
-        alignger = align.Aligner(
+        aligner = align.Aligner(
                 self._align_method,
                 config['ALIGNMENT'][self._align_method],  # Cmd
                 inpath = self._seq_path,
@@ -254,11 +284,12 @@ class IdentityFilter(GenericFilter):
         self._align_path = msa_path
 
 
-    def _build_identity_list(self):
-        """Parses alignment file and builds up a list of sequences that are at
+    def _build_identity_set(self):
+        """Parses alignment file and builds up a set of sequences that are at
         least <threshold> percent identical to each other.
         """
-        self._align_dict = parse_alignment_file(self._align_path,
+        self._align_dict = parser.parse_alignment_file(
+                self._align_path,
                 file_type="fasta",  # Just for now -> make more modular eventualy
                 )
         identity_set = set()
@@ -267,15 +298,21 @@ class IdentityFilter(GenericFilter):
                 2,  # Pairwise
                 ):
             zipped = zip(self._align_dict[header1], self._align_dict[header2])
-            identical = sum((1 for res1,res2 in zipped if res1==res2))
-            total = sum((1 for res1,res2 in zipped if not res1=='-' if not res2=='-'))
+            idents,totals = [],[]
+            for res1,res2 in zipped:
+                if res1!='-' and res2!='-':
+                    totals.append(1)
+                    if res1==res2:
+                        idents.append(1)
+            identical = sum(idents)
+            total = sum(totals)
             if identical > total:
                 raise ValueError  # Should never happen
             try:
                 percent_identical = identical/total * 100
             except ZeroDivisionError:  # No aligned region
                 percent_identical = 0
-            if percent_identical >= self._filter_threshold:
+            if percent_identical >= self._filter_score:
                 identity_set.add((header1,header2))  # Add as a tuple
         return identity_set
 
@@ -284,77 +321,30 @@ class IdentityFilter(GenericFilter):
         """Recursively decompose identical tuple pairs and pick all IDs out of
         indices, add them to self._to_remove.
         """
-        inital_set = self._build_identity_list()
-        tuples_to_remove = _decompose_sets(initial_set)
+        initial_set = self._build_identity_set()
+        tuples_to_remove = decompose_sets(initial_set)
         for_removal = []
         for tup in tuples_to_remove:
-            for seq_id in tup:
-                seq_obj = [seq_obj for seq_obj in self._seq_list if seq_obj._id == seq_id]
-                for_removal.append(
-                        self._name,  # Group
-                        seq_obj,
-                        len(seq_obj),
-                        )
-        self._to_remove = sorted(for_removal,
-                key = lambda x:x[2],  # Sort by length
-                reverse=True,  # Longest sequences first -> TO-DO, make changeable
-                )[1:]  # Don't remove first entry
-
-
-    @staticmethod
-    def _decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
-        """Recursively flatten a list of tuple identifiers to find all those that
-        are at least <threshold> percent identical to at least one other member of
-        the same set.
-        """
-        # Recurred versions or initialize new set
-        old_set_of_tuples = old_set_of_tuples if old_set_of_tuples else set()
-        merged = merged if merged else set()
-        # Basecase 1
-        if len(set_of_tuples) == 1:
-            return set_of_tuples
-        elif set_of_tuples == old_set_of_tuples:
-            return set_of_tuples
-        else:  # Do some work
-            new_set_of_tuples = set()
-            for tup1,tup2 in itertools.combinations(
-                    set_of_tuples,
-                    2,  # Pairwise combinations
-                    ):
-                merge = False
-                for header1,header2 in itertools.product(tup1,tup2):
-                    if header1 == header2:
-                        merge = True
-                        break
-                if merge:
-                    new_tup = set()
-                    for tup in (tup1,tup2):
-                        merged.add(tuple(sorted(tup)))  # Sort to avoid redundancy
-                        try:
-                            new_set_of_tuples.remove(tup)
-                        except KeyError:
-                            pass  # Not already in new set
-                        for item in tup:
-                            new_tup.add(item)
-                    new_set_of_tuples.add(tuple(sorted(new_tup)))
-                else:
-                    for tup in (tup1,tup2):
-                        if not tup in merged:
-                            new_set_of_tuples.add(tuple(sorted(tup)))
-            return _decompose_sets(new_set_of_tuples,set_of_tuples,merged)  # Recur
+            pairs = [(seq_obj,len(seq_obj)) for seq_obj in self._seq_list if seq_obj._id in tup]
+            for pair in sorted(
+                    pairs,
+                    key=lambda x:x[1],  # Sort by length
+                    reverse=True,  # Longest first
+                    )[1:]:  # Keep first entry
+                self._to_remove.append(pair)
 
 
     def _get_filter_outpath(self, out_type):
         """Similar to Collection._get_outpath; returns a complete filepath
         based on the type of output required and self._name to avoid clobbering
         """
-        basename = str(self._name)
+        basename = "filter_seqs"
         if out_type == 'seqs':
             outfile = basename + '.fa'
-            outpath = os.path.join(self._outdir, outfile)
+            outpath = os.path.join(self._target_dir, outfile)
         elif out_type == 'align':
             outfile = basename + '.mfa'
-            outpath = os.path.join(self._outdir, outfile)
+            outpath = os.path.join(self._target_dir, outfile)
         else:
             raise ValueError # Is this necessary?
         return outpath

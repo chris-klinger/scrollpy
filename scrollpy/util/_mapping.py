@@ -24,6 +24,7 @@ from scrollpy.files import tree_file as tf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._leafseq import LeafSeq
 from scrollpy.util._util import non_blank_lines
+from scrollpy.util._align import affine_align,simple_score
 
 
 class Mapping:
@@ -103,14 +104,15 @@ class Mapping:
                     self.infmt,
                     )
             for record in records:
+                desc = record.description
                 try:
-                    self._records[group].append(record.description)
+                    self._records[group].append(desc)
                 except KeyError:
                     self._records[group] = []
-                    self._records[group].append(record.description)
+                    self._records[group].append(desc)
                 # Keep flat objects as well
                 self._records.append(record)
-                self._seq_descriptions.append(record.description)
+                self._seq_descriptions.append(desc)
 
 
     def _unique_group_name(group, counter=1, seen=set()):
@@ -168,6 +170,14 @@ class Mapping:
     def _create_mapping_from_seqs(self):
         """Alias internal records dict as self._mapping"""
         self._mapping = self._records  # Just alias
+
+
+    def _create_mapping_from_tree(self):
+        """Simple mapping, one group and all tree labels"""
+        group = os.path.basename(self._treefile).split('.',1)[0]
+        if not len(group) > 0:  # This should never happen in reality
+            raise ValueError  # Mapping cannot be completed
+        self._mapping[group] = self._leaf_names  # Alias leaf labels
 
 
     def _create_seq_dict(self):
@@ -271,5 +281,27 @@ def get_best_name_match(target_name, name_set):
             if len(name) == len(target_name):
                 pairs.append((target_name,name))
             else:  # Harder, try to align
-                pass
+                aligned1,aligned2 = affine_align(
+                        seq1=target_name,
+                        seq2=name,
+                        score_func=simple_score,
+                        )
+                pairs.append((aligned1,aligned2))
+        # Go through each
+        _,best_name = compare_pairs(pairs)
+        return best_name
+
+
+def compare_pairs(seq_pairs):
+    """Returns the highest scoring pair among pairs"""
+    best_pair = None
+    high_score = 0
+    for s1,s2 in seq_pairs:
+        score = 0
+        for r1,r2 in zip(s1,s2):  # Same length; pairwise comp
+            score += simple_score(r1,r2)
+        if score > high_score:
+            high_score = score
+            best_pair = (s1,s2)
+    return best_pair
 

@@ -20,17 +20,15 @@ class ScrollSeq:
 
     Args:
         id_num (int): Unique ID number to assign to instance
-        infile (str): full path to file of origin
         group (str): group to which the sequence belongs
         SeqRecord (obj): BioPython object (default: None)
     """
-    def __init__(self, id_num, infile, group, SeqRecord=None):
+    def __init__(self, id_num, group, seq_record=None):
             #accession=None, name=None, description=None, seq=None): # property attrs
         self._id = id_num
-        self._infile = infile
         self._group = group
         self._distance = 0.0 # Initialize float counter for distance
-        self._record = SeqRecord
+        self._record = seq_record
         # All remaining attributes are internal properties
         #self._accession = accession
         #self._name = name

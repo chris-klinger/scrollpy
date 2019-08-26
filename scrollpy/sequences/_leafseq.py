@@ -24,9 +24,10 @@ class LeafSeq:
     def __init__(self, id_num, group, tree_node, seq_obj=None):
         self._id = id_num
         self._group = group
-        self._distance = 0.0  # Initialize float counter for distance
         self._node = tree_node
         self._seq = seq_obj  # Can be None
+        # Internal defaults
+        self._distance = 0.0  # Initialize float counter for distance
 
 
     def __str__(self):

@@ -147,6 +147,7 @@ def non_blank_lines(file_handle):
     """
     with open(file_handle,'r') as i:
         for line in i:
+            line = line.strip()
             if line: # blank lines are not truthy
                 yield line
 

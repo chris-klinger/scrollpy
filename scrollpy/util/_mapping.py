@@ -86,7 +86,7 @@ class Mapping:
         if self._duplicates:
             pass  # Do something!!!
         # Return seq dict
-        return self._seq_dict()
+        return self._seq_dict
 
 
     def _parse_infiles(self):
@@ -219,7 +219,7 @@ class Mapping:
         else:
             matched_seq = get_best_name_match(label, self._seq_descriptions)
             if matched_seq in self._found_seqs:
-                raise ValueError  # Indicates duplicate
+                raise ValueError  # Indicates duplicate; replace with specific exception?
             # Otherwise, get associated record by index
             index = self._seq_descriptions.index(matched_seq)
             record = self._record_list[index]
@@ -242,7 +242,7 @@ class Mapping:
         else:
             matched_leaf = get_best_name_match(label, self._leaf_names)
             if matched_leaf in self._found_leaves:
-                raise ValueError
+                raise ValueError # Indicates duplicate; replace with specific exception?
             # Otherwise, get associated node by index
             index = self._leaf_names.index(matched_leaf)
             node = self._leaves[index]

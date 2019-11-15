@@ -45,12 +45,12 @@ class Mapping:
         self._treefile = treefile
         self._mapfile = mapfile
         # Optional vars or in config
-        for var in _config_vars:
+        for var in self._config_vars:
             try:
                 value = kwargs[var]
             except KeyError:
                 value = configs['ARGS'][var]
-            self.setattr(var, value)
+            setattr(self, var, value)
         # Internal counter
         self._counter = 1
         # Internal defaults
@@ -89,18 +89,21 @@ class Mapping:
         return self._seq_dict
 
 
-    def _parse_infiles(self):
+    def _parse_infiles(self, _test=False):
         """Parse files into record objects"""
         for filepath in self._infiles:
             # Get group from filename
-            group = os.path.basename(file_path).split('.',1)[0]
+            group = os.path.basename(filepath).split('.',1)[0]
             if not len(group) > 0:  # This should never happen in reality
                 raise ValueError  # Mapping cannot be completed
             # Filepaths are unique, but group names are not guaranteed to be
-            group = _unique_group_name(group)
+            if _test:
+                group = _unique_group_name(group, seen={})
+            else:
+                group = _unique_group_name(group)
             # Get SeqRecords using BioPython
             records = sf._get_sequences(
-                    file_path,
+                    filepath,
                     self.infmt,
                     )
             for record in records:
@@ -111,31 +114,8 @@ class Mapping:
                     self._records[group] = []
                     self._records[group].append(desc)
                 # Keep flat objects as well
-                self._records.append(record)
+                self._record_list.append(record)
                 self._seq_descriptions.append(desc)
-
-
-    def _unique_group_name(group, counter=1, seen=set()):
-        """Utility function to ensure group names are unique.
-
-        Args:
-            group (str): group name; must be hashable
-
-        Returns:
-            unique group name
-        """
-        group = str(group)  # In case it is an int
-        if group not in seen
-            seen.add(group)
-            return group
-        else:
-            if counter == 1: # First time, add
-                group = group + '.' + str(counter)
-            if counter > 1:
-                group_basename = group.split('.',1)[0] # In case it is an int
-                group = group_basename + '.' + str(counter) # <group>.<num>
-            counter += 1
-            return _unique_group_name(group, counter)
 
 
     def _parse_treefile(self):
@@ -256,6 +236,34 @@ class Mapping:
                     )
 
 
+def _unique_group_name(group, seen={}):
+        """Utility function to ensure group names are unique.
+
+        Args:
+            group (str): group name; must be hashable
+
+        Returns:
+            unique group name
+        """
+        group = str(group)  # In case it is an int
+        if group not in seen.keys():
+            seen[group] = 1
+            return group
+        else:
+            # Copy group var before rest of else block changes it
+            orig_group = group
+            counter = seen[group]
+            if counter == 1: # First time, add
+                group = group + '.' + str(counter)
+            elif counter > 1:
+                group_basename = group.split('.',1)[0] # In case it is an int
+                group = group_basename + '.' + str(counter) # <group>.<num>
+            counter += 1
+            # Update counter for the original group name only!
+            seen[orig_group] = counter
+            return _unique_group_name(group)
+
+
 def get_best_name_match(target_name, name_set):
     """Find the best match between target_name and each name in a list.
 
@@ -276,20 +284,38 @@ def get_best_name_match(target_name, name_set):
     if target_name in name_set:
         return target_name
     else:  # Harder, find best match overall
-        pairs = []
-        for name in name_set:
-            if len(name) == len(target_name):
-                pairs.append((target_name,name))
-            else:  # Harder, try to align
-                aligned1,aligned2 = affine_align(
-                        seq1=target_name,
-                        seq2=name,
-                        score_func=simple_score,
-                        )
-                pairs.append((aligned1,aligned2))
+        pairs = _make_aligned_seq_pairs(target_name, name_set)
         # Go through each
         _,best_name = compare_pairs(pairs)
         return best_name
+
+
+def _make_aligned_seq_pairs(target_name, name_set):
+    """Creates a list of aligned names for comparison.
+
+    Pairs are left as-is if they are the same length; otherwise, they
+    are aligned using a simple identity-based metric.
+
+    Args:
+        target_name (str): name to match/align to
+
+        name_set (set): all possible names to search
+
+    Returns:
+        a list of matched/aligned names for comparison
+    """
+    pairs = []
+    for name in name_set:
+        if len(name) == len(target_name):
+            pairs.append((target_name,name))
+        else:  # Harder, try to align
+            aligned1,aligned2 = affine_align(
+                    seq1=target_name,
+                    seq2=name,
+                    score_func=simple_score,
+                    )
+            pairs.append((aligned1,aligned2))
+    return pairs
 
 
 def compare_pairs(seq_pairs):

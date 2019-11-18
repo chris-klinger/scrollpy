@@ -138,8 +138,11 @@ class Mapping:
         Returns:
             a mapping dict of group:[<labels>] pairs
         """
-        for line in non_blank_lines(self._map_file):
+        for line in non_blank_lines(self._mapfile):
+            line = line.strip('\n')  # Remove newlines
             map_id,group = line.split('\t')
+            map_id = map_id.rstrip()  # Trailing whitespace
+            group = group.rstrip()  # Trailing whitespace
             try:
                 self._mapping[group].append(map_id)
             except KeyError:

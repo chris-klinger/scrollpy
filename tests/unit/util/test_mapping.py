@@ -364,9 +364,7 @@ class TestMappingTreeFile(unittest.TestCase):
 
     def test_parse_treefile(self):
         """Tests parsing a single tree file"""
-        with warnings.catch_warnings():  # Parser raises warning
-            warnings.simplefilter("ignore")
-            self.mapping._parse_treefile()
+        self.mapping._parse_treefile()
         # Expected leaf names - note, shortneded from input
         expected_labels = [
             'NP_001025178.1', 'NP_001229766.1', 'NP_003929.4',
@@ -380,9 +378,7 @@ class TestMappingTreeFile(unittest.TestCase):
     def test_create_mapping_from_tree(self):
         """Tests creating a mapping from tree labels"""
         # Populate object
-        with warnings.catch_warnings():  # Parser raises warning
-            warnings.simplefilter("ignore")
-            self.mapping._parse_treefile()
+        self.mapping._parse_treefile()
         # Create mapping
         self.mapping._create_mapping_from_tree()
         # Expected values
@@ -397,9 +393,7 @@ class TestMappingTreeFile(unittest.TestCase):
     def test_get_leafseq_exact_match(self):
         """Tests that leafseq objects are attained correctly"""
         # Populate object
-        with warnings.catch_warnings():  # Parser raises warning
-            warnings.simplefilter("ignore")
-            self.mapping._parse_treefile()
+        self.mapping._parse_treefile()
         # Get the actual object itself
         leaf_obj = self.mapping._get_leafseq(
                 'Hsap_AP_EGADEZ',  # group name
@@ -413,9 +407,7 @@ class TestMappingTreeFile(unittest.TestCase):
     def test_get_leafseq_not_match(self):
         """Tests getting a leafseq when the label is not exactly the same"""
         # Populate object
-        with warnings.catch_warnings():  # Parser raises warning
-            warnings.simplefilter("ignore")
-            self.mapping._parse_treefile()
+        self.mapping._parse_treefile()
         # Get the actual object itself
         leaf_obj = self.mapping._get_leafseq(
                 'Hsap_AP_EGADEZ',  # group name
@@ -427,14 +419,134 @@ class TestMappingTreeFile(unittest.TestCase):
         self.assertEqual(leaf_obj._node.name,'NP_001025178.1')
 
 
+    def test_create_seq_dict(self):
+        """Tests creating a sequence dict with leaves only"""
+        # Populate object
+        self.mapping._parse_treefile()
+        self.mapping._create_mapping_from_tree()
+        # Expected labels
+        expected_labels = [
+            'NP_001025178.1', 'NP_001229766.1', 'NP_003929.4',
+            'NP_031373.2', 'NP_055670.1',
+            ]
+        # Create the dict
+        self.mapping._create_seq_dict()
+        # Items to compare
+        key = list(self.mapping._seq_dict.keys())[0]  # First and only entry
+        obj_list = self.mapping._seq_dict[key]
+        obtained_labels = [obj._node.name for obj in obj_list]
+        # Actual tests
+        self.assertEqual(key,'Hsap_AP_EGADEZ')
+        self.assertEqual(obtained_labels,expected_labels)
+
+
 class TestMappingTreePlusFiles(unittest.TestCase):
     """Tests Mapping class with both tree and sequence files"""
 
-    pass
+    def setUp(self):
+        """Creates a Mapping object based on an input file"""
+        seq_file1 = os.path.join(data_dir, 'Hsap_AP_GA.fa')
+        seq_file2 = os.path.join(data_dir, 'Hsap_AP_EDZ.fa')
+        seq_files = (seq_file1, seq_file2)
+        tree_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.mfa.contree')
+        # Create necessary object
+        self.mapping = _mapping.Mapping(
+                *seq_files,
+                treefile=tree_file,
+                infmt='fasta',
+                treefmt='newick',
+                )
+
+
+    def tearDown(self):
+        """Removes Mapping object"""
+        self.mapping = None
+
+
+    def test_create_seq_dict(self):
+        """Tests seq_dict creation when both sequences and a tree are
+        present. Need to ensure LeafSeq objects have ScrollSeqs"""
+        # First populate object
+        self.mapping._parse_infiles(_test=True)
+        self.mapping._parse_treefile()
+        self.mapping._create_mapping_from_seqs()
+        # Run seq_dict funtion
+        self.mapping._create_seq_dict()
+        # Actual tests
+        # print()
+        # print(self.mapping._seq_dict)
+        # print()
+        self.assertEqual(len(self.mapping._seq_dict.keys()),2)
+        for _,obj_list in self.mapping._seq_dict.items():
+            for leaf_obj in obj_list:
+                leaf_label = leaf_obj._node.name
+                seq_label = leaf_obj._seq.name
+                # Labels need to match!!!
+                self.assertEqual(leaf_label,seq_label)
 
 
 class TestMappingAllPlusMapping(unittest.TestCase):
     """Tests Mapping class with tree, sequence, and mapping files"""
 
-    pass
+    def setUp(self):
+        """Creates a Mapping object based on an input file"""
+        seq_file1 = os.path.join(data_dir, 'Hsap_AP_GA.fa')
+        seq_file2 = os.path.join(data_dir, 'Hsap_AP_EDZ.fa')
+        seq_files = (seq_file1, seq_file2)
+        tree_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.mfa.contree')
+        map_file = os.path.join(data_dir, 'Hsap_AP_mapping.txt')
+        # Create necessary object
+        self.mapping = _mapping.Mapping(
+                *seq_files,
+                treefile=tree_file,
+                mapfile=map_file,
+                infmt='fasta',
+                treefmt='newick',
+                )
+
+
+    def tearDown(self):
+        """Removes Mapping object"""
+        self.mapping = None
+
+
+    def test_create_mapping_from_mapfile(self):
+        """Tests parsing of the mapfile"""
+        self.mapping._create_mapping_from_mapfile()
+        expected_dict = {'Hsap_AP': [
+            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+            ]}
+        self.assertEqual(self.mapping._mapping,expected_dict)
+
+
+    def test_create_seq_dict(self):
+        """Tests creating a seq dict when all files are present"""
+        # First populate object
+        self.mapping._parse_infiles(_test=True)
+        self.mapping._parse_treefile()
+        self.mapping._create_mapping_from_mapfile()
+        # Create sequence dict
+        self.mapping._create_seq_dict()
+        # Test for accuracy
+        self.assertEqual(len(self.mapping._seq_dict.keys()),1)
+        for _,obj_list in self.mapping._seq_dict.items():
+            for leaf_obj in obj_list:
+                leaf_label = leaf_obj._node.name
+                seq_label = leaf_obj._seq.name
+                # Labels need to match!!!
+                self.assertEqual(leaf_label,seq_label)
+
+    def test_call(self):
+        """Tests that calling the object works as expected"""
+        self.mapping()
+        for _,obj_list in self.mapping._seq_dict.items():
+            for leaf_obj in obj_list:
+                leaf_label = leaf_obj._node.name
+                seq_label = leaf_obj._seq.name
+                # Labels need to match!!!
+                self.assertEqual(leaf_label,seq_label)
 

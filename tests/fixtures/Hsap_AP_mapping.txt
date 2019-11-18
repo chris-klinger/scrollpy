@@ -1,0 +1,6 @@
+NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens] 	Hsap_AP
+NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens] 	Hsap_AP
+NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens] 	Hsap_AP
+NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens] 	Hsap_AP
+NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens] 	Hsap_AP
+

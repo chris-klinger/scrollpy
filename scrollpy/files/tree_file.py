@@ -6,6 +6,7 @@ Loading trees is supported through the ETE3 package
 """
 
 import sys
+import warnings
 
 from ete3 import Tree
 from ete3.parser.newick import NewickError
@@ -22,11 +23,14 @@ def read_tree(inpath, tree_format):
         ETE3 tree object representing file's contents
     """
     if tree_format == 'newick':
-        try:
-            return _read_newick_tree(inpath)
-        except NewickError:
-            # Log something!!!
-            sys.exit(0)  # Exit cleanly
+        # ETE3 still opens in 'U' mode; suppress warning about deprecation
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                return _read_newick_tree(inpath)
+            except NewickError:
+                # Log something!!!
+                sys.exit(0)  # Exit cleanly
     else:
         pass  # Add support for other file formats later?
 

@@ -284,9 +284,12 @@ def get_best_name_match(target_name, name_set):
     if target_name in name_set:
         return target_name
     else:  # Harder, find best match overall
-        pairs = _make_aligned_seq_pairs(target_name, name_set)
+        unaligned,aligned = _make_aligned_seq_pairs(
+                target_name, name_set)
         # Go through each
-        _,best_name = compare_pairs(pairs)
+        best_pair = compare_pairs(aligned)
+        best_index = aligned.index(best_pair)
+        _,best_name = unaligned[best_index]
         return best_name
 
 
@@ -302,20 +305,24 @@ def _make_aligned_seq_pairs(target_name, name_set):
         name_set (set): all possible names to search
 
     Returns:
-        a list of matched/aligned names for comparison
+        a list of original and matched/aligned names for comparison
     """
-    pairs = []
+    unaligned = []
+    aligned = []
     for name in name_set:
+        # No matter what add to unaligned
+        unaligned.append((target_name,name))
         if len(name) == len(target_name):
-            pairs.append((target_name,name))
+            # Easy, just append
+            aligned.append((target_name,name))
         else:  # Harder, try to align
             aligned1,aligned2 = affine_align(
                     seq1=target_name,
                     seq2=name,
                     score_func=simple_score,
                     )
-            pairs.append((aligned1,aligned2))
-    return pairs
+            aligned.append((aligned1,aligned2))
+    return unaligned,aligned
 
 
 def compare_pairs(seq_pairs):

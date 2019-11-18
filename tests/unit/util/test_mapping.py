@@ -3,6 +3,7 @@ Tests /util/_mapping.py
 """
 
 import os, unittest, shutil
+import warnings
 
 
 from scrollpy import config
@@ -72,13 +73,13 @@ class TestMakeAlignedSeqPairs(unittest.TestCase):
                 ('Homo sapiens','Homo sapiens'),
                 ('Homo sapiens','Bodo lentars'),
                 ]
-        self.assertEqual(
-                _mapping._make_aligned_seq_pairs(
-                    'Homo sapiens',  # target_name
-                    name_set,
-                    ),
-                seq_pairs,
+        unaligned,aligned = _mapping._make_aligned_seq_pairs(
+                'Homo sapiens',  # target_name
+                name_set,
                 )
+        self.assertEqual(unaligned,seq_pairs)
+        self.assertEqual(aligned,seq_pairs)
+
 
     def test_align_numbers(self):
         """Easiest case; check whether align works with numbers"""
@@ -89,13 +90,11 @@ class TestMakeAlignedSeqPairs(unittest.TestCase):
                 ('123456789','4---56789'),  # First char won't be a gap
                 ('123456789','123456---'),
                 ]
-        self.assertEqual(
-                _mapping._make_aligned_seq_pairs(
-                    '123456789',  # target_name
-                    name_set,
-                    ),
-                seq_pairs,
+        unaligned,aligned = _mapping._make_aligned_seq_pairs(
+                '123456789',  # target_name
+                name_set,
                 )
+        self.assertEqual(aligned,seq_pairs)
 
 
     def test_align_names(self):
@@ -107,13 +106,11 @@ class TestMakeAlignedSeqPairs(unittest.TestCase):
                 ('Homosapiens','Homo---iens'),
                 ('Homosapiens','Homosa-iens'),
                 ]
-        self.assertEqual(
-                _mapping._make_aligned_seq_pairs(
-                    'Homosapiens',  # target_name
-                    name_set,
-                    ),
-                seq_pairs,
+        unaligned,aligned = _mapping._make_aligned_seq_pairs(
+                'Homosapiens',  # target_name
+                name_set,
                 )
+        self.assertEqual(aligned,seq_pairs)
 
 
 class TestComparePairs(unittest.TestCase):
@@ -292,13 +289,142 @@ class TestMappingOneFile(unittest.TestCase):
 class TestMappingTwoFiles(unittest.TestCase):
     """Tests Mapping class with two sequence files"""
 
-    pass
+    def setUp(self):
+        """Creates a Mapping object based on an input file"""
+        seq_file1 = os.path.join(data_dir, 'Hsap_AP_GA.fa')
+        seq_file2 = os.path.join(data_dir, 'Hsap_AP_EDZ.fa')
+        seq_files = (seq_file1, seq_file2)
+        # Create necessary object
+        self.mapping = _mapping.Mapping(
+                *seq_files,  # *infiles
+                infmt='fasta',
+                treefmt='newick',
+                )
+
+
+    def tearDown(self):
+        """Removes Mapping object"""
+        self.mapping = None
+
+
+    def test_parse_infiles(self):
+        """Tests parse with one infile
+
+        Check that function correctly updates:
+            mapping._records
+            mapping._record_list
+            mapping._seq_descriptions
+        """
+        self.mapping._parse_infiles(_test=True)
+        expected_record_dict = {
+            'Hsap_AP_GA': [
+            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+            ],
+            'Hsap_AP_EDZ': [
+            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+            ]
+            }
+        expected_descriptions = [
+            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+            ]
+        self.assertEqual(self.mapping._records,expected_record_dict)
+
+
+    def test_create_mapping_from_seqs(self):
+        """Tests _create_mapping_from_seqs with one file"""
+        self.mapping._create_mapping_from_seqs()
+        self.assertEqual(self.mapping._records,self.mapping._mapping)
 
 
 class TestMappingTreeFile(unittest.TestCase):
     """Tests Mapping class with a tree file"""
 
-    pass
+    def setUp(self):
+        """Creates a Mapping object based on an input file"""
+        tree_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.mfa.contree')
+        # Create necessary object
+        self.mapping = _mapping.Mapping(
+                treefile=tree_file,
+                infmt='fasta',
+                treefmt='newick',
+                )
+
+
+    def tearDown(self):
+        """Removes Mapping object"""
+        self.mapping = None
+
+
+    def test_parse_treefile(self):
+        """Tests parsing a single tree file"""
+        with warnings.catch_warnings():  # Parser raises warning
+            warnings.simplefilter("ignore")
+            self.mapping._parse_treefile()
+        # Expected leaf names - note, shortneded from input
+        expected_labels = [
+            'NP_001025178.1', 'NP_001229766.1', 'NP_003929.4',
+            'NP_031373.2', 'NP_055670.1',
+            ]
+        # Actual tests
+        self.assertEqual(len(self.mapping._leaves),5)  # Leaf objects
+        self.assertEqual(self.mapping._leaf_names,expected_labels)
+
+
+    def test_create_mapping_from_tree(self):
+        """Tests creating a mapping from tree labels"""
+        # Populate object
+        with warnings.catch_warnings():  # Parser raises warning
+            warnings.simplefilter("ignore")
+            self.mapping._parse_treefile()
+        # Create mapping
+        self.mapping._create_mapping_from_tree()
+        # Expected values
+        expected_dict = {'Hsap_AP_EGADEZ': [
+            'NP_001025178.1', 'NP_001229766.1', 'NP_003929.4',
+            'NP_031373.2', 'NP_055670.1',
+            ]}
+        # Actual tests
+        self.assertEqual(self.mapping._mapping,expected_dict)
+
+
+    def test_get_leafseq_exact_match(self):
+        """Tests that leafseq objects are attained correctly"""
+        # Populate object
+        with warnings.catch_warnings():  # Parser raises warning
+            warnings.simplefilter("ignore")
+            self.mapping._parse_treefile()
+        # Get the actual object itself
+        leaf_obj = self.mapping._get_leafseq(
+                'Hsap_AP_EGADEZ',  # group name
+                'NP_001025178.1',  # label name
+                )
+        # Test the retrieved object
+        self.assertEqual(leaf_obj._group,'Hsap_AP_EGADEZ')
+        self.assertEqual(leaf_obj._node.name,'NP_001025178.1')
+
+
+    def test_get_leafseq_not_match(self):
+        """Tests getting a leafseq when the label is not exactly the same"""
+        # Populate object
+        with warnings.catch_warnings():  # Parser raises warning
+            warnings.simplefilter("ignore")
+            self.mapping._parse_treefile()
+        # Get the actual object itself
+        leaf_obj = self.mapping._get_leafseq(
+                'Hsap_AP_EGADEZ',  # group name
+                # Label name below; full name to match
+                'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+                )
+        # Test the retrieved object
+        self.assertEqual(leaf_obj._group,'Hsap_AP_EGADEZ')
+        self.assertEqual(leaf_obj._node.name,'NP_001025178.1')
 
 
 class TestMappingTreePlusFiles(unittest.TestCase):

@@ -60,4 +60,4 @@ def _read_newick_tree(inpath):
         # Log something and freak out!!!
         raise NewickError  # Re-raise to signal could not load
     # If this point is reached, a tree is loaded
-    return Tree
+    return tree

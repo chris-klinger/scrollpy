@@ -36,7 +36,7 @@ class ScrollCollection:
         inpath (str): full path to input file (default:None)
     """
     def __init__(self, outdir, seq_list, group, align_method,
-            dist_method, opt_group=None, inpath=None,
+            dist_method, opt_group=None,
             align_model=None, # Need to add this eventually
             dist_model=None # Need to deal with this eventually
             ):
@@ -53,15 +53,14 @@ class ScrollCollection:
         self._dist_path = None # Path to the distance file
         self._dist_dict = None # Parsed distance file list
         self._opt_group = opt_group
-        self._inpath = inpath # Means we don't need to create
 
-    def __str__(self):
-        """TO-DO"""
-        pass
+    # def __str__(self):
+    #     """TO-DO"""
+    #     pass
 
-    def __repr__(self):
-        """TO-DO"""
-        pass
+    # def __repr__(self):
+    #     """TO-DO"""
+    #     pass
 
     def __call__(self):
         """A call implies aligning, calculating distances, and then

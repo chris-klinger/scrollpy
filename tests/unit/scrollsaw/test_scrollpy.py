@@ -10,6 +10,7 @@ from Bio import SeqIO
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy.scrollsaw._scrollpy import ScrollPy
+from scrollpy.util import _mapping
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__)) # /files/
@@ -34,8 +35,6 @@ class TestScrollPyOneFile(unittest.TestCase):
         except DuplicateSectionError:
             pass
         # Now provide sufficient arg defaults
-        config['ARGS']['filter'] = 'False'
-        config['ARGS']['filter_method'] = 'zscore'
         config['ARGS']['dist_matrix'] = 'LG'
         config['ARGS']['no_clobber'] = 'True'
 
@@ -47,86 +46,36 @@ class TestScrollPyOneFile(unittest.TestCase):
         self.infile_base = self.infile.split('.')[0]
         self.inpath = os.path.join(data_dir, self.infile)
 
+        # Create seq_dict from mapping first
+        mapping = _mapping.Mapping(
+                self.inpath,
+                infmt='fasta',
+                treefmt='newick',
+                test=True,  # Disable unique group names
+                )
+        seq_dict = mapping()
+
         self.sp = ScrollPy(
+                seq_dict,
                 self.tmpdir, # target_dir
-                'Mafft', # align_method
-                'RAxML', # dist_method
-                (self.inpath,),
+                align='Mafft', # align_method
+                distance='RAxML', # dist_method
                 )
 
 
-    # Testing Utility function(s)
-    def test_group_naming_nonoverlap(self):
-        """Tests to ensure that naming is normal if unique"""
-        self.sp._groups.append("group1")
-        self.sp._groups.append(
-            self.sp._unique_group_name("group2"))
-        self.assertEqual(self.sp._groups, ["group1", "group2"])
-
-
-    def test_group_naming_overlap(self):
-        """Tests that the group naming convention works"""
-        self.sp._groups.append("group1")
-        self.sp._groups.append(
-            self.sp._unique_group_name("group1"))
-        self.assertEqual(self.sp._groups, ["group1", "group1.1"])
-
-
-    def test_group_naming_overlap_integers(self):
-        """Tests that group naming works if names are ints"""
-        self.sp._groups.append("1") # These should always be strings
-        self.sp._groups.append(
-            self.sp._unique_group_name("1")) # Always strings!
-        self.assertEqual(self.sp._groups, ["1", "1.1"])
-
-
-    def test_group_naming_overlap_floats(self):
-        """Tests that group naming works if names are float-ish"""
-        self.sp._groups.append("1.1")
-        self.sp._groups.append(
-            self.sp._unique_group_name("1.1")) # Always strings
-        self.assertEqual(self.sp._groups, ["1.1", "1.1.1"])
-
-
-    # Testing actual data-based functions
-    def test_infile_parsing(self):
-        """Tests that infile parsing is fine"""
-        self.sp._parse_infiles()
-        self.assertEqual(self.sp._groups[0], self.infile_base)
-        self.assertTrue(self.infile_base in self.sp._seq_dict.keys())
-        self.assertEqual(len(self.sp._seq_dict[self.infile_base]), 4)
-
-
-    def test_make_scroll_seqs(self):
-        """Tests that records are transformed to ScrollSeqs"""
-        with open(self.sp.infiles[0]) as i:
-            records = [r for r in SeqIO.parse(i, "fasta")]
-        ss = self.sp._make_scroll_seqs(
-            self.sp.infiles[0], # infile
-            "one", # group; arbitrary
-            records)
-        self.assertEqual(len(ss), 4)
-        self.assertEqual(ss[0].id_num, 1)
-        self.assertEqual(ss[1].id_num, 2)
+    def tearDown(self):
+        """Remove tmp dir and all files"""
+        shutil.rmtree(self.tmpdir)
 
 
     def test_make_collections_with_one(self):
         """Tests that collection are made ok"""
-        with open(self.sp.infiles[0]) as i:
-            records = [r for r in SeqIO.parse(i, "fasta")]
-        self.sp._groups.append("one") # need to have _groups
-        self.sp._seq_dict["one"] = records
-        self.sp._make_scroll_seqs(
-            self.sp.infiles[0],
-            "one",
-            records)
         self.sp._make_collections()
         self.assertEqual(len(self.sp._collections), 1)
 
 
     def test_sort_distances_in_order(self):
         """Tests sorting when objects are already in order"""
-        self.sp._parse_infiles() # Should populate all groups
         scroll_seq_objs = self.sp._seq_dict[self.infile_base]
         dist = 0
         for obj in scroll_seq_objs:
@@ -138,9 +87,9 @@ class TestScrollPyOneFile(unittest.TestCase):
             ordered_ids.append(obj.id_num)
         self.assertEqual(ordered_ids, [1,2,3,4])
 
+
     def test_sort_distances_outof_order(self):
         """Tests sorting when objects are not already in order"""
-        self.sp._parse_infiles() # Should populate all groups
         scroll_seq_objs = self.sp._seq_dict[self.infile_base]
         for _,d in zip(scroll_seq_objs, (3,1,4,2)):
             _ += d
@@ -159,11 +108,6 @@ class TestScrollPyOneFile(unittest.TestCase):
         for obj in self.sp._ordered_seqs:
             ordered_ids.append(obj.id_num)
         self.assertEqual(ordered_ids, [4,2,1,3])
-
-
-    def tearDown(self):
-        """Remove tmp dir and all files"""
-        shutil.rmtree(self.tmpdir)
 
 
 class TestScrollPyTwoFiles(unittest.TestCase):
@@ -189,34 +133,32 @@ class TestScrollPyTwoFiles(unittest.TestCase):
         self.infile2_base = self.infile2.split('.',1)[0]
         self.inpath2 = os.path.join(data_dir, self.infile2)
 
+        # Create seq_dict from mapping first
+        mapping = _mapping.Mapping(
+                *(self.inpath1,self.inpath2),
+                infmt='fasta',
+                treefmt='newick',
+                test=True,  # Disable unique group names
+                )
+        seq_dict = mapping()
+
         self.sp = ScrollPy(
+                seq_dict,
                 self.tmpdir, # target_dir
-                'Mafft', # align_method
-                'RAxML', # dist_method
-                (self.inpath1,self.inpath2),
+                align='Mafft', # align_method
+                distance='RAxML', # dist_method
                 )
 
 
-    def test_infile_parsing(self):
-        """Tests that the infiles are correctly parsed"""
-        self.sp._parse_infiles()
-        self.assertEqual(self.sp._groups,
-            [self.infile1_base, self.infile2_base])
-        file1_ids = [o.id_num for o in self.sp._seq_dict[self.infile1_base]]
-        file2_ids = [o.id_num for o in self.sp._seq_dict[self.infile2_base]]
-        self.assertEqual(file1_ids, [1,2,3,4])
-        self.assertEqual(file2_ids, [5,6,7,8])
+    def tearDown(self):
+        """Remove tmp dir and all files"""
+        shutil.rmtree(self.tmpdir)
 
 
     def test_actual_call(self):
         """Tests whether a call to ScrollPy with two objects works"""
         self.sp()
         self.assertEqual(len(self.sp._ordered_seqs), 8)
-
-
-    def tearDown(self):
-        """Remove tmp dir and all files"""
-        shutil.rmtree(self.tmpdir)
 
 
 class TestScrollPyThreeFiles(unittest.TestCase):
@@ -246,31 +188,26 @@ class TestScrollPyThreeFiles(unittest.TestCase):
         self.infile3_base = self.infile3.split('.',1)[0]
         self.inpath3 = os.path.join(data_dir, self.infile3)
 
+        # Create seq_dict from mapping first
+        mapping = _mapping.Mapping(
+                *(self.inpath1,self.inpath2,self.inpath3),
+                infmt='fasta',
+                treefmt='newick',
+                test=True,  # Disable unique group names
+                )
+        seq_dict = mapping()
+
         self.sp = ScrollPy(
+                seq_dict,
                 self.tmpdir, # target_dir
-                'Mafft', # align_method
-                'RAxML', # dist_method
-                (self.inpath1,
-                    self.inpath2,
-                    self.inpath3,
-                ),
+                align='Mafft', # align_method
+                distance='RAxML', # dist_method
                 )
 
 
-    def test_infile_parsing(self):
-        """Tests that the infiles are correctly parsed"""
-        self.sp._parse_infiles()
-        self.assertEqual(self.sp._groups,
-            [self.infile1_base,
-            self.infile2_base,
-            self.infile3_base,
-            ])
-        file1_ids = [o.id_num for o in self.sp._seq_dict[self.infile1_base]]
-        file2_ids = [o.id_num for o in self.sp._seq_dict[self.infile2_base]]
-        file3_ids = [o.id_num for o in self.sp._seq_dict[self.infile3_base]]
-        self.assertEqual(file1_ids, [1,2,3,4])
-        self.assertEqual(file2_ids, [5,6,7,8])
-        self.assertEqual(file3_ids, [9,10,11,12])
+    def tearDown(self):
+        """Remove tmp dir and all files"""
+        shutil.rmtree(self.tmpdir)
 
 
     def test_actual_call(self):
@@ -278,8 +215,4 @@ class TestScrollPyThreeFiles(unittest.TestCase):
         self.sp()
         self.assertEqual(len(self.sp._ordered_seqs), 12)
 
-
-    def tearDown(self):
-        """Remove tmp dir and all files"""
-        shutil.rmtree(self.tmpdir)
 

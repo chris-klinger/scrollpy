@@ -65,12 +65,17 @@ class Mapping:
         self._found_seqs = set()
         self._found_leaves = set()
         self._duplicates = set()
+        # Test var
+        try:
+            self._test = kwargs['test']
+        except KeyError:
+            self._test = False  # False by default
 
 
     def __call__(self):
         """Run internal functions to create an internal _seq_dict object"""
         # Parse input files
-        self._parse_infiles()
+        self._parse_infiles(self._test)
         if self._treefile:
             self._parse_treefile()
         # Create a mapping

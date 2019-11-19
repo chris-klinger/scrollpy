@@ -31,7 +31,7 @@ class ScrollTree:
     def __call__(self):
         """Runs tree-based ScrollSaw"""
         # Calculate distances for each group in mapping
-        leaves = sf._cat_sequence_lists(self._seq_dict.values())
+        leaves = sf._cat_sequence_lists(*self._seq_dict.values())
         self._get_all_pairwise_distances(leaves)
         # Sort distances
         self._sort_distances()
@@ -42,15 +42,23 @@ class ScrollTree:
         and updates the internal LeafSeq distance attribute for each
         """
         for leaf in leaves:
-            other_leaves = leaves[:].remove(leaf)
+            # Remove target leaf from list copy
+            other_leaves = leaves[:]
             for oleaf in other_leaves:
+                # Simply calling other_leaves.remove(leaf) does not work
+                # Need to explicitly find matching names
+                if leaf._node.name == oleaf._node.name:
+                    other_leaves.remove(oleaf)
+            # Now can get distances
+            for oleaf in other_leaves:
+                # Sort so bi-directional dist works
                 search_string = "{}.{}".format(*tuple(
-                    sorted([leaf.name, oleaf.name])))  # Sort so bi-directional dist works
+                    sorted([leaf._node.name, oleaf._node.name])))
                 try:
                     dist = self._cached[search_string]  # Try fast lookup
                 except KeyError:
                     dist = leaf.get_distance(oleaf)  # Else, calculate and store
-                    cached[search_string] = dist
+                    self._cached[search_string] = dist
                 leaf._distance += dist
 
 

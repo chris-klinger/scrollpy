@@ -58,7 +58,7 @@ class LeafSeq:
         return self._distance < other
 
 
-    def __eq__(self):
+    def __eq__(self, other):
         return self._distance == other
 
 
@@ -70,7 +70,7 @@ class LeafSeq:
             return len(self._node)
 
 
-    def __getattr__(self):
+    def __getattr__(self, name):
         """Delegate calls to underlying object(s)"""
         underlying_obj = None
         try:
@@ -88,7 +88,7 @@ class LeafSeq:
             def wrapped_func(*args, **kwargs):
                 new_args = []
                 for arg in args:
-                    if isinstance(arg, SeqNode):  # I.e. comparing two nodes
+                    if isinstance(arg, LeafSeq):  # I.e. comparing two nodes
                         arg = arg._node  # Replace with node attr of other object
                     new_args.append(arg)
                 ret = attr(*new_args, **kwargs)  # Wrap old func with new args

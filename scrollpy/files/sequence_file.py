@@ -107,3 +107,4 @@ def _sequence_list_to_file_by_id(seq_list, outpath):
     with open(outpath, 'w') as o:
         for seq_object in seq_list:
             seq_object._write_by_id(o)
+

@@ -15,7 +15,10 @@ from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy import util
 from scrollpy import scroll_log
+from scrollpy import Mapping
+from scrollpy import Filter
 from scrollpy import ScrollPy
+from scrollpy import ScrollTree
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
 # Import lookups
@@ -286,6 +289,13 @@ def main():
                 "Outputs filtered sequences in the same format as specified for "
                 "'--seqout'. Filtered sequences will be organized by group."
                 ))
+    run_options.add_argument("--filter-only",
+            action = "store_true",
+            help = (
+                "Filters sequences according to 'filter-method' and outputs the "
+                "starting sequences and/or filtered sequences as specified by "
+                "other arguments without running any other methods."
+                ))
     run_options.add_argument("-s", "--split-seqs",
             action = "store_true",
             help = (
@@ -465,13 +475,19 @@ def main():
 
     # Check the filepaths for appropriateness
     all_paths = []
+    # Sequence infile(s)
     if args.infiles:  # Nonetype if not called at all
         if len(args.infiles) > 0:  # list; zero-length if none specified
             for path in args.infiles:
                 # os.path ensures correct full path
                 real_path = os.path.realpath(os.path.join(current_dir,path))
                 all_paths.append(real_path)
+    # Tree file, if supplied
     if args.treefile:  # Nonetype if not called at all
+        real_path = os.path.realpath(os.path.join(current_dir,path))
+        all_paths.append(real_path)  # Only one file
+    # Mapping file, if supplied
+    if args.mapping:  # Nonetype if not called at all
         real_path = os.path.realpath(os.path.join(current_dir,path))
         all_paths.append(real_path)  # Only one file
     # Quit if no paths specified
@@ -550,37 +566,64 @@ def main():
     ##############################################################################
 
     # Actual program execution
+    # Begin by creating a mapping, regardless of actual execution
+    mapping = Mapping(
+            *args.infiles,          # Unpack list
+            treefile=args.treefile, # None if not provided
+            mapfile=args.mapping,   # None if not provided
+            )
+    start_seq_dict = mapping()  # Run to get mapped seq_dict
+    # Filter if necessary
+    # Ensure that filtering only still calls filter!
+    if args.filter_only:
+        args.filter=True
+    # Actually filter
+    removed_seq_dict=None  # If not filtering
+    if args.filter:
+        seq_filter = Filter(  # Additional args should be in config already
+                start_seq_dict,
+                )
+        # Call, and bind filtered seq_dict to 'start_seq_dict' var
+        start_seq_dict,removed_seq_dict = seq_filter()
+    # If filtering only, output directly from Filter
+    if args.filter_only:
+        pass
+    # Run actual program execution now
     if not args.treefile:  # Sequence-based analysis
         RunObj = ScrollPy(
-                args.tmpout,  # Actual program run uses tmp dir!
-                args.align,
-                args.distance,
-                args.infiles)
-        # Run Scrollsaw itself
-        RunObj()
-        # Write to outfile(s); config handles gritty details
-        # Write table file no matter what
-        Writer = TableWriter(
-                RunObj,    # object to use
-                args.out,  # specified output location
+                start_seq_dict, # Filtered or not
+                args.tmpout,    # Actual program run uses tmp dir!
+                )
+    else:  # Tree-based analysis
+        RunObj = ScrollTree(
+                start_seq_dict, # Filtered or not
+                )
+    # Perform the actual program execution
+    RunObj()
+    # Write to outfile(s); config handles gritty details
+    # Write table file no matter what
+    Writer = TableWriter(
+            RunObj,    # object to use
+            args.out,  # specified output location
+            )
+    #try:
+    Writer.write()
+    #except:  # Dangerous; Change!!!
+    #    print("Unexpected error when writing table file")
+    # Write sequences, if requested
+    if args.seqout or args.filter_out:  # User requested sequences
+        Writer = SeqWriter(
+                RunObj,           # Object to use
+                args.out,         # Specified output location
+                removed_seq_dict, # Filtered seqs; may be None
+                args.seqout,      # Output sequences
+                args.filter_out,  # Removed/filtered sequences
                 )
         #try:
         Writer.write()
         #except:  # Dangerous; Change!!!
-        #    print("Unexpected error when writing table file")
-        # Write sequences, if requested
-        if args.seqout or args.filter_out:  # User requested sequences
-            Writer = SeqWriter(
-                    RunObj,    # object to use
-                    args.out,  # specified output location
-                    args.seqout,  # Output sequences
-                    args.filter_out,  # Removed/filtered sequences
-                    )
-            #try:
-            Writer.write()
-            #except:  # Dangerous; Change!!!
-            #    print("Unexpected error when writing sequence files")  # Logging!
-        # Something about a summary file? -> TO_DO
+        #    print("Unexpected error when writing sequence files")  # Logging!
+    # Something about a summary file? -> TO_DO
 
 
 if __name__ == '__main__':

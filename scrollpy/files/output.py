@@ -67,10 +67,11 @@ class SeqWriter(BaseWriter):
                 returns a list of [group,[ScrollSeqObjs]] pairs to use
                     for writing.
     """
-    def __init__(self, sp_object, out_path, sequences=False, removed=False):
+    def __init__(self, sp_object, out_path, removed_seqs=None, sequences=False, removed=False):
         BaseWriter.__init__(self, sp_object, out_path)
-        self._sequences = sequences  # Whether or not to write output sequences
-        self._removed = removed  # Whether or not to add in removed seqs
+        self._removed_seq_dict =  removed_seqs # Sequences removed by filtering
+        self._sequences = sequences            # Whether or not to write output sequences
+        self._removed = removed                # Whether or not to add in removed seqs
 
 
     def write(self):
@@ -104,13 +105,17 @@ class SeqWriter(BaseWriter):
         """Returns only a number of sequences as specified by the user."""
         seqs = {}
         if removed:  # Simply want ALL removed sequences
-            for obj in self._sp_object.return_removed_seqs():
-                group = obj._group
-                try:
-                    seqs[group].append(obj)
-                except KeyError:
-                    seqs[group] = []
-                    seqs[group].append(obj)
+            if self._removed_seq_dict:
+                seqs = self._removed_seq_dict
+            else:  # No filtered sequences
+                pass  # Log something
+            # for obj in self._sp_object.return_removed_seqs():
+            #     group = obj._group
+            #     try:
+            #         seqs[group].append(obj)
+            #     except KeyError:
+            #         seqs[group] = []
+            #         seqs[group].append(obj)
         if not removed:
             counts = {}
             num_seqs = int(config['ARGS']['number']) # configparser uses ALL strings

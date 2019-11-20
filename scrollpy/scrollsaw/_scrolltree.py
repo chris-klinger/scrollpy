@@ -37,6 +37,11 @@ class ScrollTree:
         self._sort_distances()
 
 
+    def return_ordered_seqs(self):
+        """Returns ordered sequences following execution"""
+        return self._ordered_seqs
+
+
     def _get_all_pairwise_distances(self, leaves):
         """Calculates all pairwise distances from each leaf to each other leaf
         and updates the internal LeafSeq distance attribute for each

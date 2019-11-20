@@ -11,6 +11,7 @@ from scrollpy.files import output
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy.scrollsaw._scrollpy import ScrollPy
+from scrollpy.util._mapping import Mapping
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__)) # /files/
@@ -39,12 +40,13 @@ class TestBaseWriter(unittest.TestCase):
 class TestSeqWriterOneFile(unittest.TestCase):
     """Tests the seq writer class"""
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """Create necessary objects"""
         # Make dir
-        self.tmpdir = os.path.join(data_dir, 'out-seq')
+        cls.tmpdir = os.path.join(data_dir, 'out-seq')
         try:
-            os.makedirs(self.tmpdir)
+            os.makedirs(cls.tmpdir)
         except FileExistsError:
             print("Failed to make target directory")
             pass
@@ -59,25 +61,44 @@ class TestSeqWriterOneFile(unittest.TestCase):
         config['ARGS']['filter_method'] = 'zscore'
         config['ARGS']['dist_matrix'] = 'LG'
         config['ARGS']['no_clobber'] = 'True'
-        # Make ScrollPy object
+
         # CHANGE ME TO CHANGE TEST
         #######################################
-        self.infile = 'Hsap_AP1G_FourSeqs.fa' #
+        cls.infile = 'Hsap_AP1G_FourSeqs.fa' #
         #######################################
-        self.infile_base = self.infile.split('.')[0]
-        self.inpath = os.path.join(data_dir, self.infile)
-        self.sp = ScrollPy(
-                self.tmpdir, #target dir
-                'Mafft', # align_method
-                'RAxML', # dist_method
-                (self.inpath,),
+        cls.infile_base = cls.infile.split('.')[0]
+        cls.inpath = os.path.join(data_dir, cls.infile)
+
+        # Make Mapping
+        mapping = Mapping(
+                cls.inpath,
+                infmt='fasta',
+                treefmt='newick',
                 )
-        self.sp() # Run internal methods
+        seq_dict = mapping()
+        # Now make ScrollPy object
+        cls.sp = ScrollPy(
+                seq_dict,
+                cls.tmpdir, #target dir
+                align='Mafft', # align_method
+                distance='RAxML', # dist_method
+                )
+        cls.sp() # Run internal methods
+
+
+    def setUp(self):
+        """Populate the SeqWriter brand new for each test"""
         # Make SeqWriter object
         self.writer = output.SeqWriter(
                 self.sp,     # object
                 self.tmpdir, # file_path
                 )
+
+
+    @classmethod
+    def tearDownClass(self):
+        """Removes the directory"""
+        shutil.rmtree(self.tmpdir)
 
 
     def test_filter_equal(self):
@@ -119,6 +140,25 @@ class TestSeqWriterOneFile(unittest.TestCase):
         self.assertEqual(len(new_list[0][1]), 4) # nested -> [(x,[])]
 
 
+    def test_filter_removed_empty(self):
+        """Tests that _filter returns an empty list for empty filter dict"""
+        empty_list = self.writer._filter(removed=True)
+        self.assertEqual(len(empty_list),0)
+
+
+    def test_filter_removed_nonempty(self):
+        """Tests that filter returns proper structure when non-empty"""
+        mock_dict = {
+                "group1":['obj1', 'obj2', 'obj3'],
+                "group2":['obj4', 'obj5'],
+                }
+        self.writer._removed_seq_dict = mock_dict  # Add after __init__
+        # Now test
+        new_list = self.writer._filter(removed=True)
+        self.assertEqual(len(new_list[0][1]), 3)  # First nested item
+        self.assertEqual(len(new_list[1][1]), 2)  # Second nested item
+
+
     def test_get_filepath(self):
         """Tests returned filepath"""
         # Mock user input
@@ -134,11 +174,6 @@ class TestSeqWriterOneFile(unittest.TestCase):
         outpath = self.writer._get_filepath("group")
         self.assertEqual(outpath,
                 os.path.join(self.tmpdir, 'group_sequences_awesome.fa'))
-
-
-    def tearDown(self):
-        """Removes the directory"""
-        shutil.rmtree(self.tmpdir)
 
 
 class TestTableWriter(unittest.TestCase):
@@ -159,17 +194,33 @@ class TestTableWriter(unittest.TestCase):
         #######################################
         self.infile_base = self.infile.split('.')[0]
         self.inpath = os.path.join(data_dir, self.infile)
+
+        # Make mapping
+        mapping = Mapping(
+                self.inpath,
+                infmt='fasta',
+                treefmt='newick',
+                )
+        seq_dict = mapping()
+
+        # Now make ScrollPy object
         self.sp = ScrollPy(
+                seq_dict,
                 self.tmpdir, #target dir
-                'Mafft', # align_method
-                'RAxML', # dist_method
-                self.inpath)
+                align='Mafft', # align_method
+                distance='RAxML', # dist_method
+                )
         #self.sp() # Run internal methods
         # Make SeqWriter object
         self.writer = output.TableWriter(
                 self.sp,     # object
                 self.tmpdir, # file_path
                 )
+
+
+    def tearDown(self):
+        """Removes the directory"""
+        shutil.rmtree(self.tmpdir)
 
 
     def test_modifying_sep_underscore(self):
@@ -208,10 +259,6 @@ class TestTableWriter(unittest.TestCase):
         self.assertEqual(new_vals,
                 ["_", "one_sep", "two__seps", "one _ sep"])
 
-
-    def tearDown(self):
-        """Removes the directory"""
-        shutil.rmtree(self.tmpdir)
 
 
 if __name__ == '__main__':

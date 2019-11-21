@@ -1,42 +1,22 @@
 """
-This module contains a generic class that will farm out alignment calls
-to the relevant program using the BioPython command line application
-tools, or internal methods (if implemented).
+This module contains a generic class that will farm out tree building calls
+to the relevant program using the subprocess (for now - check BioPython
+compatability eventually?).
 
-Class should (eventually) handle all details, including capturing output
-in a file (if it is the program default) or redirecting stdout to the
-relevant file if it is not. StdErr can be captured by a logging object
-for detailed user interface.
+Similar to Aligner and Distance, but focussing on actual tree-building
+commands.
 
-More details to follow.
 """
 
-import os,errno
+import os
 import subprocess
 from subprocess import SubprocessError
 
-from Bio.Align import Applications
-from Bio.Application import ApplicationError
 
+class TreeBuilder:
 
-class Aligner:
     def __init__(self, method, cmd, inpath, outpath,
             cmd_list=None, logger=None, **kwargs):
-        """Class to handle farming out and managing alignments.
-
-        Args:
-            method (str): Name of method to use for alignment. Accepted
-                values are `Muscle`, `Clustalw`, `ClustalOmega`, `Prank`,
-                `Mafft`, `Dialign`, `Probcons`, `TCoffee`, `MSAProbs`,
-                `Generic`.
-            cmd (str): Command (if executable is on system PATH) or full
-                path to the relevant executable
-            inpath (str): Full path for input
-            outpath (str): Full path to dump MSA to
-            _logger (obj): Reference to a logger for logging (optional)
-            **kwargs: Additional parameters specified for the relevant
-                program (optional)
-        """
         if self._validate('method', method, self._validate_method):
             self.method = method
         if self._validate('command', cmd, self._validate_command,
@@ -54,48 +34,36 @@ class Aligner:
         self.kwargs = kwargs
 
 
-    def __str__(self):
-        """TO-DO"""
-        pass
-
     def __repr__(self):
         """TO-DO"""
         pass
 
-    def __call__(self):
-        """Calls the underlying alignment method.
 
-        First, validate method, command, and outpath arguments as valid.
-        Next, call the underlying method using BioPython commandline
-        wrapper or internal method and handle stdout/stderr.
-        """
-        # Either delegate call to BioPython or run internal method
-        if self.method == 'Mafft':
-            cmdline = Applications.MafftCommandline(
-                self.cmd, input=self.inpath, **self.kwargs)
-            try:
-                stdout, stderr = cmdline() # Need to log stderr eventually
-            except ApplicationError: # Raised if subprocess return code != 0
-                print("Failed to run MAFFT") # Should process better eventually
-            with open(self.outpath, 'w') as o:
-                o.write(stdout)
-        # BioPython interface not flexible enough to handle --add for Mafft
-        elif self.method == 'MafftAdd':  # Add to existing alignment
-            self.cmd_list.insert(0, self.cmd)  # Add to list first
+    def __str__(self):
+        """TO-DO"""
+        pass
+
+
+    def __call__(self):
+        """TO-DO"""
+        # For now use subprocess
+        if self.method == 'IQ-Tree':
+            self.cmd_list.insert(0, self.cmd)  # I.e. /path/to/iqtree
             try:
                 cmdline = subprocess.run(
-                    self.cmd_list,  # Full command for execution
+                    self.cmd_list,  # Full command
                     stdout=subprocess.PIPE,  # Returns bytes
                     stderr=subprocess.PIPE,  # Returns bytes
                     )
-            except SubprocessError:  # Should be default base raised
-                print("Failed to run Mafft add")  # Log eventually
+            except SubprocessError:
+                print("Failed to run IQ-Tree")  # Log eventually
             with open(self.outpath, 'w') as o:
                 decoded_out = cmdline.stdout.decode()
                 o.write(decoded_out)
-        # Other method here
-        elif self.method == 'Generic':
-            pass # To be implemented
+        # Other methods?
+        elif self.method == 'RAxML':
+            pass  # TO-DO
+
 
     def _validate(self, name, value, validation_method, **kwargs):
         """Calls other checking methods for each"""
@@ -116,19 +84,19 @@ class Aligner:
 
     def _validate_method(self, method_name):
         """Returns True if method exists in class"""
-        if not method_name in ('Mafft', 'Generic'): # For now
+        if not method_name in ('RAxML', 'IQ-Tree'): # For now
             return False
         return True
 
     def _validate_command(self, command, method=None):
         """Returns True if command makes sense for method"""
-        if method == 'Mafft':
+        if method == 'IQ-Tree':
             path_char = os.sep
             if path_char in command: # Full path given
                 cmd = os.path.basename(command)
             else:
                 cmd = command
-            if cmd not in ('mafft', 'mafft-linsi'):
+            if cmd not in ('iqtree'):
                 return False
         elif method == 'Generic':
             if not command == 'None':
@@ -144,7 +112,7 @@ class Aligner:
                 inpath # File name
                 )
         elif os.path.isdir(inpath):
-            raise AttributeError("Cannot align {}; directory")
+            raise AttributeError("Cannot build tree with {}; directory")
         return True
 
     def _validate_outpath(self, outpath):

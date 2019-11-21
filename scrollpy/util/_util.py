@@ -216,3 +216,14 @@ def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
                         new_set_of_tuples.add(tuple(sorted(tup)))
         return decompose_sets(new_set_of_tuples,set_of_tuples,merged)  # Recur
 
+
+def flatten_dict_to_list(input_dict):
+    """Simply steps through all key,value pairs and adds them
+    to a flat list
+    """
+    out_list = []
+    for _,v in input_dict.items():
+        for item in v:
+            out_list.append(item)
+    return out_list
+

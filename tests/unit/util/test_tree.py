@@ -86,7 +86,7 @@ class TestTreeModule(unittest.TestCase):
         self.assertEqual(expected_children,actual_children)
 
 
-    def test_is_group_outgroup(self):
+    def test_get_group_outgroup(self):
         """Tests that re-rooting works correctly"""
         # Target to actually search for
         target_leaf = 'NP_031373.2'
@@ -94,23 +94,24 @@ class TestTreeModule(unittest.TestCase):
         group_names = ['NP_001025178.1','NP_001229766.1']
         # Test with both TreeNode and LeafSeq objects
         group_nodes = [self.tree&name for name in group_names]
-        # leafseqs = [leafseq for leafseq in self.leafseq_list
-        #         if leafseq.name in group_names]
+        # For LeafSeq objects, have to retrieve actual _node attr!!!
+        leafseq_nodes = [leafseq._node for leafseq in self.leafseq_list
+                if leafseq.name in group_names]
         # # Actually run
-        node_root = _tree.is_group_outgroup(
+        node_root = _tree.get_group_outgroup(
                 self.tree,
                 target_leaf,
                 group_nodes,
                 )
-        # leafseq_root = _tree.is_group_outgroup(
-        #         self.tree,
-        #         target_leaf,
-        #         leafseqs,
-        #         )
+        leafseq_root = _tree.get_group_outgroup(
+                self.tree,
+                target_leaf,
+                leafseq_nodes,
+                )
         # Get children
         node_root_children = [leaf.name for leaf in node_root]
-        # leafseq_root_children = [leaf.name for leaf in leafseq_root]
+        leafseq_root_children = [leaf.name for leaf in leafseq_root]
         # Now test equality
         self.assertEqual(group_names,node_root_children)
-        # self.assertEqual(group_names,leafseq_root_children)
+        self.assertEqual(group_names,leafseq_root_children)
 

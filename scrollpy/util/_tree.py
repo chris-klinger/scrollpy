@@ -65,7 +65,7 @@ def last_monophyletic_ancestor(node_to_check, leafseq_list, previous_node=None):
         return previous_node  # Last node that was monophyletic
 
 
-def is_group_outgroup(tree_obj, target_leaf, group_list):
+def get_group_outgroup(tree_obj, target_leaf, group_list):
     """
     For a given group of sequences, determines whether they can be used to
     root the tree, in order to be able to look for the target_leaf.
@@ -91,18 +91,18 @@ def is_group_outgroup(tree_obj, target_leaf, group_list):
     common_ancestor = tree_obj.get_common_ancestor(group_list)
     # Check whether it is root - try again
     if common_ancestor.is_root():
-        return False
+        return None
     else:  # Internal node
         # Node can't already contain sequence of interest
         for leaf in common_ancestor:
             if leaf.name == target_leaf:
-                return False
+                return None
         # Also, target sequence can't be sister group
         next_ancestor = common_ancestor.up
         for node in next_ancestor.children:
             if not node == common_ancestor:  # I.E., get sister
                 if node.is_leaf():
                     if node.name == target_leaf:
-                        return False
+                        return None
     return common_ancestor
 

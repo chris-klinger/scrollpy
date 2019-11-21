@@ -20,6 +20,7 @@ from contextlib import suppress
 
 from scrollpy import config
 from scrollpy.files import sequence_file as sf
+from scrollpy.alignments import parser as af
 from scrollpy.files import tree_file as tf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._leafseq import LeafSeq
@@ -33,15 +34,18 @@ class Mapping:
     Args:
         infiles (iter): path(s) to one or more input files
 
+        alignfile (str): path to an alignment file (default: None)
+
         treefile (str): path to a tree file (default: None)
 
         mapfile (str): path to a mapping file (default: None)
     """
     # Class var list
-    _config_vars = ('infmt', 'treefmt')
+    _config_vars = ('infmt', 'alignfmt', 'treefmt')
 
-    def __init__(self, *infiles, treefile=None, mapfile=None, **kwargs):
+    def __init__(self, *infiles, alignfile=None, treefile=None, mapfile=None, **kwargs):
         self._infiles = infiles
+        self._alignfile = alignfile
         self._treefile = treefile
         self._mapfile = mapfile
         # Optional vars or in config
@@ -57,6 +61,8 @@ class Mapping:
         self._records = {}
         self._record_list = []
         self._seq_descriptions = []
+        self._align_records = []
+        self._align_descriptions = []
         self._leaves = []
         self._leaf_names = []
         self._mapping = {}
@@ -76,6 +82,8 @@ class Mapping:
         """Run internal functions to create an internal _seq_dict object"""
         # Parse input files
         self._parse_infiles(self._test)
+        if self._alignfile:
+            self._parse_alignfile()
         if self._treefile:
             self._parse_treefile()
         # Create a mapping
@@ -123,6 +131,18 @@ class Mapping:
                 self._seq_descriptions.append(desc)
 
 
+    def _parse_alignfile(self):
+        """Parse an alignment file into record objects"""
+        alignment = af.parse_alignment_file(
+                self._alignfile,
+                self.alignfmt,
+                to_dict=False,  # Return raw Align object
+                )
+        self._align_records = [record for record in alignment]
+        self._align_descriptions = [record.description for
+                record in self._align_records]
+
+
     def _parse_treefile(self):
         """Parse tree file, if it exists"""
         tree = tf.read_tree(
@@ -168,7 +188,7 @@ class Mapping:
         self._mapping[group] = self._leaf_names  # Alias leaf labels
 
 
-    def _create_seq_dict(self):
+    def _create_seq_dict(self, log=False):
         """Creates a seq_dict based on a mapping"""
         for group,labels in self._mapping.items():
             self._seq_dict[group] = []
@@ -176,16 +196,25 @@ class Mapping:
                 try:
                     scrollseq_obj = None
                     leafseq_obj = None
-                    with suppress(KeyError):  # Try to get ScrollSeq obj
-                        scrollseq_obj = self._get_scrollseq(
-                            group=group,
-                            label=label,
-                            )
-                    with suppress(KeyError):  # Try to get LeafSeq obj
+                    with suppress(KeyError):
+                        # Leafseq objects only come from one source
+                        # Get this first, because conditional below for
+                        # ScrollSeq objects terminates with block
                         leafseq_obj = self._get_leafseq(
                             group=group,
                             label=label,
                             )
+                        # Sequences can come from alignment and/or seqfiles
+                        if self._alignfile:
+                            scrollseq_obj = self._get_alignseq(
+                                    group=group,
+                                    label=label,
+                                    )
+                        else:
+                            scrollseq_obj = self._get_scrollseq(
+                                group=group,
+                                label=label,
+                                )
                     # Increment counter after making all objects
                     self._counter += 1
                     # Associate Seq with Leaf, if Leaf exists
@@ -196,6 +225,35 @@ class Mapping:
                         self._seq_dict[group].append(scrollseq_obj)
                 except ValueError:  # Indicates a duplicate sequence
                     self._duplicates.add(label)
+
+
+    def _get_alignseq(self, group, label):
+        """Tries to retrieve a SeqRecord object from within a Bio.Align
+        object by label; if successful, build a ScrollSeq object.
+
+        May want to strip the gap characters eventually, but for now
+        just leave it, as it is unclear if there is any reason to.
+        """
+        if not self._align_records:
+            raise KeyError  # Caught by handling function
+        else:
+            matched_seq = get_best_name_match(
+                    label,
+                    self._align_descriptions,  # Desc attr of all align records
+                    )
+            if matched_seq in self._found_seqs:  # Uses same as seqfiles
+                raise ValueError  # Duplicate mapping; not allowed
+            # Otherwise, get associated record
+            index = self._align_descriptions.index(matched_seq)
+            record = self._align_records[index]
+            # Add to seen
+            self._found_seqs.add(matched_seq)
+            # Make and return
+            return ScrollSeq(
+                    id_num = self._counter,
+                    group = group,
+                    seq_record = record
+                    )
 
 
     def _get_scrollseq(self, group, label):

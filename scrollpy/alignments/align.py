@@ -47,7 +47,7 @@ class Aligner:
         if self._validate('outpath', outpath, self._validate_outpath):
             self.outpath = outpath
         # For finer control, can supply command list instead
-        self._cmd_list = cmd_list
+        self.cmd_list = cmd_list
         # Check logger eventually?
         self._logger = logger
         # Should eventually validate kwargs? Or leave for BioPython?
@@ -116,7 +116,7 @@ class Aligner:
 
     def _validate_method(self, method_name):
         """Returns True if method exists in class"""
-        if not method_name in ('Mafft', 'Generic'): # For now
+        if not method_name in ('Mafft', 'MafftAdd', 'Generic'): # For now
             return False
         return True
 

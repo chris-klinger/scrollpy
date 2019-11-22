@@ -2,12 +2,16 @@
 This module contains the main TreePlacer object.
 """
 
+import os
 import tempfile
 
+from Bio import SeqIO
 
+from scrollpy import config
 from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
 from scrollpy.util import _tree,_util
+from scrollpy.alignments.align import Aligner
 
 
 class TreePlacer:
@@ -45,6 +49,7 @@ class TreePlacer:
         self._original_leafseqs  = []
         self._original_leaves    = []
         # Internal defaults; change each time through __call__ loop
+        self._current_seq_path   = ""
         self._current_align_path = ""
         self._current_phy_path   = ""
         self._current_tree_path  = ""
@@ -106,6 +111,8 @@ class TreePlacer:
 
     def _make_new_files(self, seq_obj):
         """Calls other internal functions"""
+        # Create a new sequence file
+        self._current_seq_path = self._get_outpath(seq_obj,'seq')
         # Add to existing alignemnt
         self._current_align_path = self._get_outpath(seq_obj,'align')
         self._add_seq_to_alignment(seq_obj)
@@ -122,7 +129,9 @@ class TreePlacer:
         # Is name guaranteed to be unique?
         basename = seq_obj.name
         # Create a new subdir for each run?
-        if out_type == 'align':
+        if out_type == 'seq':
+            outfile = basename + '.fa'
+        elif out_type == 'align':
             outfile = basename + '.mfa'
         elif out_type == 'phylip':
             outfile = basename + '.phy'
@@ -135,35 +144,39 @@ class TreePlacer:
 
     def _add_seq_to_alignment(self, seq_obj):
         """Calls MAFFT to add sequences to an existing alignment"""
-        # First create a temporary file - removed after context manager
-        with tempfile.NamedTemporaryFile() as seq_file:
-            seq_obj._write(seq_file)  # Temporary input file
-            if self.align_method == 'Mafft':
-                # MAFFT for now, maybe add support for others later?
-                method = 'MafftAdd'
-                align_command = [
-                        '--add',         # Adding to existing alignment
-                        seq_file,        # Need file object for input
-                        '--keeplength',  # Alignment length unchanged
-                        '--thread',      # Use all possible cores
-                        '-1',
-                        self._alignment, # Starting alignment handle
-                        ]
-            elif self.align_method == 'Generic':
-                pass  # Add eventually?
-            aligner = align.Aligner(
-                    method,  # Signal to Aligner that adding should happen
-                    config['ALIGNMENT'][self.align_method],  # Cmd to execute
-                    inpath = seq_file,  # Exists inside of context manager
-                    outpath = self._current_align_path, # Should be a real path on the system
-                    cmd_list = align_command,  # Fine-grained control
+        with open(self._current_seq_path,'w') as seq_file:
+            # seq_obj.write(seq_file)  # Temporary input file
+            SeqIO.write(  # Need to use BioPython interface instead!
+                    seq_obj,
+                    seq_file,
+                    'fasta',  # Change to be flexible?
                     )
-            aligner()  # Run command
+        if self.align_method == 'Mafft':
+            # MAFFT for now, maybe add support for others later?
+            method = 'MafftAdd'
+            align_command = [
+                    '--add',                # Adding to existing alignment
+                    self._current_seq_path, # Input provided as string
+                    '--keeplength',         # Alignment length unchanged
+                    '--thread',             # Use all possible cores
+                    '-1',
+                    self._alignment,        # Starting alignment handle
+                    ]
+        elif self.align_method == 'Generic':
+            pass  # Add eventually?
+        aligner = Aligner(
+                method,  # Signal to Aligner that adding should happen
+                config['ALIGNMENT'][self.align_method],  # Cmd to execute
+                inpath = self._current_seq_path,  # Exists inside of context manager
+                outpath = self._current_align_path, # Should be a real path on the system
+                cmd_list = align_command,  # Fine-grained control
+                )
+        aligner()  # Run command
 
 
     def _make_tree(self):
         """Calls IQ-TREE to construct a tree"""
-        if self.tree_method == 'IQ-Tree':
+        if self.tree_method == 'Iqtree':
             build_command = [
                     '-nt',  # Number of processors
                     'AUTO',
@@ -291,7 +304,7 @@ class TreePlacer:
                 )
         last_group = next(iter(last_groups))  # Single item
         output_info.append(last_group)
-        output_info..append(last_ancestor.support)
+        output_info.append(last_ancestor.support)
         if (start_node.support >= self.support) or\
                 (last_ancestor.support >= self.support):
             output_info.append('Possible Positive Hit')

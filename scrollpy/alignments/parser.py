@@ -24,7 +24,8 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     try:
         alignment =  AlignIO.read(file_path,file_type)
     except ValueError:  # Not parsable
-        pass  # Try to parse on our own eventually
+        print("Could not read alignment from {}".format(file_path))
+        # pass  # Try to parse on our own eventually
     # Eventually should get down to here
     if to_dict:
         return _bio_align_to_dict(alignment)

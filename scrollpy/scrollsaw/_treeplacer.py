@@ -285,7 +285,49 @@ class TreePlacer:
 
     def _classify_node(self, start_node):
         """Finds info about a non-monophyletic node"""
-        pass
+        output_info = []
+        # Starting from added_leaf ancestor
+        # Support value first
+        output_info.append(start_node.support)
+        # Get information for all groups under the node
+        node_groups = _tree.get_node_groups(
+                start_node,
+                self._original_leafseqs,
+                )
+        # Need to get node info for all groups
+        group_count = len(node_groups)
+        output_info.append(group_count)
+        current_groups = set()
+        for node in start_node.traverse():
+            if _tree.is_node_monophyletic(
+                    node,
+                    self._original_leafseqs,
+                    ):
+                # Only care about monophyletic nodes
+                associated_groups = _tree.get_node_groups(
+                        node,
+                        self._original_leafseqs,
+                        )
+                group = next(iter(associated_groups))  # Single item
+                if group not in current_groups:
+                    # First node only
+                    support = node.support
+                    target_leafseqs = self._leafseq_dict[group]
+                    target_leaves = [leafseq._node for leafseq in target_leafseqs]
+                    add_on = 'Group is incomplete'
+                    if _tree.is_complete_group(
+                            node,
+                            target_leaves,
+                            ):
+                        add_on = 'Group is complete'
+                    # Add to growing list
+                    output_info.extend([group,support,add_on])
+                    current_groups.add(group)
+                    # Check if done
+                    if len(current_groups) == group_count:
+                        break
+
+        return output_info
 
 
     def _classify_monophyletic_node(self, start_node):
@@ -304,16 +346,34 @@ class TreePlacer:
                 start_node,
                 self._original_leafseqs,
                 )
+        # Check if a more ancestral monophyletic node has been found
+        same_node = False
         if last_ancestor == start_node:
+            same_node = True
             output_info.append('Same node')
         else:
             output_info.append('Different node')
-        output_info.append(last_ancestor.support)
+        if same_node:
+            last_ancestor.support = start_node.support
+            output_info.append('NA')
+        else:
+            output_info.append(last_ancestor.support)
+        # Check whether the monophyletic ancestor is complete
+        target_leafseqs = self._leafseq_dict[group]
+        target_leaves = [leafseq._node for leafseq in target_leafseqs]
+        if _tree.is_complete_group(
+                last_ancestor,
+                target_leaves,
+                ):
+            output_info.append('Group is complete')
+        else:
+            output_info.append('Group is incomplete')
+        # Finally, check whether either node meets threshold
         if (start_node.support >= self.support) or\
                 (last_ancestor.support >= self.support):
             output_info.append('Possible Positive Hit')
         else:
-            output_info.append('Not Classified')
+            output_info.append('Unlikely Positive Hit')
 
         return output_info
 

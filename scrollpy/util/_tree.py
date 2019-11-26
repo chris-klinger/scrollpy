@@ -109,3 +109,25 @@ def get_group_outgroup(tree_obj, target_leaf, group_list):
                         return None
     return common_ancestor
 
+
+def is_complete_group(node_object, group_list):
+    """
+    For a given node and a list of node objects for a given group, checks
+    whether all members of the group are leaves under the given node.
+
+    Essentially, checks whether a given node is a parent to all members of
+    a group or if there are members present elsewhere in the tree.
+
+    Args:
+        node_object (obj): ETE3 Tree/TreeNode object.
+        group_list (list): List of TreeNodee objects for a group.
+
+    Returns:
+        True is all nodes in group_list are leaves under node_object.
+
+    """
+    group_leaves = [leaf for leaf in node_object if leaf in group_list]
+    if len(group_leaves) != len(group_list):
+        return False
+    return True
+

@@ -244,7 +244,43 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
 
 
     def test_classify_node(self):
-        pass
+        """Tests getting information about non-monophyletic nodes"""
+        # Set up
+        # Set up
+        test_seq = self.placer._to_place[0]
+        tree_path = os.path.join(
+                data_dir,
+                'Hsap_AP1G_NP_001025178.1.phy.contree',
+                )
+        self.placer._current_tree_path = tree_path
+        self.placer._update_tree_mappings()
+        # Re-root tree
+        added_leaf = test_seq.name
+        self.placer._root_tree(added_leaf)
+        # Change group for one node
+        old_list = self.placer._leafseq_dict['group1']
+        for leafseq in old_list:
+            if leafseq.name == 'NP_055670.1':
+                leafseq._group = 'group4'
+                old_list.remove(leafseq)
+            self.placer._leafseq_dict['group4'] = [leafseq]
+            self.placer._leafseq_dict['group1'] = old_list
+        # Get common ancestor of non-monophyletic node
+        test = self.placer._current_tree_obj&"NP_003929.4"
+        test_node = test.up
+        # Now get info
+        info = self.placer._classify_node(test_node)
+        expected = [
+                75.0,                  # Starting node support
+                2,                     # Number of groups under start node
+                'group1',              # First group name
+                1.0,                   # First group support (monophyletic)
+                'Group is incomplete', # Group complete?
+                'group4',              # As above, but for second group
+                1.0,
+                'Group is complete',
+                ]
+        self.assertEqual(info,expected)
 
 
     def test_classify_monophyletic_node(self):
@@ -265,6 +301,13 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
         first_ancestor = added_node.up
         info = self.placer._classify_monophyletic_node(first_ancestor)
         # Check information
-        expected = ['group2', 100.0, 'Same node', 100.0, 'Possible Positive Hit']
+        expected = [
+                'group2',                # Starting node group
+                100.0,                   # Starting node support
+                'Same node',             # Whether last ancestral is same as starting
+                'NA',                    # Last ancestral support (if different)
+                'Group is complete',     # Whether all group members present
+                'Possible Positive Hit', # Support >= threshold?
+                ]
         self.assertEqual(info,expected)
 

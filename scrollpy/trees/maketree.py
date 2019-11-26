@@ -27,7 +27,7 @@ class TreeBuilder:
         if self._validate('outpath', outpath, self._validate_outpath):
             self.outpath = outpath
         # For finer control, can supply command list instead
-        self._cmd_list = cmd_list
+        self.cmd_list = cmd_list
         # Check logger eventually?
         self._logger = logger
         # Should eventually validate kwargs? Or leave for BioPython?
@@ -47,7 +47,7 @@ class TreeBuilder:
     def __call__(self):
         """TO-DO"""
         # For now use subprocess
-        if self.method == 'IQ-Tree':
+        if self.method == 'Iqtree':
             self.cmd_list.insert(0, self.cmd)  # I.e. /path/to/iqtree
             try:
                 cmdline = subprocess.run(
@@ -57,9 +57,10 @@ class TreeBuilder:
                     )
             except SubprocessError:
                 print("Failed to run IQ-Tree")  # Log eventually
-            with open(self.outpath, 'w') as o:
-                decoded_out = cmdline.stdout.decode()
-                o.write(decoded_out)
+            # OUTPUT FILE IS THE SUMMARY FILE!!!
+            # with open(self.outpath, 'w') as o:
+            #     decoded_out = cmdline.stdout.decode()
+            #     o.write(decoded_out)
         # Other methods?
         elif self.method == 'RAxML':
             pass  # TO-DO
@@ -84,13 +85,13 @@ class TreeBuilder:
 
     def _validate_method(self, method_name):
         """Returns True if method exists in class"""
-        if not method_name in ('RAxML', 'IQ-Tree'): # For now
+        if not method_name in ('RAxML', 'Iqtree'): # For now
             return False
         return True
 
     def _validate_command(self, command, method=None):
         """Returns True if command makes sense for method"""
-        if method == 'IQ-Tree':
+        if method == 'Iqtree':
             path_char = os.sep
             if path_char in command: # Full path given
                 cmd = os.path.basename(command)

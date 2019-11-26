@@ -12,6 +12,8 @@ from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
 from scrollpy.util import _tree,_util
 from scrollpy.alignments.align import Aligner
+from scrollpy.trees.maketree import TreeBuilder
+from scrollpy.util._mapping import Mapping
 
 
 class TreePlacer:
@@ -78,16 +80,15 @@ class TreePlacer:
             # Create all neccessary files
             self._make_new_files(seq_obj)
             # Parse tree object and update internal mappings
-            self._read_current_tree()
-            if not self._original_leaves:
-                self._update_tree_mappings()
+            # self._read_current_tree()
+            self._update_tree_mappings()
             # Determine the right leaf
             added_leaf = self._get_added_leaf()
             # Start recording information
             leaf_info = []
             leaf_info.append(added_leaf)
             # Try to re-root tree
-            new_tree = self._root_tree(added_leaf, new_tree)
+            self._root_tree(added_leaf)
             # Write new tree to output?
             # Get actual node
             added_node = new_tree&added_leaf
@@ -136,7 +137,8 @@ class TreePlacer:
         elif out_type == 'phylip':
             outfile = basename + '.phy'
         elif out_type == 'tree':
-            outfile = basename + '.tre'
+            if self.tree_method == 'Iqtree':
+                outfile = basename + '.phy.contree'
         # Get full path and return
         outpath = os.path.join(self._outdir, outfile)
         return outpath
@@ -181,7 +183,7 @@ class TreePlacer:
                     '-nt',  # Number of processors
                     'AUTO',
                     '-s',  # Input filename
-                    phylip_path,
+                    self._current_phy_path,
                     '-m',
                     self.tree_matrix,  # E.g. 'LG'
                     '-bb',  # Rapid bootstrapping
@@ -199,12 +201,12 @@ class TreePlacer:
         builder()  # Run command
 
 
-    def _read_current_tree(self):
-        """Reads and sets attribute"""
-        self._current_tree_obj = tf.read_tree(
-                self._current_tree_path,
-                'newick',  # IQ-Tree output is Newick
-                )
+    # def _read_current_tree(self):
+    #     """Reads and sets attribute"""
+    #     self._current_tree_obj = tf.read_tree(
+    #             self._current_tree_path,
+    #             'newick',  # IQ-Tree output is Newick
+    #             )
 
 
     def _update_tree_mappings(self):
@@ -213,8 +215,13 @@ class TreePlacer:
         mapping = Mapping(
                 alignfile=self._alignment,
                 treefile=self._current_tree_path,
+                infmt='fasta',
+                alignfmt='fasta',
+                treefmt='newick',
                 )
         tree_dict = mapping()  # Returns Mapping with LeafSeqs
+        # Reach into Mapping object and get tree
+        self._current_tree_obj = mapping._tree_obj
         # Flatten both dicts
         seq_list = _util.flatten_dict_to_list(self._seq_dict)
         tree_list = _util.flatten_dict_to_list(tree_dict)
@@ -261,19 +268,18 @@ class TreePlacer:
         return added_leaves[0]
 
 
-    def _root_tree(self, added_leaf, tree_obj):
+    def _root_tree(self, added_leaf):
         """Randomly selects a group to root on"""
         for group,leaves in self._leafseq_dict.items():
             # get_group_outgroup function needs TreeNode objects
             group_list = [leafseq._node for leafseq in leaves]
-            # Now call function
-            outgroup = get_group_outgroup(
-                    tree_obj,
+            outgroup = _tree.get_group_outgroup(
+                    self._current_tree_obj,
                     added_leaf,
                     group_list,  # TreeNode objects!
                     )
             if outgroup:  # Returns TreeNode or None
-                tree_obj.set_outgroup(outgroup)
+                self._current_tree_obj.set_outgroup(outgroup)
                 break  # No need to check others
 
 
@@ -292,18 +298,16 @@ class TreePlacer:
                 )
         group = next(iter(node_groups))  # Single item
         output_info.append(group)  # Name of group
-        output_info.append(first_ancestor.support)  # Bootstrap support
+        output_info.append(start_node.support)  # Bootstrap support
         # Now walk up
-        last_ancestor = last_monophyletic_ancestor(
+        last_ancestor = _tree.last_monophyletic_ancestor(
                 start_node,
                 self._original_leafseqs,
                 )
-        last_groups = get_node_groups(
-                last_ancestor,
-                self._original_leafseqs,
-                )
-        last_group = next(iter(last_groups))  # Single item
-        output_info.append(last_group)
+        if last_ancestor == start_node:
+            output_info.append('Same node')
+        else:
+            output_info.append('Different node')
         output_info.append(last_ancestor.support)
         if (start_node.support >= self.support) or\
                 (last_ancestor.support >= self.support):

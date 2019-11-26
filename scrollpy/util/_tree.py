@@ -88,7 +88,10 @@ def get_group_outgroup(tree_obj, target_leaf, group_list):
 
     """
     # Find common ancestor of all leaves
-    common_ancestor = tree_obj.get_common_ancestor(group_list)
+    if len(group_list) == 1:
+        common_ancestor = group_list[0].up
+    else:
+        common_ancestor = tree_obj.get_common_ancestor(group_list)
     # Check whether it is root - try again
     if common_ancestor.is_root():
         return None

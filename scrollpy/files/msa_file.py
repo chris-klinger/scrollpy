@@ -7,12 +7,15 @@ different types of aligned files.
 """
 
 
+from scrollpy.util._util import non_blank_lines
+
+
 def afa_to_phylip(alignment_file, target_file):
     """Convert a standard FASTA alignment to phylip"""
     num_seqs = 0
     headers = []
     seq_dict = {}
-    for line in nonblank_lines(alignment_file):
+    for line in non_blank_lines(alignment_file):
         if line.startswith('>'):
             header = line.strip('>').strip('\n')
             if header in headers:
@@ -36,6 +39,8 @@ def afa_to_phylip(alignment_file, target_file):
         o.write("{} {}\n".format(num_seqs,target_length))
         for header in headers:
             seq = seq_dict[header]
+            # IQ-TREE splits on spaces?
+            header = header.split()[0]  # Is this bad?
             # Cut it short if it is longer than 40 chars
             if len(header) > 40:
                 header = header[:40]

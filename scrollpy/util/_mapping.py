@@ -63,6 +63,7 @@ class Mapping:
         self._seq_descriptions = []
         self._align_records = []
         self._align_descriptions = []
+        self._tree_obj = None
         self._leaves = []
         self._leaf_names = []
         self._mapping = {}
@@ -149,6 +150,7 @@ class Mapping:
                 self._treefile,
                 self.treefmt,
                 )
+        self._tree_obj = tree
         self._leaves = [leaf for leaf in tree]
         self._leaf_names = [leaf.name for leaf in self._leaves]
 
@@ -197,13 +199,13 @@ class Mapping:
                     scrollseq_obj = None
                     leafseq_obj = None
                     with suppress(KeyError):
-                        # Leafseq objects only come from one source
-                        # Get this first, because conditional below for
-                        # ScrollSeq objects terminates with block
+                        # LeafSeq objects
                         leafseq_obj = self._get_leafseq(
                             group=group,
                             label=label,
                             )
+                    # Can't nest this all in one 'with' block?
+                    with suppress(KeyError):
                         # Sequences can come from alignment and/or seqfiles
                         if self._alignfile:
                             scrollseq_obj = self._get_alignseq(

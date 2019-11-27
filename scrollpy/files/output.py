@@ -282,7 +282,7 @@ class TableWriter(BaseWriter):
                     )
             # Make header columns for max number of groups
             for n in max_groups:
-                header_list.extend.([
+                header_list.extend([
                         'Group{}'.format(n),
                         'Group{} Support'.format(n),
                         'Group{} Completeness'.format(n),

@@ -60,10 +60,11 @@ def seqfile_to_scrollseqs(file_handle, file_format="fasta"):
     # Make ScrollSeqs
     for record in _get_sequences(file_handle, file_format):
         scroll_seq = ScrollSeq(
-                counter(),  # Gets an ID number
+                counter.current_count(),  # Gets an ID number
                 None,  # Group
                 record,  # SeqRecord object
                 )
+        counter()  # Increase the counter
         scroll_seqs.append(scroll_seq)
     return scroll_seqs
 

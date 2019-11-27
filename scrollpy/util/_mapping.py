@@ -54,7 +54,7 @@ class Mapping:
             try:
                 value = kwargs[var]
             except KeyError:
-                value = configs['ARGS'][var]
+                value = config['ARGS'][var]
             setattr(self, var, value)
         # Internal counter
         self._counter = Counter()
@@ -253,7 +253,7 @@ class Mapping:
             self._found_seqs.add(matched_seq)
             # Make and return
             return ScrollSeq(
-                    id_num = self._counter,
+                    id_num = self._counter.current_count(),
                     group = group,
                     seq_record = record
                     )
@@ -276,7 +276,7 @@ class Mapping:
             self._found_seqs.add(matched_seq)
             # Make and return
             return ScrollSeq(
-                    id_num = self._counter,
+                    id_num = self._counter.current_count(),
                     group = group,
                     seq_record = record,
                     )
@@ -299,7 +299,7 @@ class Mapping:
             self._found_leaves.add(matched_leaf)
             # Make and return
             return LeafSeq(
-                    id_num = self._counter,
+                    id_num = self._counter.current_count(),
                     group = group,
                     tree_node = node,
                     )

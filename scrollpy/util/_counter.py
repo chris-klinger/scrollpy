@@ -23,5 +23,9 @@ class Counter:
     def __call__(self):
         """Increments Class counter and returns current value"""
         Counter.__count += 1
+
+
+    def current_count(self):
+        """Returns current value"""
         return Counter.__count
 

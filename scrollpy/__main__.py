@@ -119,9 +119,34 @@ def main():
             nargs = '?',
             metavar = "Tree Format",
             default = "newick",
-            choices = ["nexus", "newick", "phylip", "nexml"],
+            choices = ["nexus", "newick", "phylip", "nexml"],  # EXPAND?
             help = (
                 "Format of tree file, if supplied. Defaults to 'newick'."
+                ))
+    file_options.add_argument("-a", "--alignment",
+            nargs = '?',
+            metavar = "Alignment Path",
+            help = (
+                "Path to a file containing an alignment (optional). "
+                "Required if analysis is to place sequences or to iterate "
+                "over an alignment to select optimal columns."
+                ))
+    file_options.add_argument("--alignfmt",
+            nargs = '?',
+            metavar = "Alignment Format",
+            default = "fasta",
+            choices = ["nexus", "clustal", "emboss"],  # EXPAND
+            help = (
+                "Format of alignment file, if supplied. Defaults to 'fasta'."
+                ))
+    file_options.add_argument("-c", "--toplace",
+            nargs = '?',
+            metavar = "Sequences to Place",
+            help = (
+                "Path to a file containing sequences to place (optional). "
+                "If provided, file will be parsed assuming that the sequences "
+                "are in the format specified by '--infmt' and consist of the "
+                "same alphabet as specified by '--seqtype'."
                 ))
     file_options.add_argument("-o", "--out",
             nargs = '?',
@@ -223,7 +248,7 @@ def main():
                 ))
     # Options for Running
     run_options = parser.add_argument_group("Run Options")
-    run_options.add_argument("-a", "--align",
+    run_options.add_argument("--align-method",
             nargs = '?',
             choices = ["Muscle", "Mafft", "Generic"], # TO-DO
             default = "Mafft",
@@ -243,7 +268,7 @@ def main():
                 "will be used instead. Default is to use the default specified "
                 "by each program, or 'Blosum62' when using 'Generic'."
                 ))
-    run_options.add_argument("-d", "--distance",
+    run_options.add_argument("--dist-method",
             nargs = '?',
             choices = ["PhyML", "RAxML", "Generic"], # TO-DO
             default = "RAxML",
@@ -263,6 +288,50 @@ def main():
                 "the called program does not accept the matrix, the default "
                 "will be used instead. Default is to use the default specified "
                 "by each program, or 'LG'/'GTR' when using 'Generic'."
+                ))
+    run_options.add_argument("--tree-method",
+            nargs = '?',
+            choices = ["Iqtree", "RAxML"], # TO-DO
+            default = "Iqtree",
+            metavar = "Tree Method",
+            help = (
+                "Method to use for building trees. Regardless of which method is "
+                "chosen, the corresponding option in the config file must be set "
+                "properly in order for the program to run."
+                ))
+    run_options.add_argument("--tree-matrix",
+            nargs = '?',
+            choices = ["WAG", "LG", "JC"], # TO-DO
+            default = "LG",
+            metavar = "Tree Matrix",
+            help = (
+                "Specify a substitution matrix for tree building. If the "
+                "called program does not accept the matrix, the default "
+                "will be used instead. Default is to use the default specified "
+                "by each program."
+                ))
+    run_options.add_argument("-p", "--placeseqs",
+            action = "store_true",
+            help = (
+                "Analysis defaults to placing sequences in a given tree to "
+                "classify them. Requires user also specifies a sequence file "
+                "using '--toplace' and an alignment using '--alignment' at a "
+                "minimum."
+                ))
+    run_options.add_argument("-e", "--iteralign",
+            action = "store_true",
+            help = (
+                "Analysis defaults to iterating over an alignment to select "
+                "optimal columns for tree building. Requires user also specify "
+                "an input alignment using '--alignment'."
+                ))
+    run_options.add_argument("--iter-method",
+            nargs = '?',
+            choices = ["zorro"],  # WORK ON THIS
+            default = "zorro",
+            metavar = "Column Selection Method"
+            help = (
+                "HELP TEXT FOR ITERATING HERE"
                 ))
     run_options.add_argument("-f", "--filter",
             action = "store_true",
@@ -566,11 +635,13 @@ def main():
     ##############################################################################
 
     # Actual program execution
+    # SOMEWHERE HERE: CHECK INPUT ARGS
     # Begin by creating a mapping, regardless of actual execution
     mapping = Mapping(
-            *args.infiles,          # Unpack list
-            treefile=args.treefile, # None if not provided
-            mapfile=args.mapping,   # None if not provided
+            *args.infiles,             # Unpack list
+            alignfile=args.alignment,  # None if not provided
+            treefile=args.treefile,    # None if not provided
+            mapfile=args.mapping,      # None if not provided
             )
     start_seq_dict = mapping()  # Run to get mapped seq_dict
     # Filter if necessary
@@ -589,40 +660,52 @@ def main():
     if args.filter_only:
         pass
     # Run actual program execution now
-    if not args.treefile:  # Sequence-based analysis
-        RunObj = ScrollPy(
+    if args.placeseqs:  # TreePlacer
+        RunObj = TreePlacer(
                 start_seq_dict, # Filtered or not
-                args.tmpout,    # Actual program run uses tmp dir!
+                args.alignment, # Input alignment
+                args.toplace,   # Sequence file to place
+                args.tmpout,    # Tmp out
                 )
-    else:  # Tree-based analysis
-        RunObj = ScrollTree(
-                start_seq_dict, # Filtered or not
-                )
+    elif args.iteralign:  # IterAlign
+        pass  # TO-DO!!!
+    else:  # Distance-based analysis!
+        if not args.treefile:  # Sequence-based analysis
+            RunObj = ScrollPy(
+                    start_seq_dict, # Filtered or not
+                    args.tmpout,    # Actual program run uses tmp dir!
+                    )
+        else:  # Tree-based analysis
+            RunObj = ScrollTree(
+                    start_seq_dict, # Filtered or not
+                    )
     # Perform the actual program execution
     RunObj()
     # Write to outfile(s); config handles gritty details
     # Write table file no matter what
-    Writer = TableWriter(
+    tbl_writer = TableWriter(
             RunObj,    # object to use
             args.out,  # specified output location
             )
     #try:
-    Writer.write()
+    tbl_writer.write()
     #except:  # Dangerous; Change!!!
     #    print("Unexpected error when writing table file")
     # Write sequences, if requested
-    if args.seqout or args.filter_out:  # User requested sequences
-        Writer = SeqWriter(
-                RunObj,           # Object to use
-                args.out,         # Specified output location
-                removed_seq_dict, # Filtered seqs; may be None
-                args.seqout,      # Output sequences
-                args.filter_out,  # Removed/filtered sequences
+    if args.seqout:  # User requested sequences
+        seq_writer = SeqWriter(
+                RunObj,   # Object to use
+                args.out, # Specified output location
                 )
         #try:
-        Writer.write()
+        seq_writer.write()
         #except:  # Dangerous; Change!!!
         #    print("Unexpected error when writing sequence files")  # Logging!
+    if args.filter_out:  # User requested filtered sequences
+        filter_writer = SeqWriter(
+                seq_filter,  # Filter object
+                args.out,    # Specified output location
+                )
     # Something about a summary file? -> TO_DO
 
 

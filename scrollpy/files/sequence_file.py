@@ -12,6 +12,9 @@ from datetime import datetime
 
 from Bio import SeqIO
 
+from scrollpy.sequences._scrollseq import ScrollSeq
+from scrollpy.util._counter import Counter
+
 
 def _get_sequences(file_handle, file_format="fasta"):
     """Reads sequences from a file and returns relevant objects.
@@ -34,6 +37,35 @@ def _get_sequences(file_handle, file_format="fasta"):
     with open(file_handle,'r') as i:
         records = [record for record in SeqIO.parse(i, file_format)]
     return records
+
+
+def seqfile_to_scrollseqs(file_handle, file_format="fasta"):
+    """Reads sequences from a file and returns relevant objects.
+
+    Like _get_sequences(), but returns ScrollSeq objects instead of
+    BioPython SeqRecord objects.
+
+    Args:
+        file_handle (str): Full path to sequence file.
+        file_format (str): SeqIO-compatible format string.
+            Defaults to "fasta".
+
+    Returns:
+        (list): List of ScrollSeq objects.
+
+    """
+    scroll_seqs = []
+    # Get reference to global counter object
+    counter = Counter()
+    # Make ScrollSeqs
+    for record in _get_sequences(file_handle, file_format):
+        scroll_seq = ScrollSeq(
+                counter(),  # Gets an ID number
+                None,  # Group
+                record,  # SeqRecord object
+                )
+        scroll_seqs.append(scroll_seq)
+    return scroll_seqs
 
 
 def _cat_sequence_lists(*seq_lists):

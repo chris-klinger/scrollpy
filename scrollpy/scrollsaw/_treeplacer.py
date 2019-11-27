@@ -24,7 +24,7 @@ class TreePlacer:
 
         alignment (obj): parsed BioPython alignment object
 
-        to_place (list): list of parsed BioPython SeqRecord objects
+        to_place (list): list of parsed ScrollSeq objects
 
         target_dir (str): path to target directory for output file(s)
 
@@ -56,7 +56,10 @@ class TreePlacer:
         self._current_phy_path   = ""
         self._current_tree_path  = ""
         self._current_tree_obj   = None
-        self._classified         = []  # Sequences and their classification for writing
+        # Classification information
+        self._classified         = {}  # Classified Seq objects
+        self._monophyletic       = []  # Info on monophyletic sequences
+        self._not_monophyletic   = []  # Info on non-monophyletic sequences
 
 
     # def __repr__(self):
@@ -100,14 +103,26 @@ class TreePlacer:
                     ):
                 leaf_info.append('Not Monophyletic')
                 # Not monophyletic, but could still get some info?
-                info = self._classify_node(first_ancestor)
+                leaf_info.extend(self._classify_node(first_ancestor))
+                # Add to internal list
+                self._not_monophyletic.append(leaf_info)
             else:
                 leaf_info.append('Monophyletic')
                 # Get some more information about the classification
-                info = self._classify_monophyletic_node(first_ancestor)
+                group,info = self._classify_monophyletic_node(first_ancestor)
+                leaf_info.extend(info)
+                # Add to internal list
+                self._monophyletic.append(leaf_info)
+                # Set info on seq object and add to list
+                self._add_classified_seq(group,seq_obj)
         # Clean up
         if self._remove_tmp:
             tmp_dir.cleanup()
+
+
+    def return_all_seqs(self):
+        """Returns all classified SrollSeq objects"""
+        return self._classified
 
 
     def _make_new_files(self, seq_obj):
@@ -148,8 +163,7 @@ class TreePlacer:
         """Calls MAFFT to add sequences to an existing alignment"""
         with open(self._current_seq_path,'w') as seq_file:
             # seq_obj.write(seq_file)  # Temporary input file
-            SeqIO.write(  # Need to use BioPython interface instead!
-                    seq_obj,
+            seq_obj._write(  # ScrollSeq _write method now
                     seq_file,
                     'fasta',  # Change to be flexible?
                     )
@@ -375,5 +389,15 @@ class TreePlacer:
         else:
             output_info.append('Unlikely Positive Hit')
 
-        return output_info
+        return group,output_info
+
+
+    def _add_classified_seq(self, group, seq_obj):
+        """Add to internal dict"""
+        seq_obj._group = group
+        try:
+            self._classified[group].append(seq_obj)
+        except KeyError:
+            self._classified[group] = []
+            self._classified[group].apepnd(seq_obj)
 

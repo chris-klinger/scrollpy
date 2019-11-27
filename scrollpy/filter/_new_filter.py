@@ -87,6 +87,11 @@ class Filter:
         return (self._seq_dict,self._removed)
 
 
+    def return_all_seqs(self):
+        """Returns all removed sequences as a dict"""
+        return self._removed
+
+
     def _remove_by_list(self):
         """Given a list of (<SeqObj>,<score>) tuples to remove,
         try to remove each from internal dict and add to removal dict;
@@ -192,6 +197,9 @@ class LengthFilter(GenericFilter):
         above = [(i,v) for i,v in enumerate(values) if v>=self._filter_score]
         for i,zscore in above:  # Index matches the original length and indices lists
             seq_obj,length = self._indices[i]
+            # Note the actual filter value on seq_obj
+            seq_obj._fvalue = zscore
+            # Signal for removal
             self._to_remove.append((
                     seq_obj,
                     zscore,  # Scoring metric
@@ -314,7 +322,21 @@ class IdentityFilter(GenericFilter):
                 percent_identical = 0
             if percent_identical >= self._filter_score:
                 identity_set.add((header1,header2))  # Add as a tuple
+                # Also add exact value to object
+                for header in (header1,header2):
+                    self._add_filter_score_to_obj(
+                            header,
+                            percent_identical,
+                            )
+
         return identity_set
+
+
+    def _add_filter_score_to_obj(self, header, score):
+        """Finds right object and adds score"""
+        for seq_obj in self._seq_list:
+            if seq_obj._id in header:
+                seq_obj._fvalue = score
 
 
     def _remove_by_identity(self):
@@ -325,7 +347,8 @@ class IdentityFilter(GenericFilter):
         tuples_to_remove = decompose_sets(initial_set)
         for_removal = []
         for tup in tuples_to_remove:
-            pairs = [(seq_obj,len(seq_obj)) for seq_obj in self._seq_list if seq_obj._id in tup]
+            pairs = [(seq_obj,len(seq_obj)) for seq_obj in
+                    self._seq_list if seq_obj._id in tup]
             for pair in sorted(
                     pairs,
                     key=lambda x:x[1],  # Sort by length

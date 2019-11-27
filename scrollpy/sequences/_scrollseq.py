@@ -28,6 +28,7 @@ class ScrollSeq:
         self._id = id_num
         self._group = group
         self._distance = 0.0 # Initialize float counter for distance
+        self._fvalue = None  # Value used to filter
         self._record = seq_record
         # All remaining attributes are internal properties
         #self._accession = accession

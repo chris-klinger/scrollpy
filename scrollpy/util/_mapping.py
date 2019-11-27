@@ -26,6 +26,7 @@ from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._leafseq import LeafSeq
 from scrollpy.util._util import non_blank_lines
 from scrollpy.util._align import affine_align,simple_score
+from scrollpy.util._counter import Counter
 
 
 class Mapping:
@@ -56,7 +57,7 @@ class Mapping:
                 value = configs['ARGS'][var]
             setattr(self, var, value)
         # Internal counter
-        self._counter = 1
+        self._counter = Counter()
         # Internal defaults
         self._records = {}
         self._record_list = []
@@ -218,7 +219,7 @@ class Mapping:
                                 label=label,
                                 )
                     # Increment counter after making all objects
-                    self._counter += 1
+                    self._counter()  # Calling increases count
                     # Associate Seq with Leaf, if Leaf exists
                     if leafseq_obj:
                         leafseq_obj._seq = scrollseq_obj

@@ -217,11 +217,14 @@ class LengthFilter(GenericFilter):
 
 
     @staticmethod
-    def calculate_zscore(values):
+    def calculate_zscore(values, absval=True):
         """Return an n-length list of z-scores"""
         smean = mean(values)
         s = std(values)
-        return [((abs(x-smean))/s) for x in values]
+        if absval:
+            return [((abs(x-smean))/s) for x in values]
+        else:
+            return [((x-smean)/s) for x in values]
 
 
     def _remove_by_zscore(self):

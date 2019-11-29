@@ -1,19 +1,19 @@
 """
-This module contains a generic class that will farm out tree building calls
-to the relevant program using the subprocess (for now - check BioPython
-compatability eventually?).
+This module contains a generic class that will farm out alignment reliability
+calls to the relevant program using subprocess.
 
-Similar to Aligner and Distance, but focussing on actual tree-building
-commands.
+Class needs to handle all details, including capturing output (file or
+stdout, depending on program), capturing stderr to logging, etc.
 
 """
 
+
 import os
 import subprocess
-from subprocess import SubprocessError
+from subprocess import SubProcessError
 
 
-class TreeBuilder:
+class AlignEvaluator:
 
     def __init__(self, method, cmd, inpath, outpath,
             cmd_list=None, logger=None, **kwargs):
@@ -45,25 +45,24 @@ class TreeBuilder:
 
 
     def __call__(self):
-        """TO-DO"""
-        # For now use subprocess
-        if self.method == 'Iqtree':
-            self.cmd_list.insert(0, self.cmd)  # I.e. /path/to/iqtree
+        """Call method and capture output"""
+        if self.method == 'zorro':
+            self.cmd_list.insert(0, self.cmd)  # I.e. 'zorro_mac'
             try:
                 cmdline = subprocess.run(
-                    self.cmd_list,  # Full command
-                    stdout=subprocess.PIPE,  # Returns bytes
-                    stderr=subprocess.PIPE,  # Returns bytes
-                    )
-            except SubprocessError:
-                print("Failed to run IQ-Tree")  # Log eventually
-            # OUTPUT FILE IS THE SUMMARY FILE!!!
-            # with open(self.outpath, 'w') as o:
-            #     decoded_out = cmdline.stdout.decode()
-            #     o.write(decoded_out)
-        # Other methods?
-        elif self.method == 'RAxML':
-            pass  # TO-DO
+                        self.cmd_list,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        )
+            except SubproccessError:
+                print("Failed to run Zorro")  # Log eventually
+            # Output file from stdout
+            with open(self.outpath,'w') as o:
+                decoded_out = cmdline.stdout.decode()
+                o.write(decoded_out)
+        # Add other options eventually
+        else:
+            print("Trying to run{}".format(self.method))
 
 
     def _validate(self, name, value, validation_method, **kwargs):
@@ -85,24 +84,26 @@ class TreeBuilder:
 
     def _validate_method(self, method_name):
         """Returns True if method exists in class"""
-        if not method_name in ('RAxML', 'Iqtree'): # For now
+        if not method_name in ('zorro', 'Generic'): # For now
             return False
         return True
 
+
     def _validate_command(self, command, method=None):
         """Returns True if command makes sense for method"""
-        if method == 'Iqtree':
+        if method == 'zorro':
             path_char = os.sep
             if path_char in command: # Full path given
                 cmd = os.path.basename(command)
             else:
                 cmd = command
-            if cmd not in ('iqtree'):
+            if cmd not in ('zorro','zorro-mac'):
                 return False
         elif method == 'Generic':
             if not command == 'None':
                 return False
         return True
+
 
     def _validate_inpath(self, inpath):
         """Raises FileNotFoundError if file does not exist"""
@@ -115,6 +116,7 @@ class TreeBuilder:
         elif os.path.isdir(inpath):
             raise AttributeError("Cannot build tree with {}; directory")
         return True
+
 
     def _validate_outpath(self, outpath):
         """Quits if directory is non-existent; Should log if file exists"""

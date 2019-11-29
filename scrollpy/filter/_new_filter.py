@@ -87,8 +87,13 @@ class Filter:
         return (self._seq_dict,self._removed)
 
 
-    def return_all_seqs(self):
-        """Returns all removed sequences as a dict"""
+    def return_remaining_seqs(self):
+        """Returns all sequences not removed as a dict"""
+        return self._seq_dict
+
+
+    def return_removed_seqs(self):
+        """Returns all sequences removed as a dict"""
         return self._removed
 
 

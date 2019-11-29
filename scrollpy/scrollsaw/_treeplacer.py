@@ -120,7 +120,7 @@ class TreePlacer:
             tmp_dir.cleanup()
 
 
-    def return_all_seqs(self):
+    def return_classified_seqs(self):
         """Returns all classified SrollSeq objects"""
         return self._classified
 

@@ -92,12 +92,12 @@ class SeqWriter(BaseWriter):
                         )
         # If Filter, want all removed sequences
         elif isinstance(target_obj,Filter):
-            write_list = self._filter(mode='all')
-            if removed_list:  # Not empty; filtering might not remove any
-                for group,seqs in removed_list:
+            for value in ('remaining','removed'):
+                write_list = self._filter(mode=value)
+                for group,seqs in write_list:
                     outfile = self._get_filepath(
                             group,
-                            seq_type='filtered',
+                            seq_type=value,
                             )
                     sequence_file._sequence_list_to_file(
                             write_list,
@@ -106,18 +106,17 @@ class SeqWriter(BaseWriter):
                             )
         # If TreePlacer, want all classified sequences
         elif isinstance(target_obj,TreePlacer):
-            write_list = self._filter(mode='all')
-            if removed_list:
-                for group,seqs in removed_list:
-                    outfile = self._get_filepath(
-                            group,
-                            seq_type='classified',
-                            )
-                    sequence_file._sequence_list_to_file(
-                            write_list,
-                            outfile,
-                            config['ARGS']['seqfmt'],  # User-specified
-                            )
+            write_list = self._filter(mode='classified')
+            for group,seqs in write_list:
+                outfile = self._get_filepath(
+                        group,
+                        seq_type='classified',
+                        )
+                sequence_file._sequence_list_to_file(
+                        write_list,
+                        outfile,
+                        config['ARGS']['seqfmt'],  # User-specified
+                        )
         # If none of these, raise error/log something
         else:
             pass  # Do something
@@ -146,8 +145,12 @@ class SeqWriter(BaseWriter):
                         seqs[group] = []
                         seqs[group].append(obj)
         # Otherwise, just get all
-        elif mode == 'all':
-            seqs = self._sp_object.return_all_seqs()
+        elif mode == 'remaining':
+            seqs = self._sp_object.return_remaining_seqs()
+        elif mode == 'removed':
+            seqs = self._sp_object.return_removed_seqs()
+        elif mode == 'classified':
+            seqs = self._sp_object.return_classified_seqs()
 
         return [(group,objs) for group,objs in seqs.items()]
 

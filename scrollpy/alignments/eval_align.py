@@ -10,7 +10,7 @@ stdout, depending on program), capturing stderr to logging, etc.
 
 import os
 import subprocess
-from subprocess import SubProcessError
+from subprocess import SubprocessError
 
 
 class AlignEvaluator:
@@ -97,7 +97,7 @@ class AlignEvaluator:
                 cmd = os.path.basename(command)
             else:
                 cmd = command
-            if cmd not in ('zorro','zorro-mac'):
+            if cmd not in ('zorro','zorro_mac'):
                 return False
         elif method == 'Generic':
             if not command == 'None':

@@ -2,6 +2,18 @@
 This module contains the main AlignIter object.
 """
 
+import os
+
+
+import numpy as np
+from numpy import mean,std
+
+
+from scrollpy import config
+from scrollpy.alignments.eval_align import AlignEvaluator
+from scrollpy.filter._new_filter import LengthFilter
+from scrollpy.alignments import parser
+from scrollpy.util import _util
 
 
 class AlignIter:
@@ -59,11 +71,7 @@ class AlignIter:
             tmp_dir = tempfile.TemporaryDirectory()
             self._outdir = tmp_dir.name
         # Get alignment object
-        self._align_object = parser.parse_alignment_file(
-                self._alignment,  # filepath
-                self.alignfmt,   # alignment type
-                to_dict=False,    # return actual object
-                )
+        self._parse_alignment()
         # Run program to evaluate columns
         columns_outpath = self._get_outpath('columns')
         self._calculate_columns(columns_outpath)
@@ -90,10 +98,10 @@ class AlignIter:
             self._make_tree()
             # Add up total BS support
             self._calculate_support()
-            # Keep record of all support values
+            # Keep track of all support values
             self._all_suppports.append(self._current_support)
             # Decide whether to continue
-            if self._current_support > self._optimal_suppport::
+            if self._current_support > self._optimal_suppport:
                 self._optimal_alignment = self._align_obj
                 self._optimal_support = self._current_support
             else:
@@ -109,22 +117,33 @@ class AlignIter:
         pass
 
 
+    def _parse_alignment(self):
+        """Make it easier to parse alignment"""
+        align_object = parser.parse_alignment_file(
+                self._alignment,  # filepath
+                self.alignfmt,   # alignment type
+                to_dict=False,    # return actual object
+                )
+        # Now set to instance variable
+        self._align_obj = align_object
+
+
     def _get_outpath(self, out_type, length=None):
         """Similar to other class functions"""
         align_name = os.path.basename(self._alignment)
         basename = align_name.rsplit('.',1)[0]
         # Outfile depends on out_type
         if out_type == 'columns':
-            outfile = basename + '_columns.fa'
+            outfile = basename + '_columns.txt'
         elif out_type in ('phylip','tree'):
             if not length:
                 raise ValueError  # Log it
             strlen = str(length)
             if out_type == 'phylip':
-                outfile = basename + strlen + '.phy'
+                outfile = basename + '_' + strlen + '.phy'
             elif out_type == 'tree':
                 if self.tree_method == 'Iqtree':
-                    outfile = basename + strlen + '.phy.contree'
+                    outfile = basename + '_' + strlen + '.phy.contree'
         # Get full outpath and return
         outpath = os.path.join(self._outdir, outfile)
         return outpath
@@ -155,7 +174,8 @@ class AlignIter:
         if self.iter_method == 'zorro':
             for i,line in enumerate(
                     _util.non_blank_lines(column_path)):
-                columns.append([i,line])
+                val = float(line)
+                columns.append([i,val])
         elif self.iter_method == 'Generic':
             pass
         # No return -> update internal value
@@ -164,23 +184,26 @@ class AlignIter:
 
     def _calculate_num_columns(self):
         """Calculate number of columns to remove based on values"""
-        # Set this on instance later?!?
-        threshold=-2  # I.e. 2 stddevs
-
         # Length of all sequences should be the same, use first one
         current_align_length = len(self._align_obj[0].seq)
-        # Columns with statistically low scores
+        # Try using quartiles instead of z-scores
         scores = [v for _,v in self._columns]
-        zscores = LengthFilter.calculate_zscore(scores)
-        below = [v for v in enumerate(values) if v<=threshold]
-        # Calculate based on remaining alignment length
-        if not below:
-            # No values are statistically low
-            return 1  # Remove one at a time
-        else:
-            # // to return whole part only
-            diff = current_align_length//len(below)
-            return max(diff,1)  # Always remove at least one
+        s_scores = sorted(scores)
+        # Get quartile data
+        q1 = np.percentile(
+                s_scores,  # Must be sorted
+                25,  # Want first quartile
+                interpolation='midpoint',  # If true q25 is between points
+                )
+        # Evaluate relative distance of values from q1
+        rel_scores = [q1/abs(v) for v in s_scores if v<=q1]
+        num_below = len(rel_scores)
+        # Find the exact mid-point in the  list
+        med = np.median(rel_scores)
+        # Calculate based on length of q1
+        # // to return whole part only
+        target_num = num_below//med
+        return max(int(target_num),1)  # Always remove at least one
 
 
     def _remove_columns(self, number):
@@ -259,25 +282,63 @@ class AlignIter:
 
     def _get_current_outpaths(self):
         """Determine current phylip/tree outpath names"""
-        pass
+        # Length of all sequences should be the same, use first one
+        current_align_length = len(self._align_obj[0].seq)
+        # Use to calculate current values
+        self._current_phy_path   = self._get_outpath(
+                'phylip',
+                length=current_align_length,
+                )
+        self._current_tree_path  = self._get_outpath(
+                'tree',
+                length=current_align_length,
+                )
 
 
     def _make_tree(self):
         """Call tree program to make new tree"""
-        pass
+        if self.tree_method == 'Iqtree':
+            build_command = [
+                    '-nt',  # Number of processors
+                    'AUTO',
+                    '-s',  # Input filename
+                    self._current_phy_path,
+                    '-m',
+                    self.tree_matrix,  # E.g. 'LG'
+                    '-bb',  # Rapid bootstrapping
+                    '1000',
+                    ]
+        elif self.tree_method == 'RAxML':
+            pass  # Add support eventually?
+        builder = TreeBuilder(
+                self.tree_method,
+                config['TREE'][self.tree_method],  # Cmd to execute
+                inpath = self._current_phy_path,  # Should exist
+                outpath = self._current_tree_path,  # Should be a real path
+                cmd_list = build_command,  # Uses subprocess internally
+                )
+        builder()  # Run command
 
 
     def _calculate_support(self):
         """Add support over all nodes"""
-        pass
-
-
-    def _update_optimals(self):
-        """Determine whether optimal values are updated"""
-        pass
+        self._current_support = _tree.get_total_support(
+                self._current_tree_obj)
 
 
     def _is_optimal(self):
         """Determines whether to continue iterating"""
-        pass
+        if len(self._all_supports) <=3:
+            return False  # Need more values
+        else:
+            # Determine the mean/std dev of all values
+            smean = mean(self._all_supports)
+            std_dev = std(self._all_supports)
+            # calculate z-score of most recent value
+            zscore = (self._current_support-smean)/std_dev
+            # Stop if below a specific threshold
+            if zscore <= -3:  # Make user-specified?
+                return True
+        # Otherwise, return False -> more iterations
+        return False
 

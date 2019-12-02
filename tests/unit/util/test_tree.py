@@ -34,6 +34,7 @@ class TestTreeModule(unittest.TestCase):
                 treefile=tree_file,
                 mapfile=map_file,
                 infmt='fasta',  # Not needed
+                alignfmt='fasta',
                 treefmt='newick',
                 )
         seq_dict = mapping()
@@ -115,3 +116,20 @@ class TestTreeModule(unittest.TestCase):
         self.assertEqual(group_names,node_root_children)
         self.assertEqual(group_names,leafseq_root_children)
 
+
+    def test_is_complete_group(self):
+        """Tests whether group completeness check works"""
+        # TO-DO!!!
+        pass
+
+
+    def test_get_total_support(self):
+        """Tests that the support for trees is calculated correctly"""
+        # Add some support values
+        for node in self.tree.traverse():
+            if len(node.children) == 2:  # Bifurcating
+                node.support = 100
+        # Calculate support (for four nodes)
+        total_support = _tree.get_total_support(self.tree)
+        # Test
+        self.assertEqual(total_support,400)

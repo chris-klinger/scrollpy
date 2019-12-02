@@ -131,3 +131,21 @@ def is_complete_group(node_object, group_list):
         return False
     return True
 
+
+def get_total_support(tree_obj):
+    """
+    Adds up support over all nodes in a given tree object.
+
+    Args:
+        tree_obj (obj): ETE3 Tree object.
+
+    Returns:
+        int: total of all node support values.
+
+    """
+    # By default, leaf nodes have support of 1.0
+    # Could restrict to stritly bifurcating?
+    supports = [node.support for node in tree_obj.traverse()
+            if len(node.children) > 1]
+    return sum(supports)
+

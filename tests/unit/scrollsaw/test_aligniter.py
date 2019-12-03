@@ -7,10 +7,12 @@ import unittest
 import shutil
 from configparser import DuplicateSectionError
 
+from Bio import AlignIO
 
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy.scrollsaw._aligniter import AlignIter
+from scrollpy.alignments import parser
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__)) # /files/
@@ -143,3 +145,146 @@ class TestAlignIter(unittest.TestCase):
         # FINALLY calculate
         num_columns = self.iter._calculate_num_columns()
         self.assertEqual(num_columns,531)
+
+
+    def test_remove_cols_from_align(self):
+        """Test removing a series of indices from alignment object"""
+        # Populate necessary instance values
+        self.iter._parse_alignment()
+        start_align = self.iter._align_obj
+        orig_len = len(start_align[0])-1
+        # Try to remove
+        test_indices = [0, 10, 1371]
+        self.iter._remove_cols_from_align(test_indices)
+        # Need to test that each one is equal to the one after
+        # It in the original alignment
+        for i,index in enumerate(test_indices):
+            adj = i+1
+            start_col = start_align[:,index]
+            if index == orig_len:  # Removed last value
+                adj_col = start_align[:,index-1]  # Second last value
+                new_col = self.iter._align_obj[:,-1]  # New last value
+            else:
+                adj_index = index+adj
+                adj_col = start_align[:,adj_index]
+                new_col = self.iter._align_obj[:,index]
+            self.assertEqual(adj_col,new_col)
+
+
+    def test_remove_cols_from_align(self):
+        """Tests when the values are grouped at beginning/end"""
+        # Populate necessary instance values
+        self.iter._parse_alignment()
+        start_align = self.iter._align_obj
+        orig_len = len(start_align[0])-1
+        # Try to remove
+        test_indices = [0, 1, 2, 3, 4, 1368, 1369, 1370, 1371]
+        self.iter._remove_cols_from_align(test_indices)
+        # Compare sequences
+        adj = start_align[:, 5:1368]
+        for s1,s2 in zip(adj,self.iter._align_obj):
+            # SeqRecords can't be directly compared
+            # Compare .seq attrs instead
+            self.assertEqual(s1.seq,s2.seq)
+
+
+    def test_shift_cols(self):
+        """Tests that column shifting works as expected"""
+        # Mock some values
+        self.iter._columns = [
+                [0,'a'] , [1,'b'] , [3,'d']  , # Removed at 2
+                [4,'e'] , [6,'g'] , [8,'i']  , # Removed at 5 and 7
+                [10,'k'], [11,'l'], [12,'m'] , # Removed at 9
+                ]
+        indices = [9,7,2,5]  # Unsorted indices
+        # Call method
+        self.iter._shift_cols(indices)
+        # Check values
+        expected = [
+                [0, 'a'], [1, 'b'], [2, 'd'],
+                [3, 'e'], [4, 'g'], [5, 'i'],
+                [6, 'k'], [7, 'l'], [8, 'm'],
+                ]
+        self.assertEqual(self.iter._columns,expected)
+
+
+    def test_write_current_alignment(self):
+        """Tests making tree"""
+        # Populate necessary instance values
+        self.iter._parse_alignment()
+        column_path = self.iter._get_outpath('columns')
+        if not os.path.exists(column_path):
+            self.iter._calculate_columns(column_path)
+        self.iter._evaluate_columns(column_path)
+        self.iter._get_current_outpaths()
+        # Write Alignment
+        self.iter._write_current_alignment()
+        # Now parse again
+        new_obj = parser.parse_alignment_file(
+                self.iter._current_phy_path,
+                'phylip-relaxed',
+                to_dict=False,
+                )
+        self.assertEqual(len(new_obj),5)
+
+
+    @unittest.skip('For time')
+    def test_make_tree(self):
+        """Tests making tree"""
+        # Populate necessary instance values
+        self.iter._parse_alignment()
+        column_path = self.iter._get_outpath('columns')
+        if not os.path.exists(column_path):
+            self.iter._calculate_columns(column_path)
+        self.iter._evaluate_columns(column_path)
+        self.iter._get_current_outpaths()
+        # Write Alignment, if not exists
+        if not os.path.exists(self.iter._current_phy_path):
+            self.iter._write_current_alignment()
+        # Make tree
+        self.iter._make_tree()
+        # Check file is not empty
+        file_size = os.stat(
+                self.iter._current_tree_path).st_size
+        self.assertTrue(file_size > 0)
+
+
+    def test_parse_tree(self):
+        """Tests parsing tree"""
+        self.iter._parse_alignment()
+        self.iter._get_current_outpaths()
+        # Write Alignment, if not exists
+        if not os.path.exists(self.iter._current_phy_path):
+            self.iter._write_current_alignment()
+        # Make tree, if not exists
+        if not os.path.exists(self.iter._current_tree_path):
+            self.iter._make_tree()
+        # Now parse it
+        self.iter._parse_tree()
+        # Check values
+        leaves = [leaf for leaf in self.iter._current_tree_obj]
+        self.assertEqual(len(leaves),5)
+
+
+    def test_calculate_support(self):
+        """Tests calculating  support"""
+        self.iter._parse_alignment()
+        self.iter._get_current_outpaths()
+        # Write Alignment, if not exists
+        if not os.path.exists(self.iter._current_phy_path):
+            self.iter._write_current_alignment()
+        # Make tree, if not exists
+        if not os.path.exists(self.iter._current_tree_path):
+            self.iter._make_tree()
+        # Now parse it
+        self.iter._parse_tree()
+        # Calc the values
+        self.iter._calculate_support()
+        self.assertEqual(self.iter._current_support,136)
+
+
+    def test_is_optimal(self):
+        """Tests calculating optimal"""
+        self.iter._all_supports = [100]
+        self.assertFalse(self.iter._is_optimal())
+

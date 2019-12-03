@@ -3,17 +3,20 @@ This module contains the main AlignIter object.
 """
 
 import os
-
+import bisect
 
 import numpy as np
 from numpy import mean,std
 
+from Bio import AlignIO
 
 from scrollpy import config
 from scrollpy.alignments.eval_align import AlignEvaluator
 from scrollpy.filter._new_filter import LengthFilter
+from scrollpy.trees.maketree import TreeBuilder
 from scrollpy.alignments import parser
-from scrollpy.util import _util
+from scrollpy.files import tree_file
+from scrollpy.util import _util,_tree
 
 
 class AlignIter:
@@ -90,13 +93,11 @@ class AlignIter:
             # Determine outpath names
             self._get_current_outpaths()
             # Write new alignment to file
-            AlignIO.write(  # AlignIO interface!
-                    self._align_obj,
-                    self._current_phy_path,
-                    "phylip-relaxed",  # Allows longer names
-                    )
+            self._write_current_alignment()
             # Build IQ-Tree
             self._make_tree()
+            # Parse and add to internal object
+            self._parse_tree()
             # Add up total BS support
             self._calculate_support()
             # Keep track of all support values
@@ -127,6 +128,25 @@ class AlignIter:
                 )
         # Now set to instance variable
         self._align_obj = align_object
+
+
+    def _parse_tree(self):
+        """Convenience"""
+        tree_obj = tree_file.read_tree(
+                self._current_tree_path,
+                'newick',
+                )
+        # Set to instance variable
+        self._current_tree_obj = tree_obj
+
+
+    def _write_current_alignment(self):
+        """Convenience"""
+        AlignIO.write(
+                self._align_obj,
+                self._current_phy_path,
+                'phylip-relaxed',
+                )
 
 
     def _get_outpath(self, out_type, length=None):
@@ -234,7 +254,8 @@ class AlignIter:
         slices = []
         for i,val in enumerate(sorted(indices)):  # Must be sorted!
             inner = []
-            if not previous:  # First value
+            # Index could be 0, specifically check if previous is None!
+            if previous is None:  # First value
                 inner.append(val)
             else:  # Later values require two indices
                 inner.append(previous+1)  # +1 offset for list indexing

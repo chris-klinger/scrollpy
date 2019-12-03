@@ -142,4 +142,4 @@ class TestAlignIter(unittest.TestCase):
         self.iter._evaluate_columns(column_path)
         # FINALLY calculate
         num_columns = self.iter._calculate_num_columns()
-        self.assertEqual(num_columns,80)
+        self.assertEqual(num_columns,531)

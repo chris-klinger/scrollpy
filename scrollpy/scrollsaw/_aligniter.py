@@ -43,6 +43,7 @@ class AlignIter:
             setattr(self, var, value)
         # Internal defaults; change each time through __call__
         self._align_obj          = None  # Parsed BioPython object
+        self._start_length       = None
         self._columns            = []
         self._current_phy_path   = ""
         self._current_tree_path  = ""
@@ -180,30 +181,25 @@ class AlignIter:
             pass
         # No return -> update internal value
         self._columns = columns
+        self._start_length = len(columns)
 
 
     def _calculate_num_columns(self):
         """Calculate number of columns to remove based on values"""
-        # Length of all sequences should be the same, use first one
-        current_align_length = len(self._align_obj[0].seq)
-        # Try using quartiles instead of z-scores
-        scores = [v for _,v in self._columns]
-        s_scores = sorted(scores)
-        # Get quartile data
-        q1 = np.percentile(
-                s_scores,  # Must be sorted
-                25,  # Want first quartile
-                interpolation='midpoint',  # If true q25 is between points
+        # Length of columns
+        curr_length = len(self._columns)
+        fraction_remaining = curr_length/self._start_length
+        # Get list of current column scores
+        curr_scores = [v for _,v in self._columns]
+        # Bin the data based on Doane's metric
+        hist,bins = np.histogram(
+                curr_scores,   # Actual data
+                bins='doane',  # Use Doane's method
                 )
-        # Evaluate relative distance of values from q1
-        rel_scores = [q1/abs(v) for v in s_scores if v<=q1]
-        num_below = len(rel_scores)
-        # Find the exact mid-point in the  list
-        med = np.median(rel_scores)
-        # Calculate based on length of q1
-        # // to return whole part only
-        target_num = num_below//med
-        return max(int(target_num),1)  # Always remove at least one
+        # Adjust number by bin count and remaining alignment length
+        num = int(hist[0] * fraction_remaining)
+        # Always remove at least one position
+        return max(num,1)
 
 
     def _remove_columns(self, number):

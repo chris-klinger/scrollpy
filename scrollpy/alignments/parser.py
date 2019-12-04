@@ -3,9 +3,11 @@ This module contains functions to parse alignment files and
 return a dictionary of header:sequence pairs
 """
 
+from Bio import AlignIO
+
+
 from scrollpy.util._util import non_blank_lines
 
-from Bio import AlignIO
 
 def parse_alignment_file(file_path, file_type, to_dict=True):
     """Opens and parses an alignment file depending on file type.
@@ -37,3 +39,11 @@ def _bio_align_to_dict(align_obj, align_dict=None):
     """
     return {record.id:str(record.seq) for record in align_obj}
 
+
+def write_alignment_file(align_obj, file_path, file_type):
+    """Uses Align.IO internally"""
+    AlignIO.write(
+            align_obj,
+            file_path,
+            file_type,  # E.g. 'fasta'
+            )

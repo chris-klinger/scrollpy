@@ -8,6 +8,7 @@ import re
 
 from scrollpy import config
 from scrollpy.files import sequence_file
+from scrollpy.alignments import parser
 from scrollpy.util import _util
 
 
@@ -47,6 +48,71 @@ class BaseWriter:
 
     def _filter(self):
         raise NotImplementedError
+
+
+
+class AlignWriter(BaseWriter):
+    """AlignWriter subclass of BaseWriter baseclass.
+
+    Methods:
+        write(): TO-DO
+
+        _filter():
+            Args:
+                (self)
+            Returns:
+                raises NotImplementedError (does not override parent)
+
+        _get_outpath(): TO-DO
+
+    """
+    def __init__(self, sp_object, out_path):
+        BaseWriter.__init__(self, sp_object, out_path)
+
+
+    def write(self):
+        """Obtain optimal alignment and write to file"""
+        # If AlignIter, want optimal alignment
+        if isinstance(target_obj,AlignIter):
+            write_obj = target_obj.get_optimal_alignment()
+            outfile = self._get_filepath(
+                    'optimal',  # 'group'
+                    seq_type='alignment',
+                    )
+            parser.write_alignment_file(
+                    write_obj,
+                    outfile,
+                    config['ARGS']['alignfmt'],  # User-specified
+                    )
+        # If none of these, raise error/log something
+        else:
+            pass  # Do something
+
+
+    def _get_outpath(self, align_name, align_type):
+        """Obtain a reasonable outpath"""
+        # Probably just use an external method once that is written?
+        no_clobber = bool(config['ARGS']['no_clobber'])
+        sep = config['ARGS']['filesep']
+        suffix = config['ARGS']['suffix']
+        aformat = config['ARGS']['alignfmt']
+        #assert isinstance(group, str) # this should eventually be a string!
+        if (suffix == '') or (not isinstance(suffix, str)):
+            basename = sep.join((str(align_name),align_type))
+        else:  # It is a string
+            basename = sep.join((str(align_name),align_type,suffix))
+        if sformat == 'fasta':
+            basename = basename + '.mfa' # Need to make more flexible eventually
+        else:
+            pass  # TO-DO!!!
+        filepath = os.path.join(self._out_path, basename)
+        if os.path.exists(filepath):
+            if no_clobber:
+                pass # DO SOMETHING
+            else:
+                pass # DO SOMETHING ELSE
+
+        return filepath
 
 
 class SeqWriter(BaseWriter):
@@ -237,6 +303,15 @@ class TableWriter(BaseWriter):
                         outpath,
                         table_type=value,
                         )
+        # If AlignIter, want information on alignments itered over
+        elif isinstance(target_obj,AlignIter):
+            lines = self._filter(mode='aligniter')
+            outpath = self._get_filepath(table_type='aligniter')
+            self._write(
+                    lines,
+                    outpath,
+                    table_type='aligniter',
+                    )
         # Else signal bad input
         else:
             pass  # Raise Error/log something
@@ -290,6 +365,15 @@ class TableWriter(BaseWriter):
                         'Group{} Support'.format(n),
                         'Group{} Completeness'.format(n),
                         ])
+        # Back to fixed number of values
+        elif table_type == 'aligniter':
+            header_list = [
+                    'Iteration',
+                    'Alignment Length',
+                    'Low Column Score',
+                    'Tree Support',
+                    'Optimal',
+                    ]
         # Modify values based on tbl sep
         # Note, self._tblsep should be safely defined
         filtered = self._modify_values_based_on_sep(
@@ -337,6 +421,9 @@ class TableWriter(BaseWriter):
             linevals = self._sp_object._monophyletic
         elif mode == 'notmonophyletic':
             linevals = self._sp_object._not_monophyletic
+        # For AlignIter, allow object to return list
+        elif mode == 'aligniter':
+            linevals = self._sp_object.iter_info
 
         # Filter all values and return
         for lineval in linevals:

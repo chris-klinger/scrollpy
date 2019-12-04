@@ -44,10 +44,12 @@ class AlignIter:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Internal default that does not change each time through __call__
+        self._start_length       = None
         # Internal defaults; change each time through __call__
         self._align_obj          = None  # Parsed BioPython object
-        self._start_length       = None
         self._columns            = []
+        self._current_scores     = []
         self._current_phy_path   = ""
         self._current_tree_path  = ""
         self._current_tree_obj   = None
@@ -56,6 +58,8 @@ class AlignIter:
         # Optimal alignment/tree info
         self._optimal_alignment  = None  # Object
         self._optimal_support    = 0     # Total BS support
+        # Collated information for output
+        self.iter_info          = []
 
 
     # def __repr__(self):
@@ -84,12 +88,15 @@ class AlignIter:
         # Enter loop
         optimal = False
         number = self._num_columns  # None if not user-specified
+        iter_num = 0
         while not optimal:
-            # Determine number of columns to remove
-            if not number:  # Calculate
-                number = self._calculate_num_columns()
-            # Remove them from the alignment
-            self._remove_columns(number)
+            if iter_num > 1:
+                # Determine number of columns to remove
+                if not number:  # Calculate
+                    number = self._calculate_num_columns()
+                # Remove them from the alignment
+                self._remove_columns(number)
+
             # Determine outpath names
             self._get_current_outpaths()
             # Write new alignment to file
@@ -109,14 +116,26 @@ class AlignIter:
             else:
                 # If function returns True, loop breaks
                 optimal = self._is_optimal()
+
+            # Write information to an internal list
+            self.iter_info.append([
+                iter_num,
+                len(self._columns),  # Alignment length
+                self._current_scores[0],  # Lowest value
+                self._current_support,  # Support for current tree
+                optimal,  # Whether or not current alignment is optimal
+                ])
+
+            # If not optimal, keep going
+            iter_num += 1
         # Clean up
         if self._remove_tmp:
             tmp_dir.cleanup()
 
 
-    def write_optimal_alignment(self):
+    def get_optimal_alignment(self):
         """User can request optimal alignment"""
-        pass
+        return self._optimal_alignment
 
 
     def _parse_alignment(self):
@@ -210,10 +229,10 @@ class AlignIter:
         curr_length = len(self._columns)
         fraction_remaining = curr_length/self._start_length
         # Get list of current column scores
-        curr_scores = [v for _,v in self._columns]
+        self._current_scores = [v for _,v in self._columns]
         # Bin the data based on Doane's metric
         hist,bins = np.histogram(
-                curr_scores,   # Actual data
+                self._current_scores,   # Actual data
                 bins='doane',  # Use Doane's method
                 )
         # Adjust number by bin count and remaining alignment length

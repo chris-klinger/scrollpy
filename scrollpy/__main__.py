@@ -19,6 +19,7 @@ from scrollpy import Mapping
 from scrollpy import Filter
 from scrollpy import ScrollPy
 from scrollpy import ScrollTree
+from scrollpy import AlignIter
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
 # Import lookups
@@ -323,7 +324,9 @@ def main():
             help = (
                 "Analysis defaults to iterating over an alignment to select "
                 "optimal columns for tree building. Requires user also specify "
-                "an input alignment using '--alignment'."
+                "an input alignment using '--alignment'. Outputs the optimal "
+                "alignment found in the same format specified for the input "
+                "alignment, i.e. specified by the '--alignfmt' argument."
                 ))
     run_options.add_argument("--iter-method",
             nargs = '?',
@@ -668,7 +671,11 @@ def main():
                 args.tmpout,    # Tmp out
                 )
     elif args.iteralign:  # IterAlign
-        pass  # TO-DO!!!
+        RunObj = AlignIter(
+                args.alignment,
+                args.tmpout,
+                )
+        alignout = True  # Signal to output an alignment
     else:  # Distance-based analysis!
         if not args.treefile:  # Sequence-based analysis
             RunObj = ScrollPy(
@@ -691,6 +698,13 @@ def main():
     tbl_writer.write()
     #except:  # Dangerous; Change!!!
     #    print("Unexpected error when writing table file")
+    # Write optimal alignment, if AlignIter was performed
+    if alignout:
+        align_writer = AlignWriter(
+                RunObj,
+                args.out,
+                )
+        align_writer.write()
     # Write sequences, if requested
     if args.seqout:  # User requested sequences
         seq_writer = SeqWriter(
@@ -706,6 +720,7 @@ def main():
                 seq_filter,  # Filter object
                 args.out,    # Specified output location
                 )
+        filter_writer.write()
     # Something about a summary file? -> TO_DO
 
 

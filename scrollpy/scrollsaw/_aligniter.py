@@ -30,7 +30,13 @@ class AlignIter:
     """
 
     # Class var list
-    _config_vars = ('alignfmt', 'iter_method', 'tree_method', 'tree_matrix')
+    _config_vars = (
+            'alignfmt',
+            'col_method',
+            'iter_method',
+            'tree_method',
+            'tree_matrix',
+            )
 
     def __init__(self, alignment, target_dir, num_columns=None, **kwargs):
         # Required
@@ -46,6 +52,8 @@ class AlignIter:
             setattr(self, var, value)
         # Internal default that does not change each time through __call__
         self._start_length       = None
+        self._start_obj          = None
+        self._start_cols         = []
         self._remove_tmp         = False
         # Internal defaults; change each time through __call__
         self._align_obj          = None  # Parsed BioPython object
@@ -85,6 +93,115 @@ class AlignIter:
         self._calculate_columns(columns_outpath)
         # Parse output
         self._evaluate_columns(columns_outpath)
+        # Run analysis
+        if self.iter_method == 'hist':
+            self._hist_run()
+        elif self.iter_method == 'bisect':
+            self._bisect_run()
+        else:
+            print("Could not run __call__")
+        # Clean up
+        if self._remove_tmp:
+            tmp_dir.cleanup()
+
+
+    def get_optimal_alignment(self):
+        """User can request optimal alignment"""
+        return self._optimal_alignment
+
+
+    def _parse_alignment(self):
+        """Make it easier to parse alignment"""
+        align_object = parser.parse_alignment_file(
+                self._alignment,  # filepath
+                self.alignfmt,   # alignment type
+                to_dict=False,    # return actual object
+                )
+        # Now set to instance variable
+        self._align_obj = align_object
+        self._start_obj = self._align_obj
+
+
+    def _parse_tree(self):
+        """Convenience"""
+        tree_obj = tree_file.read_tree(
+                self._current_tree_path,
+                'newick',
+                )
+        # Set to instance variable
+        self._current_tree_obj = tree_obj
+
+
+    def _write_current_alignment(self):
+        """Convenience"""
+        AlignIO.write(
+                self._align_obj,
+                self._current_phy_path,
+                'phylip-relaxed',
+                )
+
+
+    def _get_outpath(self, out_type, length=None):
+        """Similar to other class functions"""
+        align_name = os.path.basename(self._alignment)
+        basename = align_name.rsplit('.',1)[0]
+        # Outfile depends on out_type
+        if out_type == 'columns':
+            outfile = basename + '_columns.txt'
+        elif out_type in ('phylip','tree'):
+            if not length:
+                raise ValueError  # Log it
+            strlen = str(length)
+            if out_type == 'phylip':
+                outfile = basename + '_' + strlen + '.phy'
+            elif out_type == 'tree':
+                if self.tree_method == 'Iqtree':
+                    outfile = basename + '_' + strlen + '.phy.contree'
+        # Get full outpath and return
+        outpath = os.path.join(self._outdir, outfile)
+        return outpath
+
+
+    def _calculate_columns(self, column_path):
+        """Runs external program"""
+        if self.col_method == 'zorro':
+            # Very short command
+            column_command = [
+                    self._alignment,
+                    ]
+        elif self.col_method == 'Generic':
+            pass  # Keep options open?
+        evaluator = AlignEvaluator(
+                self.col_method,
+                config['ITER'][self.col_method],  # Actual cmd
+                self._alignment,  # Alignment is infile
+                column_path,  # Outpath
+                cmd_list = column_command,
+                )
+        evaluator()
+
+
+    def _evaluate_columns(self, column_path):
+        """Parse output file into internal attribute"""
+        columns = []
+        if self.col_method == 'zorro':
+            for i,line in enumerate(
+                    _util.non_blank_lines(column_path)):
+                val = float(line)
+                columns.append([i,val])
+        elif self.iter_method == 'Generic':
+            pass
+        # No return -> update internal value
+        self._columns = sorted(
+                columns,
+                key=lambda x:x[1],
+                )
+        self._start_cols = self._columns[:]
+        self._start_length = len(columns)
+
+
+    def _hist_run(self):
+        """Progressively remove low scoring columns"""
         # Enter loop
         optimal = False
         # Determine whether calculations are needed
@@ -132,103 +249,96 @@ class AlignIter:
 
             # If not optimal, keep going
             iter_num += 1
-            print()
-        # Clean up
-        if self._remove_tmp:
-            tmp_dir.cleanup()
 
 
-    def get_optimal_alignment(self):
-        """User can request optimal alignment"""
-        return self._optimal_alignment
-
-
-    def _parse_alignment(self):
-        """Make it easier to parse alignment"""
-        align_object = parser.parse_alignment_file(
-                self._alignment,  # filepath
-                self.alignfmt,   # alignment type
-                to_dict=False,    # return actual object
-                )
-        # Now set to instance variable
-        self._align_obj = align_object
-
-
-    def _parse_tree(self):
-        """Convenience"""
-        tree_obj = tree_file.read_tree(
-                self._current_tree_path,
-                'newick',
-                )
-        # Set to instance variable
-        self._current_tree_obj = tree_obj
-
-
-    def _write_current_alignment(self):
-        """Convenience"""
-        AlignIO.write(
-                self._align_obj,
-                self._current_phy_path,
-                'phylip-relaxed',
+    def _bisect_run(self):
+        """Progressively bisect alignment to find local max"""
+        # Run first iteration
+        # Calculate lowest column score
+        low_val = self._columns[0][1]
+        # Determine outpath names
+        self._get_current_outpaths()
+        # Write new alignment to file
+        self._write_current_alignment()
+        # Build IQ-Tree
+        self._make_tree()
+        # Parse and add to internal object
+        self._parse_tree()
+        # Add up total BS support
+        self._calculate_support()
+        # Keep track of all support values
+        self._all_supports.append(self._current_support)
+        # Write information to an internal list
+        self.iter_info.append([
+            1,  # Iter num
+            len(self._columns),  # Alignment length
+            low_val,  # Lowest value
+            self._current_support,  # Support for current tree
+            ])
+        # Recur until a final value is reached
+        self._bisect_alignment(
+                0,  # Start at first value
+                self._start_length,  # Alignment length
+                self._current_support,
                 )
 
 
-    def _get_outpath(self, out_type, length=None):
-        """Similar to other class functions"""
-        align_name = os.path.basename(self._alignment)
-        basename = align_name.rsplit('.',1)[0]
-        # Outfile depends on out_type
-        if out_type == 'columns':
-            outfile = basename + '_columns.txt'
-        elif out_type in ('phylip','tree'):
-            if not length:
-                raise ValueError  # Log it
-            strlen = str(length)
-            if out_type == 'phylip':
-                outfile = basename + '_' + strlen + '.phy'
-            elif out_type == 'tree':
-                if self.tree_method == 'Iqtree':
-                    outfile = basename + '_' + strlen + '.phy.contree'
-        # Get full outpath and return
-        outpath = os.path.join(self._outdir, outfile)
-        return outpath
-
-
-    def _calculate_columns(self, column_path):
-        """Runs external program"""
-        if self.iter_method == 'zorro':
-            # Very short command
-            column_command = [
-                    self._alignment,
-                    ]
-        elif self.iter_method == 'Generic':
-            pass  # Keep options open?
-        evaluator = AlignEvaluator(
-                self.iter_method,
-                config['ITER'][self.iter_method],  # Actual cmd
-                self._alignment,  # Alignment is infile
-                column_path,  # Outpath
-                cmd_list = column_command,
-                )
-        evaluator()
-
-
-    def _evaluate_columns(self, column_path):
-        """Parse output file into internal attribute"""
-        columns = []
-        if self.iter_method == 'zorro':
-            for i,line in enumerate(
-                    _util.non_blank_lines(column_path)):
-                val = float(line)
-                columns.append([i,val])
-        elif self.iter_method == 'Generic':
-            pass
-        # No return -> update internal value
-        self._columns = sorted(
-                columns,
-                key=lambda x:x[1],
-                )
-        self._start_length = len(columns)
+    def _bisect_alignment(self, start, stop, prev_support, iter_num=2):
+        """Recursive bisection"""
+        num_cols = (stop-start)/2
+        if num_cols < 1:
+            return
+        else:
+            # Set up to remove
+            num_cols = int(num_cols)
+            rem_cols = start + num_cols
+            print("Removing {} columns".format(rem_cols))
+            self._align_obj = self._start_obj   # Start fresh
+            self._columns = self._start_cols[:] # Start fresh
+            # Remove from alignemnt
+            self._remove_columns(rem_cols)
+            print(len(self._columns))
+            # Calculate lowest column score
+            low_val = self._columns[0][1]
+            # Determine outpath names
+            self._get_current_outpaths()
+            # Write new alignment to file
+            self._write_current_alignment()
+            # Build IQ-Tree
+            self._make_tree()
+            # Parse and add to internal object
+            self._parse_tree()
+            # Add up total BS support
+            self._calculate_support()
+            # Keep track of all support values
+            self._all_supports.append(self._current_support)
+            # Set optimal values if needed
+            if self._current_support > self._optimal_support:
+                self._optimal_alignment = self._align_obj
+                self._optimal_support = self._current_support
+            # Write information to an internal list
+            self.iter_info.append([
+                iter_num,
+                len(self._columns),  # Alignment length
+                low_val,  # Lowest value
+                self._current_support,  # Support for current tree
+                ])
+            # Decide whether to take old/new start
+            if self._current_support > prev_support:
+                new_start = start + num_cols
+                new_stop = stop
+            else:
+                new_start = start
+                new_stop = stop - num_cols
+            print("New start is {}".format(new_start))
+            print("New stop is {}".format(new_stop))
+            # Recur
+            self._bisect_alignment(
+                    new_start,
+                    new_stop,
+                    self._current_support,
+                    iter_num+1,
+                    )
 
 
     def _calculate_num_columns(self):
@@ -252,11 +362,6 @@ class AlignIter:
 
     def _remove_columns(self, number):
         """Removes <number> of alignment columns from current object"""
-        # # Default sorting is low -> high
-        # sorted_columns = sorted(
-        #         self._columns,
-        #         key=lambda x:x[1],
-        #         )
         # Iter while keeping track of indices
         indices = []
         values = []

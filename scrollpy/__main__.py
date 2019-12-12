@@ -20,6 +20,7 @@ from scrollpy import Filter
 from scrollpy import ScrollPy
 from scrollpy import ScrollTree
 from scrollpy import AlignIter
+from scrollpy import AlignWriter
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
 # Import lookups
@@ -330,9 +331,17 @@ def main():
                 ))
     run_options.add_argument("--iter-method",
             nargs = '?',
+            choices = ["hist","bisect"],
+            default = "hist",
+            metavar = "Column selection method",
+            help = (
+                "HELP TEXT FOR ITER METHOD"
+                ))
+    run_options.add_argument("--col-method",
+            nargs = '?',
             choices = ["zorro"],  # WORK ON THIS
             default = "zorro",
-            metavar = "Column Selection Method",
+            metavar = "Column Evaluation Method",
             help = (
                 "HELP TEXT FOR ITERATING HERE"
                 ))

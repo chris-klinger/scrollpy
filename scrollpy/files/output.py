@@ -7,6 +7,11 @@ import os
 import re
 
 from scrollpy import config
+from scrollpy.scrollsaw._aligniter import AlignIter
+from scrollpy.scrollsaw._scrollpy import ScrollPy
+from scrollpy.scrollsaw._scrolltree import ScrollTree
+from scrollpy.scrollsaw._treeplacer import TreePlacer
+from scrollpy.filter._new_filter import Filter
 from scrollpy.files import sequence_file
 from scrollpy.alignments import parser
 from scrollpy.util import _util
@@ -72,12 +77,13 @@ class AlignWriter(BaseWriter):
 
     def write(self):
         """Obtain optimal alignment and write to file"""
+        target_obj = self._sp_object
         # If AlignIter, want optimal alignment
         if isinstance(target_obj,AlignIter):
             write_obj = target_obj.get_optimal_alignment()
             outfile = self._get_filepath(
                     'optimal',  # 'group'
-                    seq_type='alignment',
+                    align_type='alignment',
                     )
             parser.write_alignment_file(
                     write_obj,
@@ -89,7 +95,7 @@ class AlignWriter(BaseWriter):
             pass  # Do something
 
 
-    def _get_outpath(self, align_name, align_type):
+    def _get_filepath(self, align_name, align_type):
         """Obtain a reasonable outpath"""
         # Probably just use an external method once that is written?
         no_clobber = bool(config['ARGS']['no_clobber'])
@@ -101,7 +107,7 @@ class AlignWriter(BaseWriter):
             basename = sep.join((str(align_name),align_type))
         else:  # It is a string
             basename = sep.join((str(align_name),align_type,suffix))
-        if sformat == 'fasta':
+        if aformat == 'fasta':
             basename = basename + '.mfa' # Need to make more flexible eventually
         else:
             pass  # TO-DO!!!

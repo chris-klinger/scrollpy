@@ -46,10 +46,10 @@ class AlignIter:
             setattr(self, var, value)
         # Internal default that does not change each time through __call__
         self._start_length       = None
+        self._remove_tmp         = False
         # Internal defaults; change each time through __call__
         self._align_obj          = None  # Parsed BioPython object
         self._columns            = []
-        self._current_scores     = []
         self._current_phy_path   = ""
         self._current_tree_path  = ""
         self._current_tree_obj   = None
@@ -87,15 +87,19 @@ class AlignIter:
         self._evaluate_columns(columns_outpath)
         # Enter loop
         optimal = False
-        number = self._num_columns  # None if not user-specified
+        # Determine whether calculations are needed
+        if not self._num_columns:
+            calc_columns = True
         iter_num = 0
         while not optimal:
-            if iter_num > 1:
+            if iter_num >= 1:
                 # Determine number of columns to remove
-                if not number:  # Calculate
-                    number = self._calculate_num_columns()
+                if calc_columns:  # Calculate
+                    self._num_columns = self._calculate_num_columns()
                 # Remove them from the alignment
-                self._remove_columns(number)
+                self._remove_columns(self._num_columns)
+            # Calculate lowest column score
+            low_val = self._columns[0][1]
 
             # Determine outpath names
             self._get_current_outpaths()
@@ -108,9 +112,9 @@ class AlignIter:
             # Add up total BS support
             self._calculate_support()
             # Keep track of all support values
-            self._all_suppports.append(self._current_support)
+            self._all_supports.append(self._current_support)
             # Decide whether to continue
-            if self._current_support > self._optimal_suppport:
+            if self._current_support > self._optimal_support:
                 self._optimal_alignment = self._align_obj
                 self._optimal_support = self._current_support
             else:
@@ -121,13 +125,14 @@ class AlignIter:
             self.iter_info.append([
                 iter_num,
                 len(self._columns),  # Alignment length
-                self._current_scores[0],  # Lowest value
+                low_val,  # Lowest value
                 self._current_support,  # Support for current tree
                 optimal,  # Whether or not current alignment is optimal
                 ])
 
             # If not optimal, keep going
             iter_num += 1
+            print()
         # Clean up
         if self._remove_tmp:
             tmp_dir.cleanup()
@@ -219,7 +224,10 @@ class AlignIter:
         elif self.iter_method == 'Generic':
             pass
         # No return -> update internal value
-        self._columns = columns
+        self._columns = sorted(
+                columns,
+                key=lambda x:x[1],
+                )
         self._start_length = len(columns)
 
 
@@ -228,31 +236,32 @@ class AlignIter:
         # Length of columns
         curr_length = len(self._columns)
         fraction_remaining = curr_length/self._start_length
-        # Get list of current column scores
-        self._current_scores = [v for _,v in self._columns]
+        # Score data
+        current_scores = [v for _,v in self._columns]
         # Bin the data based on Doane's metric
         hist,bins = np.histogram(
-                self._current_scores,   # Actual data
+                current_scores,   # Actual data
                 bins='doane',  # Use Doane's method
                 )
         # Adjust number by bin count and remaining alignment length
         num = int(hist[0] * fraction_remaining)
+        print("Remove {} columns".format(num))
         # Always remove at least one position
         return max(num,1)
 
 
     def _remove_columns(self, number):
         """Removes <number> of alignment columns from current object"""
-        # Default sorting is low -> high
-        sorted_columns = sorted(
-                self._columns,
-                key=lambda x:x[1],
-                )
+        # # Default sorting is low -> high
+        # sorted_columns = sorted(
+        #         self._columns,
+        #         key=lambda x:x[1],
+        #         )
         # Iter while keeping track of indices
         indices = []
         values = []
         for i in range(number):  # i gives index
-            value = sorted_columns[i]
+            value = self._columns[i]  # Already sorted
             values.append(value)
             index = value[0]  # 1st value
             indices.append(index)
@@ -360,20 +369,27 @@ class AlignIter:
         """Add support over all nodes"""
         self._current_support = _tree.get_total_support(
                 self._current_tree_obj)
+        print("Current support is: {}".format(self._current_support))
 
 
     def _is_optimal(self):
         """Determines whether to continue iterating"""
         if len(self._all_supports) <=3:
+            print("Getting more values")
             return False  # Need more values
         else:
             # Determine the mean/std dev of all values
             smean = mean(self._all_supports)
+            print("Mean value is {}".format(smean))
             std_dev = std(self._all_supports)
+            print("Std dev is {}".format(std_dev))
             # calculate z-score of most recent value
-            zscore = (self._current_support-smean)/std_dev
+            z_low = (self._current_support-smean)/std_dev
+            print("Low Z-score is {}".format(z_low))
+            z_high = (self._optimal_support-smean)/std_dev
+            print("High Z-score is {}".format(z_high))
             # Stop if below a specific threshold
-            if zscore <= -3:  # Make user-specified?
+            if z_low <= -2 or z_high >= 2:  # Make user-specified?
                 return True
         # Otherwise, return False -> more iterations
         return False

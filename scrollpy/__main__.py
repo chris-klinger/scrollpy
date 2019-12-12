@@ -332,7 +332,7 @@ def main():
             nargs = '?',
             choices = ["zorro"],  # WORK ON THIS
             default = "zorro",
-            metavar = "Column Selection Method"
+            metavar = "Column Selection Method",
             help = (
                 "HELP TEXT FOR ITERATING HERE"
                 ))
@@ -554,13 +554,19 @@ def main():
                 # os.path ensures correct full path
                 real_path = os.path.realpath(os.path.join(current_dir,path))
                 all_paths.append(real_path)
+    else:
+        args.infiles = []  # Empty list
     # Tree file, if supplied
     if args.treefile:  # Nonetype if not called at all
-        real_path = os.path.realpath(os.path.join(current_dir,path))
+        real_path = os.path.realpath(os.path.join(current_dir,args.treefile))
         all_paths.append(real_path)  # Only one file
+    # Alignment file, if supplied
+    if args.alignment:
+        real_path = os.path.realpath(os.path.join(current_dir,args.alignment))
+        all_paths.append(real_path)
     # Mapping file, if supplied
     if args.mapping:  # Nonetype if not called at all
-        real_path = os.path.realpath(os.path.join(current_dir,path))
+        real_path = os.path.realpath(os.path.join(current_dir,args.mapping))
         all_paths.append(real_path)  # Only one file
     # Quit if no paths specified
     if len(all_paths) == 0: # No input files!
@@ -639,14 +645,15 @@ def main():
 
     # Actual program execution
     # SOMEWHERE HERE: CHECK INPUT ARGS
-    # Begin by creating a mapping, regardless of actual execution
-    mapping = Mapping(
-            *args.infiles,             # Unpack list
-            alignfile=args.alignment,  # None if not provided
-            treefile=args.treefile,    # None if not provided
-            mapfile=args.mapping,      # None if not provided
-            )
-    start_seq_dict = mapping()  # Run to get mapped seq_dict
+    # Begin by creating a mapping, unless iteralign
+    if not args.iteralign:
+        mapping = Mapping(
+                args.infiles,              # List to unpack
+                alignfile=args.alignment,  # None if not provided
+                treefile=args.treefile,    # None if not provided
+                mapfile=args.mapping,      # None if not provided
+                )
+        start_seq_dict = mapping()  # Run to get mapped seq_dict
     # Filter if necessary
     # Ensure that filtering only still calls filter!
     if args.filter_only:

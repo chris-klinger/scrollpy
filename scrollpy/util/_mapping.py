@@ -44,7 +44,7 @@ class Mapping:
     # Class var list
     _config_vars = ('infmt', 'alignfmt', 'treefmt')
 
-    def __init__(self, *infiles, alignfile=None, treefile=None, mapfile=None, **kwargs):
+    def __init__(self, infiles, alignfile=None, treefile=None, mapfile=None, **kwargs):
         self._infiles = infiles
         self._alignfile = alignfile
         self._treefile = treefile

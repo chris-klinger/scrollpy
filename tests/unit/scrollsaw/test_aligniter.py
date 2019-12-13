@@ -33,7 +33,8 @@ class TestAlignIter(unittest.TestCase):
             pass
         # Provide defaults
         config['ARGS']['alignfmt'] = 'fasta'
-        config['ARGS']['iter_method'] = 'zorro'
+        config['ARGS']['col_method'] = 'zorro'
+        config['ARGS']['iter_method'] = 'hist'
         config['ARGS']['tree_method'] = 'Iqtree'
         config['ARGS']['tree_matrix'] = 'LG'
 
@@ -62,6 +63,13 @@ class TestAlignIter(unittest.TestCase):
     def tearDownClass(cls):
         """Remove directory"""
         pass
+
+
+    def test_get_optimal_alignment(self):
+        """Checks instance lookup"""
+        self.iter._optimal_alignment = "Optimal"
+        self.assertEqual("Optimal",
+                self.iter.get_optimal_alignment())
 
 
     def test_parse_alignment(self):
@@ -127,6 +135,10 @@ class TestAlignIter(unittest.TestCase):
                 line = line.strip('\n')
                 val = float(line)
                 columns.append([i,val])
+        columns = sorted(
+                columns,
+                key=lambda x:x[1],
+                )
         # Run instance method -> populate iter._columns
         self.iter._evaluate_columns(column_path)
         # Test
@@ -288,3 +300,24 @@ class TestAlignIter(unittest.TestCase):
         self.iter._all_supports = [100]
         self.assertFalse(self.iter._is_optimal())
 
+
+    def test_evaluate_info(self):
+        """Tests adding extra information to iter_info"""
+        self.iter.iter_info = [
+                [1,'_','_',40],
+                [2,'_','_',30],
+                [3,'_','_',90],
+                [4,'_','_',40],
+                [5,'_','_',10],
+                ]
+        # Run method
+        self.iter._evaluate_info()
+        expected_info = [
+                [1,'_','_',40,"Sub-optimal"],
+                [2,'_','_',30,"Sub-optimal"],
+                [3,'_','_',90,"Optimal"],
+                [4,'_','_',40,"Sub-optimal"],
+                [5,'_','_',10,"Sub-optimal"],
+                ]
+        self.assertEqual(expected_info,
+                self.iter.iter_info)

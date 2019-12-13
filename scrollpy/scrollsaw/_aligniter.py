@@ -100,6 +100,8 @@ class AlignIter:
             self._bisect_run()
         else:
             print("Could not run __call__")
+        # Add easy lookup value to self.iter_info
+        self._evaluate_info()
         # Clean up
         if self._remove_tmp:
             tmp_dir.cleanup()
@@ -244,7 +246,6 @@ class AlignIter:
                 len(self._columns),  # Alignment length
                 low_val,  # Lowest value
                 self._current_support,  # Support for current tree
-                optimal,  # Whether or not current alignment is optimal
                 ])
 
             # If not optimal, keep going
@@ -292,12 +293,12 @@ class AlignIter:
             # Set up to remove
             num_cols = int(num_cols)
             rem_cols = start + num_cols
-            print("Removing {} columns".format(rem_cols))
+            # print("Removing {} columns".format(rem_cols))
             self._align_obj = self._start_obj   # Start fresh
             self._columns = self._start_cols[:] # Start fresh
             # Remove from alignemnt
             self._remove_columns(rem_cols)
-            print(len(self._columns))
+            # print(len(self._columns))
             # Calculate lowest column score
             low_val = self._columns[0][1]
             # Determine outpath names
@@ -330,8 +331,8 @@ class AlignIter:
             else:
                 new_start = start
                 new_stop = stop - num_cols
-            print("New start is {}".format(new_start))
-            print("New stop is {}".format(new_stop))
+            # print("New start is {}".format(new_start))
+            # print("New stop is {}".format(new_stop))
             # Recur
             self._bisect_alignment(
                     new_start,
@@ -355,7 +356,7 @@ class AlignIter:
                 )
         # Adjust number by bin count and remaining alignment length
         num = int(hist[0] * fraction_remaining)
-        print("Remove {} columns".format(num))
+        # print("Remove {} columns".format(num))
         # Always remove at least one position
         return max(num,1)
 
@@ -480,22 +481,35 @@ class AlignIter:
     def _is_optimal(self):
         """Determines whether to continue iterating"""
         if len(self._all_supports) <=3:
-            print("Getting more values")
+            # print("Getting more values")
             return False  # Need more values
         else:
             # Determine the mean/std dev of all values
             smean = mean(self._all_supports)
-            print("Mean value is {}".format(smean))
+            # print("Mean value is {}".format(smean))
             std_dev = std(self._all_supports)
-            print("Std dev is {}".format(std_dev))
+            # print("Std dev is {}".format(std_dev))
             # calculate z-score of most recent value
             z_low = (self._current_support-smean)/std_dev
-            print("Low Z-score is {}".format(z_low))
+            # print("Low Z-score is {}".format(z_low))
             z_high = (self._optimal_support-smean)/std_dev
-            print("High Z-score is {}".format(z_high))
+            # print("High Z-score is {}".format(z_high))
             # Stop if below a specific threshold
             if z_low <= -2 or z_high >= 2:  # Make user-specified?
                 return True
         # Otherwise, return False -> more iterations
         return False
+
+
+    def _evaluate_info(self):
+        """Add an extra column to self.iter_info"""
+        for i,sub_list in  enumerate(sorted(
+            self.iter_info,
+            key=lambda x:x[3],  # Tree support
+            reverse=True,  # Largest first
+            )):
+            if i == 0:
+                sub_list.append("Optimal")
+            else:
+                sub_list.append("Sub-optimal")
 

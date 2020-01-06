@@ -7,11 +7,23 @@ import tempfile
 from itertools import combinations
 
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.files import sequence_file as sf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._collection import ScrollCollection
 from scrollpy.filter._filter import Filter
 #from scrollpy.util import _util
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
+
+# console_logger = scroll_log.get_console_logger(__name__)
+# status_logger  = scroll_log.get_status_logger(__name__)
+# file_logger    = scroll_log.get_file_logger(__name__)
+# output_logger  = scroll_log.get_output_logger(__name__)
+
 
 class ScrollPy:
     """Main ScrollPy object; based on user input, run is variable.
@@ -23,7 +35,10 @@ class ScrollPy:
 
     """
     # Class var list
-    _config_vars = ('align', 'distance')
+    _config_vars = (
+            'align',
+            'distance',
+            )
 
     def __init__(self, seq_dict, target_dir, **kwargs):
         # Required
@@ -66,7 +81,16 @@ class ScrollPy:
             # make collection objects
             self._make_collections()
             # actually run alignment/distance calculations
-            for collection in self._collections:
+            total = len(self._collections)
+            for i,collection in enumerate(self._collections):
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Performing comparison {} of {}",
+                            (i, total)),
+                        2,
+                        'INFO',
+                        status_logger,
+                        )
                 collection()
         finally:
             if self._remove_tmp:
@@ -92,6 +116,15 @@ class ScrollPy:
         """
         if len(self._groups) == 1: # only one group
             group = self._groups[0]
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Adding collection object for single group {}\n",
+                        group,
+                        ),
+                    3,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             self._collections.append(ScrollCollection(
                 self.target_dir,
                 self._seq_dict[group], # seq_list
@@ -100,6 +133,15 @@ class ScrollPy:
                 self.distance,  # Distance method
                 ))
         for group1,group2 in combinations(self._groups,2): # pairwise
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Adding collection object for groups {} and {}\n",
+                        group1, group2,
+                        ),
+                    3,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             seq_list = sf._cat_sequence_lists(
                 self._seq_dict[group1],
                 self._seq_dict[group2]) # Dict values are lists

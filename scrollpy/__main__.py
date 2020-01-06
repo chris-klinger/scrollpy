@@ -11,10 +11,10 @@ import datetime
 import logging
 
 
+from scrollpy import scroll_log
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy import util
-from scrollpy import scroll_log
 from scrollpy import Mapping
 from scrollpy import Filter
 from scrollpy import ScrollPy
@@ -468,6 +468,10 @@ def main():
     info_options.add_argument("--citation",
             action = "store_true",
             help = "Display citation and quit.")
+
+    # info_options.add_argument("--spinner",
+    #         action = "store_true")
+
     # Parse all arguments
     args = parser.parse_args()
 
@@ -481,36 +485,52 @@ def main():
     config.set("ARGS", 'verbosity', str(args.verbosity))
 
     # Set up loggers
-    #name = __name__
     name = 'scrollpy'  # can't use __name__ since it becomes __main__
-#    print("Name of main module is: {}".format(name))
     out = args.out if args.out else current_dir
     logfile_path = scroll_log.get_logfile(
-            #args.no_log,      # Whether to log to file
-            True,  # JUST FOR TESTING
+            args.no_log,      # Whether to log to file
+            # True,  # JUST FOR TESTING
             args.logfile,     # Logfile name/path
             out,         # Output directory
             args.no_create,   # Directory creation
             args.no_clobber,  # Replace existing file
             args.filesep,     # Separator for files
             )
+
     # Get loggers and configure each; default level is 'INFO'
     # Configure console handler
     console_handler = logging.StreamHandler(stream = sys.stderr)
     console_handler.setFormatter(scroll_log.raw_format)
     console_handler.addFilter(
-            scroll_log.ConsoleFilter(args.verbosity))
+            scroll_log.ConsoleFilter(
+                args.verbosity,
+                ),
+            )
     # Create console logger and add handler to it
     console_logger = scroll_log.get_console_logger(name)
     console_logger.addHandler(console_handler)
+
+    # Configure status handler
+    status_handler = scroll_log.StreamOverwriter(stream = sys.stderr)
+    status_handler.setFormatter(scroll_log.raw_format)
+    status_handler.addFilter(
+            scroll_log.ConsoleFilter(
+                args.verbosity,
+                ),
+            )
+    # Create status logger and add handler to it
+    status_logger = scroll_log.get_status_logger(name)
+    status_logger.addHandler(status_handler)
 
     # Configure file handler
     file_handler = logging.FileHandler(filename = logfile_path)  # mode='a'
     file_handler.setFormatter(scroll_log.rich_format)
     file_handler.addFilter(
-            scroll_log.FileFilter(args.log_level,
-            args.no_log,  # If set, no output will be logged
-            ))
+            scroll_log.FileFilter(
+                args.log_level,
+                args.no_log,  # If set, no output will be logged
+                ),
+            )
     # Create file logger and add handler to it
     file_logger = scroll_log.get_file_logger(name)
     file_logger.addHandler(file_handler)
@@ -519,21 +539,15 @@ def main():
     output_handler = logging.FileHandler(filename = logfile_path)  # Same as file
     output_handler.setFormatter(scroll_log.raw_format)
     output_handler.addFilter(
-            scroll_log.OutputFilter(args.log_level,
-            args.no_log,  # If set, no output will be logged
-            ))
+            scroll_log.OutputFilter(
+                args.log_level,
+                args.no_log,  # If set, no output will be logged
+                ),
+            )
     # Create output logger and add handler to it
     output_logger = scroll_log.get_output_logger(name)
     output_logger.addHandler(output_handler)
 
-    # Simple message regarding starting time to the user
-#    scroll_log.log_message(
-#            scroll_log.BraceMessage("Initialized at {} \n", main_start),  # msg
-#            2,  # verbosity level of message
-#            'INFO',  # level
-#            console_logger, file_logger  # loggers
-#            )
-#
 
     #############################################################################
     # SIMPLE USE CASES
@@ -541,18 +555,62 @@ def main():
 
     # Check to see if any of 'citation'/'usage'/'version' present
     if args.version:
-        print(_version)  # Move to logging!
+        scroll_log.log_message(
+            scroll_log.BraceMessage("Version {}\n", _version),  # msg
+            1,  # verbosity level of message
+            'INFO',  # level
+            console_logger,  # loggers
+            )
+        # print(_version)  # Move to logging!
         sys.exit (0)
     if args.citation:
-        print(_citation)  # Move to logging!
+        scroll_log.log_message(
+            scroll_log.BraceMessage("Version {}\n", _citation),  # msg
+            1,  # verbosity level of message
+            'INFO',  # level
+            console_logger,  # loggers
+            )
+        # print(_citation)  # Move to logging!
         sys.exit(0)
     if args.usage:
-        print(_usage)
+        scroll_log.log_message(
+            scroll_log.BraceMessage("Version {}\n", _usage),  # msg
+            1,  # verbosity level of message
+            'INFO',  # level
+            console_logger,  # loggers
+            )
+        # print(_usage)
         sys.exit(0)
+
+    # Testing status logger - delete eventually
+    # if args.spinner:
+    #     import time
+    #     for i in range(10):
+    #         scroll_log.log_message(
+    #             scroll_log.BraceMessage("Displaying {} of 9\r",i),
+    #             1,
+    #             'INFO',
+    #             status_logger,
+    #             )
+    #         # display(
+    #         #     "Displaying {} ".format(i),
+    #         #     rewritable=True,
+    #         # )
+    #         time.sleep(1)
+    #     sys.exit(0)
+
 
     ##############################################################################
     # PARAMETER VALIDATION
     ##############################################################################
+
+    # Indicate start time
+    scroll_log.log_message(
+            scroll_log.BraceMessage("Initialized at {} \n", main_start),  # msg
+            2,  # verbosity level of message
+            'INFO',  # level
+            console_logger, file_logger,  # loggers
+            )
 
     # Check the filepaths for appropriateness
     all_paths = []
@@ -579,19 +637,46 @@ def main():
         all_paths.append(real_path)  # Only one file
     # Quit if no paths specified
     if len(all_paths) == 0: # No input files!
-        print("No input files detected; please try again")  # Print something useful!
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "No input files detected; please try again\n"),  # msg
+                1,  # verbosity level of message
+                'ERROR',  # level
+                console_logger, file_logger,  # loggers
+                )
         sys.exit(0)
+
     # Check for duplicates and quit if any exist
     duplicates = util.check_duplicate_paths(*all_paths)
     if len(duplicates) > 0:
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Duplicate filepaths detected in input:\n"),  # msg
+                1,  # verbosity level of message
+                'ERROR',  # level
+                console_logger, file_logger,  # loggers
+                )
         for path in duplicates:
-            print("Duplicate path {} detected in input".format(path))  # Logging!
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Duplicate path {} detected\n", path),  # msg
+                    1,  # verbosity level of message
+                    'ERROR',  # level
+                    console_logger, file_logger,  # loggers
+                    )
         sys.exit(0)
+
     # Check to make sure all paths are good!
     non_existent = util.check_input_paths(*all_paths)
     if len(non_existent) > 0:
         for path in non_existent:
-            print("Apparent non-existent file {}".format(path)) # Logging!
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Non-existent filepath {} detected\n", path),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
         sys.exit(0)
 
     # Check whether the output directory exists; if not, try to make it
@@ -602,9 +687,24 @@ def main():
             try:
                 util.ensure_dir_exists(args.out)
             except OSError:
-                # Make a note in the log file(s)!
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Failed to create output directory {}; using current "
+                            "directory instead\n", args.out),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
                 args.out = current_dir
         else:
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Did not attempt to create output directory {}; try "
+                        "again with the '--no-create' flag turned off\n", args.out),
+                    1,
+                    'WARNING',
+                    console_logger, file_logger,
+                    )
             args.out = current_dir
 
     # Check whether temporary output is specified
@@ -613,11 +713,27 @@ def main():
             try:
                 util.ensure_dir_exists(args.tmpout)
             except OSError:
-                # Logging!
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Failed to create temporary directory {}; falling "
+                            "back to 'tmp' in current directory", args.tmpout)
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
                 new_tmp = os.path.join(current_dir, '/tmp/')
                 try:
                     util.ensure_dir_exists(new_tmp)
                 except OSError:
+                    scroll_log.log_message(
+                            scroll_log.BraceMessage(
+                                "Failed to create temporary directory {}; falling "
+                                "back to system temp. Files may or may not be recoverable\n",
+                                new_tmp),
+                            1,
+                            'ERROR',
+                            console_logger, output_logger,
+                            )
                     args.tmpout = None  # Fall back to tmp dir
 
     # Need to check all other parameters here...
@@ -653,9 +769,23 @@ def main():
     ##############################################################################
 
     # Actual program execution
+    scroll_log.log_message(
+        scroll_log.BraceMessage("Starting main program analysis\n"),  # msg
+        2,  # verbosity level of message
+        'INFO',  # level
+        console_logger, file_logger  # loggers
+        )
+
     # SOMEWHERE HERE: CHECK INPUT ARGS
+
     # Begin by creating a mapping, unless iteralign
     if not args.iteralign:
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Creating sequence mapping\n"),
+                3,
+                'INFO',
+                console_logger, file_logger
+                )
         mapping = Mapping(
                 args.infiles,              # List to unpack
                 alignfile=args.alignment,  # None if not provided
@@ -663,6 +793,7 @@ def main():
                 mapfile=args.mapping,      # None if not provided
                 )
         start_seq_dict = mapping()  # Run to get mapped seq_dict
+
     # Filter if necessary
     # Ensure that filtering only still calls filter!
     if args.filter_only:
@@ -670,6 +801,12 @@ def main():
     # Actually filter
     removed_seq_dict=None  # If not filtering
     if args.filter:
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Filtering input sequences\n"),
+                2,
+                'INFO',
+                console_logger, file_logger,
+                )
         seq_filter = Filter(  # Additional args should be in config already
                 start_seq_dict,
                 )
@@ -678,8 +815,15 @@ def main():
     # If filtering only, output directly from Filter
     if args.filter_only:
         pass
+
     # Run actual program execution now
     if args.placeseqs:  # TreePlacer
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Initializing tree placing analysis\n"),
+                1,
+                'INFO',
+                console_logger, file_logger,
+                )
         RunObj = TreePlacer(
                 start_seq_dict, # Filtered or not
                 args.alignment, # Input alignment
@@ -687,6 +831,12 @@ def main():
                 args.tmpout,    # Tmp out
                 )
     elif args.iteralign:  # IterAlign
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Initializing alignment iteration analysis\n"),
+                1,
+                'INFO',
+                console_logger, file_logger,
+                )
         RunObj = AlignIter(
                 args.alignment,
                 args.tmpout,
@@ -694,26 +844,48 @@ def main():
         alignout = True  # Signal to output an alignment
     else:  # Distance-based analysis!
         if not args.treefile:  # Sequence-based analysis
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Initializing sequence-based scrollsaw analysis"),
+                    1,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             RunObj = ScrollPy(
                     start_seq_dict, # Filtered or not
                     args.tmpout,    # Actual program run uses tmp dir!
                     )
         else:  # Tree-based analysis
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Initializing tree-based scrollsaw analysis"),
+                    1,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             RunObj = ScrollTree(
                     start_seq_dict, # Filtered or not
                     )
     # Perform the actual program execution
     RunObj()
+
     # Write to outfile(s); config handles gritty details
     # Write table file no matter what
     tbl_writer = TableWriter(
             RunObj,    # object to use
             args.out,  # specified output location
             )
-    #try:
-    tbl_writer.write()
-    #except:  # Dangerous; Change!!!
-    #    print("Unexpected error when writing table file")
+    try:
+        tbl_writer.write()
+    except:  # Dangerous; Change!!!
+        scroll_log.log_message(  # Log exception instead?!?
+                scroll_log.BraceMessage(
+                    "Failed to write output table"),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+
     # Write optimal alignment, if AlignIter was performed
     if alignout:
         align_writer = AlignWriter(
@@ -721,6 +893,7 @@ def main():
                 args.out,
                 )
         align_writer.write()
+
     # Write sequences, if requested
     if args.seqout:  # User requested sequences
         seq_writer = SeqWriter(
@@ -731,6 +904,7 @@ def main():
         seq_writer.write()
         #except:  # Dangerous; Change!!!
         #    print("Unexpected error when writing sequence files")  # Logging!
+
     if args.filter_out:  # User requested filtered sequences
         filter_writer = SeqWriter(
                 seq_filter,  # Filter object

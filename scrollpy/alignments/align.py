@@ -18,10 +18,16 @@ from subprocess import SubprocessError
 from Bio.Align import Applications
 from Bio.Application import ApplicationError
 
+from scrollpy import scroll_log
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
+
 
 class Aligner:
-    def __init__(self, method, cmd, inpath, outpath,
-            cmd_list=None, logger=None, **kwargs):
+    def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
         """Class to handle farming out and managing alignments.
 
         Args:
@@ -29,11 +35,14 @@ class Aligner:
                 values are `Muscle`, `Clustalw`, `ClustalOmega`, `Prank`,
                 `Mafft`, `Dialign`, `Probcons`, `TCoffee`, `MSAProbs`,
                 `Generic`.
+
             cmd (str): Command (if executable is on system PATH) or full
                 path to the relevant executable
+
             inpath (str): Full path for input
+
             outpath (str): Full path to dump MSA to
-            _logger (obj): Reference to a logger for logging (optional)
+
             **kwargs: Additional parameters specified for the relevant
                 program (optional)
         """
@@ -48,8 +57,6 @@ class Aligner:
             self.outpath = outpath
         # For finer control, can supply command list instead
         self.cmd_list = cmd_list
-        # Check logger eventually?
-        self._logger = logger
         # Should eventually validate kwargs? Or leave for BioPython?
         self.kwargs = kwargs
 
@@ -58,9 +65,11 @@ class Aligner:
         """TO-DO"""
         pass
 
+
     def __repr__(self):
         """TO-DO"""
         pass
+
 
     def __call__(self):
         """Calls the underlying alignment method.
@@ -71,17 +80,45 @@ class Aligner:
         """
         # Either delegate call to BioPython or run internal method
         if self.method == 'Mafft':
+            # Log information
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Calling Mafft to align sequences\n"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            # Set up method
             cmdline = Applications.MafftCommandline(
                 self.cmd, input=self.inpath, **self.kwargs)
+            # Try to run
             try:
                 stdout, stderr = cmdline() # Need to log stderr eventually
             except ApplicationError: # Raised if subprocess return code != 0
+                # LOG AS EXCEPTION
                 print("Failed to run MAFFT") # Should process better eventually
+            # Capture information from program
             with open(self.outpath, 'w') as o:
                 o.write(stdout)
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(stderr),
+                    3,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
         # BioPython interface not flexible enough to handle --add for Mafft
         elif self.method == 'MafftAdd':  # Add to existing alignment
+            # Log information
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Calling Mafft to add sequences\n"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            # Set up method
             self.cmd_list.insert(0, self.cmd)  # Add to list first
+            # Try to run
             try:
                 cmdline = subprocess.run(
                     self.cmd_list,  # Full command for execution
@@ -89,13 +126,23 @@ class Aligner:
                     stderr=subprocess.PIPE,  # Returns bytes
                     )
             except SubprocessError:  # Should be default base raised
+                # LOG AS EXCEPTION
                 print("Failed to run Mafft add")  # Log eventually
+            # Capture information
             with open(self.outpath, 'w') as o:
                 decoded_out = cmdline.stdout.decode()
                 o.write(decoded_out)
+            decoded_stderr = cmdline.stderr.decode()
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(decoded_stderr),
+                    3,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
         # Other method here
         elif self.method == 'Generic':
             pass # To be implemented
+
 
     def _validate(self, name, value, validation_method, **kwargs):
         """Calls other checking methods for each"""
@@ -114,11 +161,13 @@ class Aligner:
                     calling alignment".format(value, name))
         # Raise error if no method provided?
 
+
     def _validate_method(self, method_name):
         """Returns True if method exists in class"""
         if not method_name in ('Mafft', 'MafftAdd', 'Generic'): # For now
             return False
         return True
+
 
     def _validate_command(self, command, method=None):
         """Returns True if command makes sense for method"""
@@ -135,6 +184,7 @@ class Aligner:
                 return False
         return True
 
+
     def _validate_inpath(self, inpath):
         """Raises FileNotFoundError if file does not exist"""
         if not os.path.exists(inpath):
@@ -146,6 +196,7 @@ class Aligner:
         elif os.path.isdir(inpath):
             raise AttributeError("Cannot align {}; directory")
         return True
+
 
     def _validate_outpath(self, outpath):
         """Quits if directory is non-existent; Should log if file exists"""
@@ -159,5 +210,4 @@ class Aligner:
         if os.path.exists(outpath):
             pass # Will eventually hook this up to the logger
         return True
-
 

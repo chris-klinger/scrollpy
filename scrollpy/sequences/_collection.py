@@ -5,12 +5,17 @@ ScrollPy.
 
 import os
 
-#from scrollpy.util import _util
+from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.files import sequence_file as sf
 from scrollpy.alignments import align
 from scrollpy.distances import distance, parser
 #from scrollpy.config._config import config
-from scrollpy import config
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 class ScrollCollection:
@@ -35,32 +40,42 @@ class ScrollCollection:
 
         inpath (str): full path to input file (default:None)
     """
-    def __init__(self, outdir, seq_list, group, align_method,
-            dist_method, opt_group=None,
-            align_model=None, # Need to add this eventually
-            dist_model=None # Need to deal with this eventually
-            ):
+    # Class var list
+    _config_vars = (
+            'align_method',
+            'align_matrix',
+            'dist_method',
+            'dist_matrix',
+            )
+
+    def __init__(self, outdir, seq_list, group, opt_group=None, **kwargs):
+        # Required
         self._outdir = outdir
         self.seq_list = seq_list
-        self._seq_path = None # Path to unaligned sequence file
         self._group = group
-        self._align_method = align_method
-        self._align_model = align_model
-        self._align_path = None # Path to the aligned file
-        self._dist_method = dist_method
-        if not dist_model:
-            self._dist_model = config['ARGS']['dist_matrix']
+        self._opt_group = opt_group  # Can be None
+        # Optional vars or in config
+        for var in self._config_vars:
+            try:
+                value = kwargs[var]
+            except KeyError:
+                value = config['ARGS'][var]
+            setattr(self, var, value)
+        # Internal defaults
+        self._seq_path = None # Path to unaligned sequence file
         self._dist_path = None # Path to the distance file
         self._dist_dict = None # Parsed distance file list
-        self._opt_group = opt_group
+
 
     # def __str__(self):
     #     """TO-DO"""
     #     pass
 
+
     # def __repr__(self):
     #     """TO-DO"""
     #     pass
+
 
     def __call__(self):
         """A call implies aligning, calculating distances, and then
@@ -77,6 +92,7 @@ class ScrollCollection:
         # Final step: modify objects using distances
         self._increment_seq_distances()
 
+
     def _get_sequence_file(self):
         """Convenience function"""
         seq_path = self._get_outpath('seqs')
@@ -91,6 +107,7 @@ class ScrollCollection:
         sf._sequence_list_to_file_by_id(self.seq_list, seq_path)
         self._seq_path = seq_path # Assign to self for other functions
 
+
     def _get_alignment(self):
         """Convenience function"""
         msa_path = self._get_outpath('align')
@@ -102,6 +119,7 @@ class ScrollCollection:
                 )
         aligner() # Actually perform alignment; may raise ApplicationError
         self._align_path = msa_path # No errors -> assign to self for later
+
 
     def _get_distances(self):
         """Convenience function"""
@@ -120,6 +138,7 @@ class ScrollCollection:
         else:
             self._dist_path = dist_path # No errors -> assign to self for later
 
+
     def _parse_distances(self):
         """Convenience function"""
         distances = parser.parse_distance_file(
@@ -127,15 +146,13 @@ class ScrollCollection:
                 self._dist_method) # Tells the parser what type of file it is
         self._dist_dict = distances # List of tuples
 
+
     def _increment_seq_distances(self):
         """Internal function to update list of SeqObjs"""
-        #print()
-        #print(self._dist_dict)
-        #print()
         for seq_obj in self.seq_list:
-            #print(seq_obj.id_num)
             # Seqs written by ID, can modify if written by acc/desc later
             seq_obj += self._dist_dict[str(seq_obj.id_num)]
+
 
     def _get_outpath(self, out_type):
         """A function to return full paths to files based on what the

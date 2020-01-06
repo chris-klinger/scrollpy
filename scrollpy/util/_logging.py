@@ -12,7 +12,9 @@ configuration defined by the user.
 
 import os
 import sys
+import shutil
 import logging
+from logging import StreamHandler
 import textwrap
 import tempfile
 import datetime
@@ -24,7 +26,7 @@ from scrollpy import config
 
 rich_format = logging.Formatter(
         # :^<N> centers in a space of N chars long
-        fmt = "{asctime} | {name:^35} | {levelname:^10} | {message}",
+        fmt = "{asctime} | {name:^30} | {levelname:^10} | {message}",
         datefmt = '%Y-%m-%d %H:%M:%S',
         style = '{',
         )
@@ -46,6 +48,14 @@ def get_console_logger(name):
     return logger
 
 
+def get_status_logger(name):
+    """Convenience function to return based on __name__"""
+    name = "S." + str(name)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
 def get_file_logger(name):
     """Convenience function to return based on __name__"""
     name = "F." + str(name)
@@ -60,6 +70,21 @@ def get_output_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     return logger
+
+
+def get_module_loggers(mod_name):
+    """Convenience function to return based on __name__"""
+    c_logger = scroll_log.get_console_logger(mod_name)
+    s_logger = scroll_log.get_status_logger(mod_name)
+    f_logger = scroll_log.get_file_logger(mod_name)
+    o_logger = scroll_log.get_output_logger(mod_name)
+    # Return in specific order
+    return (
+            c_logger,  # Console
+            s_logger,  # Status
+            f_logger,  # File
+            o_logger,  # Output
+            )
 
 
 def get_logfile(not_logging=False, logpath=None, outdir=None,
@@ -182,6 +207,39 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
                     extra={'vlevel':verbosity})
 
 
+class StreamOverwriter(StreamHandler):
+    """
+    Subclass built-in StreamHandler to enable writing to the screen
+    in place for status updates/messages, etc.
+    """
+
+    terminator='\r'
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Follows exact same logic as original StreamHandler, but uses
+        '\r' instead of '\n' as writing terminator and provides some
+        additional logic to fill entire blank lines.
+
+        """
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            # Add necessary columns
+            columns,lines = shutil.get_terminal_size(
+                    fallback=(80,20))
+            full_line = msg + ((columns - len(msg)) * ' ')
+            # issue 35046: merged two stream.writes into one.
+            stream.write(full_line + self.terminator)
+            self.flush()
+        except RecursionError:  # See issue 36272
+            raise
+        except Exception:
+            self.handleError(record)
+
+
 class BraceMessage:
     """Hack to use {} style formatting in Logging.
 
@@ -197,6 +255,7 @@ class BraceMessage:
         self.args = args
         self.kwargs = kwargs
         self.wrapped = None  # Initialize to an empty string
+
 
     def __str__(self):
         """Writes formatted string if possible; msg if not"""
@@ -220,6 +279,7 @@ class BraceMessage:
     def add_wrapped(self, msg):
         """Adds a single wrapped message to self"""
         self.wrapped = msg
+
 
     def has_lines(self):
         """Hide underlying interface"""

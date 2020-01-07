@@ -15,7 +15,7 @@ from scrollpy.distances import distance, parser
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class ScrollCollection:
@@ -103,8 +103,8 @@ class ScrollCollection:
         """Convenience function"""
         msa_path = self._get_outpath('align')
         aligner = align.Aligner(
-                self._align_method,
-                config['ALIGNMENT'][self._align_method], # Cmd to execute
+                self.align_method,
+                config['ALIGNMENT'][self.align_method], # Cmd to execute
                 inpath = self._seq_path,
                 outpath = msa_path,
                 )
@@ -115,13 +115,13 @@ class ScrollCollection:
     def _get_distances(self):
         """Convenience function"""
         dist_path = self._get_outpath('distance')
-        distcalc = distance.DistanceCalc(self._dist_method,
-                config['DISTANCE'][self._dist_method], # Cmd to execute
-                model = self._dist_model, # Model to use for distance
+        distcalc = distance.DistanceCalc(self.dist_method,
+                config['DISTANCE'][self.dist_method], # Cmd to execute
+                model = self.dist_matrix, # Model to use for distance
                 inpath = self._align_path,
                 outpath = dist_path)
         distcalc() # Actually calculates distances; may raise ApplicationError
-        if self._dist_method == 'RAxML': # RAxML is weird; may need to generalize this
+        if self.dist_method == 'RAxML': # RAxML is weird; may need to generalize this
             suffix = os.path.split(dist_path)[1]
             dist_file_name = 'RAxML_distances.' + suffix
             actual_dist_file_path = os.path.join(self._outdir, dist_file_name)
@@ -134,7 +134,7 @@ class ScrollCollection:
         """Convenience function"""
         distances = parser.parse_distance_file(
                 self._dist_path,
-                self._dist_method) # Tells the parser what type of file it is
+                self.dist_method) # Tells the parser what type of file it is
         self._dist_dict = distances # List of tuples
 
 

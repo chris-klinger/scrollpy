@@ -24,6 +24,13 @@ from scrollpy import util
 from scrollpy import config
 
 
+# Random utility funtion used in some classes
+def _get_current_terminal_width():
+    columns,lines = shutil.get_terminal_size(
+            fallback=(80,20))
+    return columns
+
+
 # Use to output rich formatting to console/file
 rich_format = logging.Formatter(
         # :^<N> centers in a space of N chars long
@@ -232,7 +239,15 @@ def log_newlines(*loggers, number=1):
     else:
         for logger in loggers:
             # Get current formatter and replace with blank_format
-            current_handler = logger.handlers[0]  # Each logger has only one handler
+            if not logger.handlers:  # Not the root logger
+                target_name = '.'.join(logger.name.split('.')[:2])
+                # print("Looking for parent logger {}".format(target_name))
+                target_logger = logging.getLogger(target_name)
+            else:
+                target_logger = logger
+            # print("Using target logger {}".format(target_logger.name))
+            # print("Target logger has handlers {}".format(target_logger.handlers))
+            current_handler = target_logger.handlers[0]  # Each logger has only one handler
             current_formatter = current_handler.formatter
             current_handler.setFormatter(raw_format)
             # Now log newlines
@@ -269,8 +284,9 @@ class StreamOverwriter(StreamHandler):
             msg = self.format(record)
             stream = self.stream
             # Add necessary columns
-            columns,lines = shutil.get_terminal_size(
-                    fallback=(80,20))
+            # columns,lines = shutil.get_terminal_size(
+            #         fallback=(80,20))
+            columns = _get_current_terminal_width()
             full_line = msg + ((columns - len(msg)) * ' ')
             # issue 35046: merged two stream.writes into one.
             stream.write(full_line + self.terminator)
@@ -347,10 +363,10 @@ class GenericFilter:
             or return False if vlevel < self.verbosity
 
     """
-    def __init__(self, verbosity, silent=False):
+    def __init__(self, verbosity, silent=False, width=78):
         self.verbosity = verbosity
         self.silent = silent
-        self.width = 78
+        self.width = width
 
 
     def filter(self, record):
@@ -403,7 +419,8 @@ class ConsoleFilter(GenericFilter):
     Only includes a leader for WARNING or ERROR, not info
     """
     def __init__(self, verbosity, silent=False):
-        GenericFilter.__init__(self, verbosity, silent)
+        term_width = _get_current_terminal_width()
+        GenericFilter.__init__(self, verbosity, silent, term_width)
 
 
     def _modify_message(self, record):

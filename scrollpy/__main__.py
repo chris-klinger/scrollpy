@@ -557,7 +557,7 @@ def main():
     # Check to see if any of 'citation'/'usage'/'version' present
     if args.version:
         scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}\n", _version),  # msg
+            scroll_log.BraceMessage("Version {}", _version),  # msg
             1,  # verbosity level of message
             'INFO',  # level
             console_logger,  # loggers
@@ -566,7 +566,7 @@ def main():
         sys.exit (0)
     if args.citation:
         scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}\n", _citation),  # msg
+            scroll_log.BraceMessage("Version {}", _citation),  # msg
             1,  # verbosity level of message
             'INFO',  # level
             console_logger,  # loggers
@@ -575,30 +575,13 @@ def main():
         sys.exit(0)
     if args.usage:
         scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}\n", _usage),  # msg
+            scroll_log.BraceMessage("Version {}", _usage),  # msg
             1,  # verbosity level of message
             'INFO',  # level
             console_logger,  # loggers
             )
         # print(_usage)
         sys.exit(0)
-
-    # Testing status logger - delete eventually
-    # if args.spinner:
-    #     import time
-    #     for i in range(10):
-    #         scroll_log.log_message(
-    #             scroll_log.BraceMessage("Displaying {} of 9\r",i),
-    #             1,
-    #             'INFO',
-    #             status_logger,
-    #             )
-    #         # display(
-    #         #     "Displaying {} ".format(i),
-    #         #     rewritable=True,
-    #         # )
-    #         time.sleep(1)
-    #     sys.exit(0)
 
 
     ##############################################################################
@@ -612,7 +595,7 @@ def main():
             'INFO',  # level
             console_logger, file_logger,  # loggers
             )
-    scroll_log.log_newlines(console_logger, file_logger, number=2)
+    scroll_log.log_newlines(console_logger)
 
     # Check the filepaths for appropriateness
     all_paths = []
@@ -653,7 +636,7 @@ def main():
     if len(duplicates) > 0:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Duplicate filepaths detected in input:\n"),  # msg
+                    "Duplicate filepaths detected in input:"),  # msg
                 1,  # verbosity level of message
                 'ERROR',  # level
                 console_logger, file_logger,  # loggers
@@ -661,7 +644,7 @@ def main():
         for path in duplicates:
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Duplicate path {} detected\n", path),  # msg
+                        "Duplicate path {} detected", path),  # msg
                     1,  # verbosity level of message
                     'ERROR',  # level
                     console_logger, file_logger,  # loggers
@@ -674,7 +657,7 @@ def main():
         for path in non_existent:
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Non-existent filepath {} detected\n", path),
+                        "Non-existent filepath {} detected", path),
                     1,
                     'ERROR',
                     console_logger, file_logger,
@@ -692,7 +675,7 @@ def main():
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
                             "Failed to create output directory {}; using current "
-                            "directory instead\n", args.out),
+                            "directory instead", args.out),
                         1,
                         'ERROR',
                         console_logger, file_logger,
@@ -702,7 +685,7 @@ def main():
             scroll_log.log_message(
                     scroll_log.BraceMessage(
                         "Did not attempt to create output directory {}; try "
-                        "again with the '--no-create' flag turned off\n", args.out),
+                        "again with the '--no-create' flag turned off", args.out),
                     1,
                     'WARNING',
                     console_logger, file_logger,
@@ -730,7 +713,7 @@ def main():
                     scroll_log.log_message(
                             scroll_log.BraceMessage(
                                 "Failed to create temporary directory {}; falling "
-                                "back to system temp. Files may or may not be recoverable\n",
+                                "back to system temp. Files may or may not be recoverable",
                                 new_tmp),
                             1,
                             'ERROR',
@@ -772,7 +755,7 @@ def main():
 
     # Actual program execution
     scroll_log.log_message(
-        scroll_log.BraceMessage("Starting main program analysis\n"),  # msg
+        scroll_log.BraceMessage("Starting main program analysis"),  # msg
         2,  # verbosity level of message
         'INFO',  # level
         console_logger, file_logger  # loggers
@@ -783,7 +766,7 @@ def main():
     # Begin by creating a mapping, unless iteralign
     if not args.iteralign:
         scroll_log.log_message(
-                scroll_log.BraceMessage("Creating sequence mapping\n"),
+                scroll_log.BraceMessage("Creating sequence mapping"),
                 2,
                 'INFO',
                 console_logger, file_logger
@@ -804,7 +787,7 @@ def main():
     removed_seq_dict=None  # If not filtering
     if args.filter:
         scroll_log.log_message(
-                scroll_log.BraceMessage("Filtering input sequences\n"),
+                scroll_log.BraceMessage("Filtering input sequences"),
                 2,
                 'INFO',
                 console_logger, file_logger,
@@ -821,7 +804,7 @@ def main():
     # Run actual program execution now
     if args.placeseqs:  # TreePlacer
         scroll_log.log_message(
-                scroll_log.BraceMessage("Initializing tree placing analysis\n"),
+                scroll_log.BraceMessage("Initializing tree placing analysis"),
                 1,
                 'INFO',
                 console_logger, file_logger,
@@ -834,7 +817,7 @@ def main():
                 )
     elif args.iteralign:  # IterAlign
         scroll_log.log_message(
-                scroll_log.BraceMessage("Initializing alignment iteration analysis\n"),
+                scroll_log.BraceMessage("Initializing alignment iteration analysis"),
                 1,
                 'INFO',
                 console_logger, file_logger,
@@ -843,7 +826,7 @@ def main():
                 args.alignment,
                 args.tmpout,
                 )
-        alignout = True  # Signal to output an alignment
+        # alignout = True  # Signal to output an alignment
     else:  # Distance-based analysis!
         if not args.treefile:  # Sequence-based analysis
             scroll_log.log_message(
@@ -896,7 +879,8 @@ def main():
                 )
 
     # Write optimal alignment, if AlignIter was performed
-    if alignout:
+    # if alignout:
+    if args.iteralign:
         align_writer = AlignWriter(
                 RunObj,
                 args.out,
@@ -926,7 +910,7 @@ def main():
     main_end = datetime.datetime.now()
     scroll_log.log_message(
             scroll_log.BraceMessage(
-                "Finished analysis at {} \n", main_end),
+                "Finished analysis at {}", main_end),
             2,  # verbosity level of message
             'INFO',  # level
             console_logger, file_logger,  # loggers
@@ -953,3 +937,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         sys.exit("\n Keyboard Interrupt detected: terminating")
+

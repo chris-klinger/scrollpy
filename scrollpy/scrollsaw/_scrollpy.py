@@ -17,7 +17,7 @@ from scrollpy.filter._filter import Filter
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 # console_logger = scroll_log.get_console_logger(__name__)
 # status_logger  = scroll_log.get_status_logger(__name__)
@@ -36,8 +36,8 @@ class ScrollPy:
     """
     # Class var list
     _config_vars = (
-            'align',
-            'distance',
+            'align_method',
+            'dist_method',
             )
 
     def __init__(self, seq_dict, target_dir, **kwargs):
@@ -82,16 +82,18 @@ class ScrollPy:
             self._make_collections()
             # actually run alignment/distance calculations
             total = len(self._collections)
+            scroll_log.log_newlines(console_logger)
             for i,collection in enumerate(self._collections):
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
                             "Performing comparison {} of {}",
-                            (i, total)),
+                            i+1, total),
                         2,
                         'INFO',
                         status_logger,
                         )
                 collection()
+            scroll_log.log_newlines(console_logger)
         finally:
             if self._remove_tmp:
                 tmp_dir.cleanup()  # Remove temporary directory
@@ -129,8 +131,8 @@ class ScrollPy:
                 self.target_dir,
                 self._seq_dict[group], # seq_list
                 group,
-                self.align,  # Alignment method
-                self.distance,  # Distance method
+                # self.align,  # Alignment method
+                # self.distance,  # Distance method
                 ))
         for group1,group2 in combinations(self._groups,2): # pairwise
             scroll_log.log_message(
@@ -149,8 +151,8 @@ class ScrollPy:
                 self.target_dir,
                 seq_list,
                 group1,
-                self.align,  # Alignment method
-                self.distance,  # Distance method
+                # self.align,  # Alignment method
+                # self.distance,  # Distance method
                 opt_group = group2 # Arbitrary which group is the 'optional' one
                 ))
 

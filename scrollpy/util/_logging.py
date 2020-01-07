@@ -24,20 +24,28 @@ from scrollpy import util
 from scrollpy import config
 
 
+# Use to output rich formatting to console/file
 rich_format = logging.Formatter(
         # :^<N> centers in a space of N chars long
         fmt = "{asctime} | {name:^30} | {levelname:^10} | {message}",
         datefmt = '%Y-%m-%d %H:%M:%S',
         style = '{',
         )
+
+# Simple formatting -> necessary?
 #basic_format = logging.Formatter(
 #        fmt = "{levelname:8s} | {message}",
 #        style = '{',
 #        )
+
+# Use to output without formatting, e.g. program stderr messages
 raw_format = logging.Formatter(
         fmt = "{message}",
         style = '{',
         )
+
+# Use to write blank lines
+blank_format = logging.Formatter(fmt="")
 
 
 def get_console_logger(name):
@@ -74,10 +82,10 @@ def get_output_logger(name):
 
 def get_module_loggers(mod_name):
     """Convenience function to return based on __name__"""
-    c_logger = scroll_log.get_console_logger(mod_name)
-    s_logger = scroll_log.get_status_logger(mod_name)
-    f_logger = scroll_log.get_file_logger(mod_name)
-    o_logger = scroll_log.get_output_logger(mod_name)
+    c_logger = get_console_logger(mod_name)
+    s_logger = get_status_logger(mod_name)
+    f_logger = get_file_logger(mod_name)
+    o_logger = get_output_logger(mod_name)
     # Return in specific order
     return (
             c_logger,  # Console
@@ -211,6 +219,35 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
                     extra={'vlevel':verbosity})
 
 
+def log_newlines(*loggers, number=1):
+    """
+    Log a blank line on one or more loggers.
+
+    Args:
+        *loggers: one or more loggers to log a newline
+
+    """
+    if number < 1:
+        raise ValueError
+    else:
+        for logger in loggers:
+            # Get current formatter and replace with blank_format
+            current_handler = logger.handlers[0]  # Each logger has only one handler
+            current_formatter = current_handler.formatter
+            current_handler.setFormatter(raw_format)
+            # Now log newlines
+            for i in range(number):
+                logger.info(
+                        BraceMessage(
+                            "",            # Message is just an empty string
+                            newline=True,  # newline=True tells Filters not to bother
+                            ),
+                        extra={'vlevel':1},
+                        )
+            # Reset formatter
+            current_handler.setFormatter(current_formatter)
+
+
 class StreamOverwriter(StreamHandler):
     """
     Subclass built-in StreamHandler to enable writing to the screen
@@ -253,9 +290,10 @@ class BraceMessage:
     When logged, the __str__ method is called in place of
     trying to format a plain string message.
     """
-    def __init__(self, msg, *args, lines=[], **kwargs):
+    def __init__(self, msg, *args, newline=False, lines=[], **kwargs):
         self.msg = msg
         self.lines = lines
+        self.newline = newline
         self.args = args
         self.kwargs = kwargs
         self.wrapped = None  # Initialize to an empty string
@@ -264,7 +302,6 @@ class BraceMessage:
     def __str__(self):
         """Writes formatted string if possible; msg if not"""
         if self.wrapped:
-            #return self.formatted.format(*self.args, **self.kwargs)
             return self.wrapped
         else:
             return self.msg.format(*self.args, **self.kwargs)
@@ -391,12 +428,17 @@ class ConsoleFilter(GenericFilter):
     def _format_message(self, record):
         """Add a nice header to each message for console output"""
         _message = record.msg.get_msg()
-        message = record.msg.format_string(_message)
-        # Add header in front
-        header,new_msg = self._add_header(record.levelname, message)
-        # Wrap to return a single string
-        record.msg.add_wrapped(self._get_text_wrapper(
-                header=header).fill(new_msg))
+        # If newline, don't add anything
+        if record.msg.newline:
+            record.msg.add_wrapped(_message)
+        # Else, properly format and return
+        else:
+            message = record.msg.format_string(_message)
+            # Add header in front
+            header,new_msg = self._add_header(record.levelname, message)
+            # Wrap to return a single string
+            record.msg.add_wrapped(self._get_text_wrapper(
+                    header=header).fill(new_msg))
 
 
     def _add_header(self, level, string):
@@ -464,12 +506,17 @@ class FileFilter(GenericFilter):
     def _format_message(self, record):
         """Simply wraps the message"""
         _message = record.msg.get_msg()
-        message = record.msg.format_string(_message)
-        # Figure out what the header is
-        header = self._get_header(record)
-        # Wrap to return a single string
-        record.msg.add_wrapped(self._get_text_wrapper(
-                header=header).fill(message))
+        # Do not apply formatting if newline
+        if record.msg.newline:
+            record.msg.add_wrapped(_message)
+        # Else, format and return full thing
+        else:
+            message = record.msg.format_string(_message)
+            # Figure out what the header is
+            header = self._get_header(record)
+            # Wrap to return a single string
+            record.msg.add_wrapped(self._get_text_wrapper(
+                    header=header).fill(message))
 
 
     def _get_header(self, record):
@@ -515,3 +562,5 @@ class OutputFilter(GenericFilter):
         #message = record.msg.get_msg()  # Should be piped output
         #record.msg.add_wrapped(message)
         pass
+
+

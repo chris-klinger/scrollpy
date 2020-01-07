@@ -498,6 +498,7 @@ def main():
             )
 
     # Get loggers and configure each; default level is 'INFO'
+
     # Configure console handler
     console_handler = logging.StreamHandler(stream = sys.stderr)
     console_handler.setFormatter(scroll_log.raw_format)
@@ -606,11 +607,12 @@ def main():
 
     # Indicate start time
     scroll_log.log_message(
-            scroll_log.BraceMessage("Initialized at {} \n", main_start),  # msg
+            scroll_log.BraceMessage("Initialized at {}", main_start),  # msg
             2,  # verbosity level of message
             'INFO',  # level
             console_logger, file_logger,  # loggers
             )
+    scroll_log.log_newlines(console_logger, file_logger, number=2)
 
     # Check the filepaths for appropriateness
     all_paths = []
@@ -639,7 +641,7 @@ def main():
     if len(all_paths) == 0: # No input files!
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "No input files detected; please try again\n"),  # msg
+                    "No input files detected; please try again"),  # msg
                 1,  # verbosity level of message
                 'ERROR',  # level
                 console_logger, file_logger,  # loggers
@@ -716,7 +718,7 @@ def main():
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
                             "Failed to create temporary directory {}; falling "
-                            "back to 'tmp' in current directory", args.tmpout)
+                            "back to 'tmp' in current directory", args.tmpout),
                         1,
                         'ERROR',
                         console_logger, file_logger,
@@ -936,8 +938,8 @@ def main():
     converted_total = util.time_list(analysis_time)
     scroll_log.log_message(
             scroll_log.BraceMessage(
-                "Analysis completed in {} days, {} hours, {} minutes, {} seconds, and {}
-                microseconds",
+                "Analysis completed in {} days, {} hours, {} minutes, "
+                "{} seconds, and {} microseconds",
                 *converted_total,  # Tuple with 5 values; unpack
                 ),
             1,

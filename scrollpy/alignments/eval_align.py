@@ -15,8 +15,7 @@ from subprocess import SubprocessError
 
 class AlignEvaluator:
 
-    def __init__(self, method, cmd, inpath, outpath,
-            cmd_list=None, logger=None, **kwargs):
+    def __init__(self, method, cmd, inpath, outpath,  cmd_list=None, **kwargs):
         if self._validate('method', method, self._validate_method):
             self.method = method
         if self._validate('command', cmd, self._validate_command,
@@ -28,8 +27,6 @@ class AlignEvaluator:
             self.outpath = outpath
         # For finer control, can supply command list instead
         self.cmd_list = cmd_list
-        # Check logger eventually?
-        self._logger = logger
         # Should eventually validate kwargs? Or leave for BioPython?
         self.kwargs = kwargs
 

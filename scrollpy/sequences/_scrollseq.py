@@ -20,8 +20,11 @@ class ScrollSeq:
 
     Args:
         id_num (int): Unique ID number to assign to instance
+
         group (str): group to which the sequence belongs
+
         SeqRecord (obj): BioPython object (default: None)
+
     """
     def __init__(self, id_num, group, seq_record=None):
             #accession=None, name=None, description=None, seq=None): # property attrs
@@ -31,10 +34,7 @@ class ScrollSeq:
         self._fvalue = None  # Value used to filter
         self._record = seq_record
         # All remaining attributes are internal properties
-        #self._accession = accession
-        #self._name = name
-        #self._description = description
-        #self._seq = seq
+
 
     def __str__(self):
         """Default to BioPython str if present; otherwise basic"""
@@ -61,18 +61,23 @@ class ScrollSeq:
         self._distance += distance # Assuming no Error, increment counter
         return self
 
+
     def __lt__(self, other):
         return self._distance < other
+
 
     def __eq__(self, other):
         return self._distance == other
 
+
     def __len__(self):
         return len(self.seq)
+
 
     def _write(self, file_obj, outfmt = "fasta"):
         """Writes internal sequence object as per Bio.SeqIO"""
         SeqIO.write(self._record, file_obj, outfmt)
+
 
     def _write_by_id(self, file_obj):
         """Writes internal sequence object using ID for header"""
@@ -81,6 +86,7 @@ class ScrollSeq:
         file_obj.write(header + '\n')
         for chunk in split_input(seq):
             file_obj.write(chunk + '\n')
+
 
     @property
     def id_num(self):
@@ -91,13 +97,16 @@ class ScrollSeq:
                     self.accession))
         return int(self._id)
 
+
     @id_num.setter
     def id_num(self):
         raise AttributeError("Cannot change ScrollSeq ID after instantiation")
 
+
     @id_num.deleter
     def id_num(self):
         raise AttributeError("Cannot delete ScollSeq ID")
+
 
     @property
     def accession(self):
@@ -107,13 +116,16 @@ class ScrollSeq:
             return None
         return self._record.id
 
+
     @accession.setter
     def accession(self, value):
         raise AttributeError("Cannot change accession on SeqRecord object")
 
+
     @accession.deleter
     def accession(self):
         raise AttributeError("Cannot remove accession from SeqRecord object")
+
 
     @property
     def name(self):
@@ -122,13 +134,16 @@ class ScrollSeq:
             return None
         return self._record.name
 
+
     @name.setter
     def name(self, value):
         raise AttributeError
 
+
     @name.deleter
     def name(self):
         raise AttributeError
+
 
     @property
     def description(self):
@@ -136,13 +151,16 @@ class ScrollSeq:
             return None
         return self._record.description
 
+
     @description.setter
     def description(self, value):
         raise AttributeError
 
+
     @description.deleter
     def description(self):
         raise AttributeError
+
 
     @property
     def seq(self):
@@ -150,9 +168,11 @@ class ScrollSeq:
             return None
         return self._record.seq # Note: returns a Seq object
 
+
     @seq.setter
     def seq(self, value):
         raise AttributeError
+
 
     @seq.deleter
     def seq(self):

@@ -20,9 +20,15 @@ from numpy import mean,median,std
 
 
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.alignments import align,parser
 from scrollpy.files import sequence_file as sf
 from scrollpy.util._util import decompose_sets
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 class Filter:
@@ -34,18 +40,25 @@ class Filter:
     Returns:
         two dictionaries; the input dictionary with sequences removed, and
         a similar dictionary of removed sequences.
+
     """
 
     length_methods = ("ZSCORE", "MAD")
     identity_methods = ("IDENTITY")
 
+    _config_vars = (
+            'filter_method',
+            'filter_by_group',
+            'filter_threshold',
+            )
+
     def __init__(self, seq_dict, **kwargs):
         self._seq_dict = seq_dict
-        for setting in ("filter_method","filter_by_group","filter_threshold"):
+        for var in _config_vars:
             try:
-                value = kwargs[setting]
+                value = kwargs[var]
             except KeyError:
-                value = config["ARGS"][setting]
+                value = config["ARGS"][var]
             # Now set it
             setattr(self, ('_'+setting), value)
         # Internal defaults
@@ -60,7 +73,7 @@ class Filter:
         elif self._filter_method.upper() in identity_methods:
             filterer = IdentityFilter
         else:  # Will we get here? Args should be filtered...
-            # Log a warning
+            # Log a warning??
             raise AttributeError  # Might change, just need to signal bad args
         # Determine whether to pool all Seq objects or go by group
         sequences = []
@@ -118,7 +131,15 @@ class Filter:
                         del seq_list[i]
                 self._seq_dict[group] = seq_list  # Replace old list
             else:
-                pass  # Log something here
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Group length prevented filtering {} with score {} from group {}\n",
+                            r_obj.acession, score, group,
+                            ),
+                        2,
+                        'WARNING',
+                        file_logger,
+                        )
 
 
     def _get_group_for_seq_obj(self, seq_obj):
@@ -323,10 +344,28 @@ class IdentityFilter(GenericFilter):
             identical = sum(idents)
             total = sum(totals)
             if identical > total:
-                raise ValueError  # Should never happen
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Fatal error when totalling identical positions for {} and {}\n",
+                            header1, header2,
+                            ),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
+                sys.exit(0)  # Replace eventually?
             try:
                 percent_identical = identical/total * 100
             except ZeroDivisionError:  # No aligned region
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "No aligned region detected between {} and {}\n",
+                            header1, header2,
+                            ),
+                        2,
+                        'WARNING',
+                        console_logger, file_logger,
+                        )
                 percent_identical = 0
             if percent_identical >= self._filter_score:
                 identity_set.add((header1,header2))  # Add as a tuple

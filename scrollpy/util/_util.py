@@ -6,6 +6,8 @@ import os
 import sys
 import errno
 import itertools
+import math
+import datetime
 
 
 def file_exists_user_spec(file_path):
@@ -226,4 +228,74 @@ def flatten_dict_to_list(input_dict):
         for item in v:
             out_list.append(item)
     return out_list
+
+
+def time_list(t_delta):
+    """
+    Returns a tuple of time increments from a timedelta object.
+
+    Args:
+        t_delta (obj): A datetime.timedelta object
+
+    Returns:
+        times (tuple): A tuple of time increments in order:
+            days, hours, minutes, seconds, microseconds
+
+    """
+    hours = 0
+    minutes = 0
+    if t_delta.seconds != 0:
+        hours,minutes,seconds = calculate_real_time(t_delta)
+    else:
+        seconds = t_delta.seconds
+    # Return everything
+    return (t_delta.days,  # Unchanged from input
+            hours,
+            minutes,
+            seconds,  # May be different from input object
+            t_delta.microseconds,
+            )
+
+
+def calculate_real_time(t_delta):
+    """
+    Calculates minutes and hours from a timedelta object.
+
+    Args:
+        t_delta (obj): A datetime.timedelta object
+
+    Returns:
+        times (tuple): A tuple of hours, minutes, seconds
+
+    """
+    seconds = t_delta.seconds
+    if seconds <= 60:
+        return (0,0,seconds)  # No larger increments can be made
+    else:
+        minutes,seconds = _split_time(seconds)
+        if minutes <= 60:
+            return (0,minutes,seconds)
+        else:
+            hours,minutes = _split_time(minutes)
+            return (hours,minutes,seconds)
+
+def _split_time(value, divisible=60):
+    """
+    Splits time values to get a whole and remainder.
+
+    Args:
+        value (int): An initial value for the smaller increment
+
+        divisible (int): The number of small increments in the larger
+            default: 60
+
+    Returns:
+        values (tuple): A tuple of whole, remainder increment values
+
+    """
+    d_value = value/divisible  # Create a float no matter what
+    remainder,whole = math.modf(d_value)  # Unpack is reverse of expected
+    # Remainder is a fraction of the divisible
+    true_remainder = round(remainder * divisible)  # Round required!
+    return (int(whole),int(true_remainder))  # Return as ints
 

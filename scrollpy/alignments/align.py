@@ -12,6 +12,7 @@ More details to follow.
 """
 
 import os,errno
+import sys
 import subprocess
 from subprocess import SubprocessError
 
@@ -46,15 +47,25 @@ class Aligner:
             **kwargs: Additional parameters specified for the relevant
                 program (optional)
         """
-        if self._validate('method', method, self._validate_method):
-            self.method = method
-        if self._validate('command', cmd, self._validate_command,
-                method=method): # Should work; if not set, an Exception was raised
-            self.cmd = cmd
-        if self._validate('inpath', inpath, self._validate_inpath):
-            self.inpath = inpath
-        if self._validate('outpath', outpath, self._validate_outpath):
-            self.outpath = outpath
+        try:
+            if self._validate('method', method, self._validate_method):
+                self.method = method
+            if self._validate('command', cmd, self._validate_command,
+                    method=method): # Should work; if not set, an Exception was raised
+                self.cmd = cmd
+            if self._validate('inpath', inpath, self._validate_inpath):
+                self.inpath = inpath
+            if self._validate('outpath', outpath, self._validate_outpath):
+                self.outpath = outpath
+        except ValueError:
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "One or more alignment parameters are invalid; exiting"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    exc_info=True,
+                    )
         # For finer control, can supply command list instead
         self.cmd_list = cmd_list
         # Should eventually validate kwargs? Or leave for BioPython?
@@ -95,8 +106,13 @@ class Aligner:
             try:
                 stdout, stderr = cmdline() # Need to log stderr eventually
             except ApplicationError: # Raised if subprocess return code != 0
-                # LOG AS EXCEPTION
-                print("Failed to run MAFFT") # Should process better eventually
+                scroll_log.log_message(
+                        scroll_log.BraceMessage("Failed to run Mafft\n"),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        exc_info=True,
+                        )
             # Capture information from program
             with open(self.outpath, 'w') as o:
                 o.write(stdout)
@@ -126,8 +142,13 @@ class Aligner:
                     stderr=subprocess.PIPE,  # Returns bytes
                     )
             except SubprocessError:  # Should be default base raised
-                # LOG AS EXCEPTION
-                print("Failed to run Mafft add")  # Log eventually
+                scroll_log.log_message(
+                        scroll_log.BraceMessage("Failed to add sequences using Mafft\n"),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        exc_info=True,
+                        )
             # Capture information
             with open(self.outpath, 'w') as o:
                 decoded_out = cmdline.stdout.decode()
@@ -149,16 +170,40 @@ class Aligner:
         if validation_method is not None: # was provided
             # Should we keep validation inside class?
             # "Self" argument here is implicit in passed function object
-            is_valid = validation_method(value, **kwargs) # May raise exception
+            try:
+                is_valid = validation_method(value, **kwargs) # May raise exception
+            except FileNotFoundError:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Expected file {} not found\n", value),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        exc_info=True,
+                        )
+                is_valid=False
+            except AttributeError:  # Indicates not a file
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Unexpected file type {}\n", value),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        exc_info=True,
+                        )
+                is_valid=False
             if not is_valid in (0, 1, True, False): # Truthy values
-                raise ValueError("Result of {} check on {} is \
-                    an unexpected value".format(
-                        validation_method.__name__, value))
+                raise ValueError(
+                        "Result of {} check on {} is an unexpected value".format(
+                        validation_method.__name__, value),
+                        )
             elif is_valid:
                 return True
-            elif not is_valid: # Could just be "else"?
-                raise ValueError("Invalid parameter {} for {} while \
-                    calling alignment".format(value, name))
+            else:  # Validation method returned False or raised Exception
+                raise ValueError(
+                        "Invalid parameter {} for {} while calling alignment".format(
+                            value, name),
+                        )
         # Raise error if no method provided?
 
 
@@ -194,7 +239,7 @@ class Aligner:
                 inpath # File name
                 )
         elif os.path.isdir(inpath):
-            raise AttributeError("Cannot align {}; directory")
+            raise AttributeError
         return True
 
 

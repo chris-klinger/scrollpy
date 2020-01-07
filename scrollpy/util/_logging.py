@@ -186,9 +186,13 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
     """
     if exc_info:  # logging an exception
         for logger in loggers:
-            logger.exception(msg_obj,
-                    exc_info=exc_info,
-                    extra={'vlevel':verbosity})
+            if isinstance(logger.handler, logging.FileHandler):
+                logger.exception(msg_obj,
+                        exc_info=exc_info,
+                        extra={'vlevel':verbosity})
+            else:  # Writing to console instead
+                logger.error(msg_obj,  # Do not include exc_info
+                        extra={'vlevel':verbosity})
     elif level == 'DEBUG':
         for logger in loggers:
             logger.debug(msg_obj,

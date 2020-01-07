@@ -39,8 +39,6 @@ class DistanceCalc:
 
             outpath (str): Full path to dump distances to
 
-            _logger (obj): Reference to a logger for logging (optional)
-
             **kwargs: Additional parameters specified for the relevant
                 program (optional?)
         """

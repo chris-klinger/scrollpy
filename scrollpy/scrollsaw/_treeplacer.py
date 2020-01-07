@@ -3,17 +3,24 @@ This module contains the main TreePlacer object.
 """
 
 import os
+import sys  # Temporarily necessary
 import tempfile
 
 from Bio import SeqIO
 
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
 from scrollpy.util import _tree,_util
 from scrollpy.alignments.align import Aligner
 from scrollpy.trees.maketree import TreeBuilder
 from scrollpy.util._mapping import Mapping
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 class TreePlacer:
@@ -31,13 +38,19 @@ class TreePlacer:
     """
 
     # Class var list
-    _config_vars = ('align_method', 'tree_method', 'tree_matrix', 'support')
+    _config_vars = (
+            'align_method',
+            'tree_method',
+            'tree_matrix',
+            'support',
+            )
 
     def __init__(self, seq_dict, alignment, to_place, target_dir, **kwargs):
         # Required
         self._seq_dict  = seq_dict   # Produced by Mapping
         self._alignment = alignment  # Should be the file handle
         self._to_place  = to_place   # Sequences to place in tree
+        self._num_seqs  = len(to_place)
         self._outdir    = target_dir
         # Optional vars or in config
         for var in self._config_vars:
@@ -79,7 +92,15 @@ class TreePlacer:
             tmp_dir = tempfile.TemporaryDirectory()
             self._outdir = tmp_dir.name
         # Iter over sequences
-        for seq_obj in self._to_place:
+        for i,seq_obj in enumerate(self._to_place):
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Placing sequence number {} of {}",
+                        (i+1),self._num_seqs),
+                    2,
+                    'INFO',
+                    status_logger,
+                    )
             # Create all neccessary files
             self._make_new_files(seq_obj)
             # Parse tree object and update internal mappings
@@ -262,7 +283,15 @@ class TreePlacer:
                 pass  # Found added seq - do something?
         if len(seq_list) != len(self._original_leafseqs):
             # FATAL ERROR! -> terminate execution eventually
-            print("Could not map all original tree labels")
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Could not map all leaves to original tree"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            sys.exit(0)  # Replace with Exception eventually?!
+            # print("Could not map all original tree labels")
         # Made it to this point, should be fine
         self._original_leaves = [leaf.name for leaf in
                 self._original_leafseqs]
@@ -277,7 +306,15 @@ class TreePlacer:
                 if not name in self._original_leaves]
         if len(added_leaves) > 1:
             # FATAL ERROR! -> terminate execution eventually
-            print("More than one added leaf!")
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "FATAL -> Detected more than one added sequence"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            sys.exit(0)
+            # print("More than one added leaf!")
         # Return only value in list
         return added_leaves[0]
 

@@ -24,21 +24,12 @@ class ScrollCollection:
     Args:
         outdir (str): full path to target directory for files
 
-        seqs (lists): list of ScrollSeq objects
+        seq_list (list): list of ScrollSeq objects
 
         group (str): name of the group to which the seqs belong
 
-        align_method (str): string denoting alignment method to use
-            Allowed values are: `Muscle`, `Clustalw`, `ClustalOmega`,
-            `Prank`, `Mafft`, `Dialign`, `Probcons`, `TCoffee`,
-            `MSAProbs`, `Generic`
-
-        dist_method (str): string denoting distance calculation method
-            to use. Allowed values are: `RAxML`, `PhyML`, `Generic`.
-
         opt_group (str): name of a second group (default: None)
 
-        inpath (str): full path to input file (default:None)
     """
     # Class var list
     _config_vars = (

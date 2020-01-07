@@ -11,12 +11,18 @@ from numpy import mean,std
 from Bio import AlignIO
 
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.alignments.eval_align import AlignEvaluator
 from scrollpy.filter._new_filter import LengthFilter
 from scrollpy.trees.maketree import TreeBuilder
 from scrollpy.alignments import parser
 from scrollpy.files import tree_file
 from scrollpy.util import _util,_tree
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 class AlignIter:
@@ -95,8 +101,22 @@ class AlignIter:
         self._evaluate_columns(columns_outpath)
         # Run analysis
         if self.iter_method == 'hist':
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Running tree iteration using histogram method"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             self._hist_run()
         elif self.iter_method == 'bisect':
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Running tree iteration using bisection method"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
             self._bisect_run()
         else:
             print("Could not run __call__")
@@ -211,6 +231,13 @@ class AlignIter:
             calc_columns = True
         iter_num = 0
         while not optimal:
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Performing tree iteration {} of many", (iter_num+1)),
+                    2,
+                    'INFO',
+                    status_logger,
+                    )
             if iter_num >= 1:
                 # Determine number of columns to remove
                 if calc_columns:  # Calculate
@@ -255,6 +282,13 @@ class AlignIter:
     def _bisect_run(self):
         """Progressively bisect alignment to find local max"""
         # Run first iteration
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Performing tree iteration 1 of many"),
+                2,
+                'INFO',
+                status_logger,
+                )
         # Calculate lowest column score
         low_val = self._columns[0][1]
         # Determine outpath names
@@ -290,6 +324,13 @@ class AlignIter:
         if num_cols < 1:
             return
         else:
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Performing tree iteration {} of many", iter_num),
+                    2,
+                    'INFO',
+                    status_logger,
+                    )
             # Set up to remove
             num_cols = int(num_cols)
             rem_cols = start + num_cols
@@ -436,14 +477,27 @@ class AlignIter:
         # Length of all sequences should be the same, use first one
         current_align_length = len(self._align_obj[0].seq)
         # Use to calculate current values
-        self._current_phy_path   = self._get_outpath(
-                'phylip',
-                length=current_align_length,
-                )
-        self._current_tree_path  = self._get_outpath(
-                'tree',
-                length=current_align_length,
-                )
+        try:
+            self._current_phy_path   = self._get_outpath(
+                    'phylip',
+                    length=current_align_length,
+                    )
+            self._current_tree_path  = self._get_outpath(
+                    'tree',
+                    length=current_align_length,
+                    )
+        except ValueError:  # Raised when length is None
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Unexpected length {} when resolving outpaths; exiting\n",
+                        current_align_length,
+                        ),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    exc_info=True,
+                    )
+            sys.exit(0)
 
 
     def _make_tree(self):

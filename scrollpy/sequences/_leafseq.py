@@ -17,9 +17,13 @@ class LeafSeq:
 
     Args:
         id_num (int): unique ID number to assign to instance
+
         group (str): group to which the sequence belongs
+
         tree_node  (obj): ETE TreeNode object
+
         seq_obj (obj): ScrollSeq object (default: None)
+
     """
     def __init__(self, id_num, group, tree_node, seq_obj=None):
         self._id = id_num

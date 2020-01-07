@@ -16,9 +16,11 @@ can be established; i.e. no partial data structures should exist.
 """
 
 import os
+import sys  # Temporarily
 from contextlib import suppress
 
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy.files import sequence_file as sf
 from scrollpy.alignments import parser as af
 from scrollpy.files import tree_file as tf
@@ -27,6 +29,11 @@ from scrollpy.sequences._leafseq import LeafSeq
 from scrollpy.util._util import non_blank_lines
 from scrollpy.util._align import affine_align,simple_score
 from scrollpy.util._counter import Counter
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 class Mapping:
@@ -42,7 +49,11 @@ class Mapping:
         mapfile (str): path to a mapping file (default: None)
     """
     # Class var list
-    _config_vars = ('infmt', 'alignfmt', 'treefmt')
+    _config_vars = (
+            'infmt',
+            'alignfmt',
+            'treefmt',
+            )
 
     def __init__(self, infiles, alignfile=None, treefile=None, mapfile=None, **kwargs):
         self._infiles = infiles
@@ -99,7 +110,22 @@ class Mapping:
         self._create_seq_dict()
         # Check to make sure no duplicates were found
         if self._duplicates:
-            pass  # Do something!!!
+            for label in self._duplicates:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Found duplicate sequence {} while creating mapping", label),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "FATAL -> found duplicate sequence(s) in input"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            sys.exit(0)
         # Return seq dict
         return self._seq_dict
 
@@ -110,7 +136,14 @@ class Mapping:
             # Get group from filename
             group = os.path.basename(filepath).split('.',1)[0]
             if not len(group) > 0:  # This should never happen in reality
-                raise ValueError  # Mapping cannot be completed
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "FATAL -> could not identify group for mapping"),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
+                sys.exit(0)  # Mapping cannot be completed
             # Filepaths are unique, but group names are not guaranteed to be
             if _test:
                 group = _unique_group_name(group, seen={})
@@ -187,7 +220,14 @@ class Mapping:
         """Simple mapping, one group and all tree labels"""
         group = os.path.basename(self._treefile).split('.',1)[0]
         if not len(group) > 0:  # This should never happen in reality
-            raise ValueError  # Mapping cannot be completed
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "FATAL -> could not identify group for mapping"),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
+                sys.exit(0)  # Mapping cannot be completed
         self._mapping[group] = self._leaf_names  # Alias leaf labels
 
 
@@ -245,7 +285,8 @@ class Mapping:
                     self._align_descriptions,  # Desc attr of all align records
                     )
             if matched_seq in self._found_seqs:  # Uses same as seqfiles
-                raise ValueError  # Duplicate mapping; not allowed
+                # Duplicate mapping; not allowed
+                raise ValueError  # Caught by handling function
             # Otherwise, get associated record
             index = self._align_descriptions.index(matched_seq)
             record = self._align_records[index]
@@ -268,7 +309,8 @@ class Mapping:
         else:
             matched_seq = get_best_name_match(label, self._seq_descriptions)
             if matched_seq in self._found_seqs:
-                raise ValueError  # Indicates duplicate; replace with specific exception?
+                # Duplicate mapping
+                raise ValueError  # Caught by handling function
             # Otherwise, get associated record by index
             index = self._seq_descriptions.index(matched_seq)
             record = self._record_list[index]
@@ -287,11 +329,12 @@ class Mapping:
         build an associated LeafSeq object and return it.
         """
         if not self._leaves:  # No associated tree object
-            raise KeyError
+            raise KeyError  # Caught by handling function
         else:
             matched_leaf = get_best_name_match(label, self._leaf_names)
             if matched_leaf in self._found_leaves:
-                raise ValueError # Indicates duplicate; replace with specific exception?
+                # Duplicate mapping
+                raise ValueError # Caught by handling function
             # Otherwise, get associated node by index
             index = self._leaf_names.index(matched_leaf)
             node = self._leaves[index]

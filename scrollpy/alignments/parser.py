@@ -6,7 +6,13 @@ return a dictionary of header:sequence pairs
 from Bio import AlignIO
 
 
+from scrollpy import scroll_log
 from scrollpy.util._util import non_blank_lines
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_logger(__name__)
 
 
 def parse_alignment_file(file_path, file_type, to_dict=True):
@@ -26,8 +32,14 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     try:
         alignment =  AlignIO.read(file_path,file_type)
     except ValueError:  # Not parsable
-        print("Could not read alignment from {}".format(file_path))
-        # pass  # Try to parse on our own eventually
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Could not read alignment from {}\n", file_path),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                exc_info=True,
+                )
     # Eventually should get down to here
     if to_dict:
         return _bio_align_to_dict(alignment)

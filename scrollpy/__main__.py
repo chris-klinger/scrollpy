@@ -782,7 +782,7 @@ def main():
     if not args.iteralign:
         scroll_log.log_message(
                 scroll_log.BraceMessage("Creating sequence mapping\n"),
-                3,
+                2,
                 'INFO',
                 console_logger, file_logger
                 )
@@ -870,6 +870,13 @@ def main():
     RunObj()
 
     # Write to outfile(s); config handles gritty details
+    scroll_log.log_message(
+            scroll_log.BraceMessage(
+                "Writing output files"),
+            2,
+            'INFO',
+            console_logger, file_logger,
+            )
     # Write table file no matter what
     tbl_writer = TableWriter(
             RunObj,    # object to use
@@ -912,6 +919,31 @@ def main():
                 )
         filter_writer.write()
     # Something about a summary file? -> TO_DO
+
+    # Finish timing and report back results
+    main_end = datetime.datetime.now()
+    scroll_log.log_message(
+            scroll_log.BraceMessage(
+                "Finished analysis at {} \n", main_end),
+            2,  # verbosity level of message
+            'INFO',  # level
+            console_logger, file_logger,  # loggers
+            )
+
+    analysis_time = main_end - main_start
+    # Datetime timedelta objects are weird and only store days, seconds,
+    # and microseconds as attrs; convert to include hours and minutes
+    converted_total = util.time_list(analysis_time)
+    scroll_log.log_message(
+            scroll_log.BraceMessage(
+                "Analysis completed in {} days, {} hours, {} minutes, {} seconds, and {}
+                microseconds",
+                *converted_total,  # Tuple with 5 values; unpack
+                ),
+            1,
+            'INFO',
+            console_logger, file_logger,
+            )
 
 
 if __name__ == '__main__':

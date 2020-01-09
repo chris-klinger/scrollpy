@@ -6,6 +6,7 @@ different types of aligned files.
 
 """
 
+import sys
 
 from scrollpy.util._util import non_blank_lines
 

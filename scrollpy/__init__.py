@@ -12,6 +12,7 @@ from scrollpy.filter._new_filter import Filter
 from scrollpy.scrollsaw._scrollpy import ScrollPy
 from scrollpy.scrollsaw._scrolltree import ScrollTree
 from scrollpy.scrollsaw._aligniter import AlignIter
+from scrollpy.scrollsaw._treeplacer import TreePlacer
 from scrollpy.files.output import AlignWriter
 from scrollpy.files.output import SeqWriter
 from scrollpy.files.output import TableWriter

@@ -92,13 +92,13 @@ class Aligner:
         # Either delegate call to BioPython or run internal method
         if self.method == 'Mafft':
             # Log information
-            # scroll_log.log_message(
-            #         scroll_log.BraceMessage(
-            #             "Calling Mafft to align sequences\n"),
-            #         2,
-            #         'INFO',
-            #         console_logger, file_logger,
-            #         )
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Calling Mafft to align sequences"),
+                    2,
+                    'INFO',
+                    file_logger,
+                    )
             # Set up method
             cmdline = Applications.MafftCommandline(
                 self.cmd, input=self.inpath, **self.kwargs)
@@ -120,17 +120,17 @@ class Aligner:
                     scroll_log.BraceMessage(stderr),
                     3,
                     'INFO',
-                    console_logger, file_logger,
+                    output_logger,
                     )
         # BioPython interface not flexible enough to handle --add for Mafft
         elif self.method == 'MafftAdd':  # Add to existing alignment
             # Log information
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Calling Mafft to add sequences\n"),
+                        "Calling Mafft to add sequences"),
                     2,
                     'INFO',
-                    console_logger, file_logger,
+                    file_logger,
                     )
             # Set up method
             self.cmd_list.insert(0, self.cmd)  # Add to list first
@@ -158,7 +158,7 @@ class Aligner:
                     scroll_log.BraceMessage(decoded_stderr),
                     3,
                     'INFO',
-                    console_logger, file_logger,
+                    output_logger,
                     )
         # Other method here
         elif self.method == 'Generic':

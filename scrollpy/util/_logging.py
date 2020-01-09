@@ -34,7 +34,7 @@ def _get_current_terminal_width():
 # Use to output rich formatting to console/file
 rich_format = logging.Formatter(
         # :^<N> centers in a space of N chars long
-        fmt = "{asctime} | {name:^30} | {levelname:^10} | {message}",
+        fmt = "{asctime} | {name:^35} | {levelname:^10} | {message}",
         datefmt = '%Y-%m-%d %H:%M:%S',
         style = '{',
         )
@@ -502,7 +502,7 @@ class FileFilter(GenericFilter):
     """
     def __init__(self, verbosity, silent=False):
         GenericFilter.__init__(self, verbosity, silent)
-        self.width = 92
+        self.width = 128
 
 
     def _modify_message(self, record):

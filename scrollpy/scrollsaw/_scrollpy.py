@@ -88,7 +88,7 @@ class ScrollPy:
                         scroll_log.BraceMessage(
                             "Performing comparison {} of {}",
                             i+1, total),
-                        2,
+                        3,
                         'INFO',
                         status_logger,
                         )

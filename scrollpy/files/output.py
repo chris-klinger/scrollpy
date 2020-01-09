@@ -303,12 +303,13 @@ class TableWriter(BaseWriter):
         elif isinstance(target_obj,TreePlacer):
             for value in ('monophyletic','notmonophyletic'):
                 lines = self._filter(mode=value)
-                outpath = self._get_filepath(table_type=value)
-                self._write(
-                        lines,
-                        outpath,
-                        table_type=value,
-                        )
+                if lines:  # Not every analysis will have both
+                    outpath = self._get_filepath(table_type=value)
+                    self._write(
+                            lines,
+                            outpath,
+                            table_type=value,
+                            )
         # If AlignIter, want information on alignments itered over
         elif isinstance(target_obj,AlignIter):
             lines = self._filter(mode='aligniter')
@@ -365,11 +366,11 @@ class TableWriter(BaseWriter):
                     3,  # Number of items per group
                     )
             # Make header columns for max number of groups
-            for n in max_groups:
+            for n in range(max_groups):
                 header_list.extend([
-                        'Group{}'.format(n),
-                        'Group{} Support'.format(n),
-                        'Group{} Completeness'.format(n),
+                        'Group{}'.format(n+1),
+                        'Group{} Support'.format(n+1),
+                        'Group{} Completeness'.format(n+1),
                         ])
         # Back to fixed number of values
         elif table_type == 'aligniter':
@@ -404,7 +405,20 @@ class TableWriter(BaseWriter):
         if mode == 'distance':
             for obj in self._sp_object.return_ordered_seqs():
                 # Pick values
-                header = obj.description
+                # Description may or may not be available
+                header = None
+                try:
+                    header = obj.description
+                except AttributeError:
+                    # Backup -> try to get TreeNode name
+                    try:
+                        header = obj._node.name
+                    except AttributeError:
+                        pass  # Log something?
+                if not header:
+                    header = 'N/A'
+                # These should always be available
+                # If not, AttributeError is raised -> should log!!!
                 group = obj._group # Problem to access directly?
                 dist = obj._distance
                 # Add to list

@@ -11,15 +11,19 @@ import datetime
 import logging
 
 
+# Utility modules
 from scrollpy import scroll_log
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy import util
+# Execution classes
 from scrollpy import Mapping
 from scrollpy import Filter
 from scrollpy import ScrollPy
 from scrollpy import ScrollTree
 from scrollpy import AlignIter
+from scrollpy import TreePlacer
+# Output classes
 from scrollpy import AlignWriter
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
@@ -404,6 +408,16 @@ def main():
                 "specified is less than or equal to zero, the default is used "
                 "instead (Default is 3)."
                 ))
+    run_options.add_argument("--support",
+            nargs = '?',
+            choices = list(range(101)),
+            type = int,
+            default = 80,
+            metavar = "Classification Tree Support",
+            help = (
+                "When placing sequences in a tree, the minimum node support "
+                "value for the sequence to be considered 'classified'."
+                ))
     run_options.add_argument("--use-config",
             action = "store_true",
             help = (
@@ -457,7 +471,7 @@ def main():
                 "This option controls how much detail is output to the terminal "
                 "during output run. '1' results in a very quiet run, while '2' "
                 "(default) displays more information about the run and '3' "
-                "displays output from external program calls."
+                "displays real-time program execution updates."
                 ))
     info_options.add_argument("--version",
             action = "store_true",
@@ -805,7 +819,7 @@ def main():
     if args.placeseqs:  # TreePlacer
         scroll_log.log_message(
                 scroll_log.BraceMessage("Initializing tree placing analysis"),
-                1,
+                2,
                 'INFO',
                 console_logger, file_logger,
                 )
@@ -818,7 +832,7 @@ def main():
     elif args.iteralign:  # IterAlign
         scroll_log.log_message(
                 scroll_log.BraceMessage("Initializing alignment iteration analysis"),
-                1,
+                2,
                 'INFO',
                 console_logger, file_logger,
                 )
@@ -832,7 +846,7 @@ def main():
             scroll_log.log_message(
                     scroll_log.BraceMessage(
                         "Initializing sequence-based scrollsaw analysis"),
-                    1,
+                    2,
                     'INFO',
                     console_logger, file_logger,
                     )
@@ -844,7 +858,7 @@ def main():
             scroll_log.log_message(
                     scroll_log.BraceMessage(
                         "Initializing tree-based scrollsaw analysis"),
-                    1,
+                    2,
                     'INFO',
                     console_logger, file_logger,
                     )
@@ -867,16 +881,16 @@ def main():
             RunObj,    # object to use
             args.out,  # specified output location
             )
-    try:
-        tbl_writer.write()
-    except:  # Dangerous; Change!!!
-        scroll_log.log_message(  # Log exception instead?!?
-                scroll_log.BraceMessage(
-                    "Failed to write output table"),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
+    # try:
+    tbl_writer.write()
+    # except:  # Dangerous; Change!!!
+    # scroll_log.log_message(  # Log exception instead?!?
+    #         scroll_log.BraceMessage(
+    #             "Failed to write output table"),
+    #         1,
+    #         'ERROR',
+    #         console_logger, file_logger,
+    #         )
 
     # Write optimal alignment, if AlignIter was performed
     # if alignout:

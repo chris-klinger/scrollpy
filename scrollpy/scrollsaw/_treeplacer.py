@@ -10,6 +10,7 @@ from Bio import SeqIO
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
 from scrollpy.util import _tree,_util
@@ -20,7 +21,7 @@ from scrollpy.util._mapping import Mapping
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class TreePlacer:
@@ -31,9 +32,11 @@ class TreePlacer:
 
         alignment (obj): parsed BioPython alignment object
 
-        to_place (list): list of parsed ScrollSeq objects
+        to_place (str): path to target file of sequences to place
 
         target_dir (str): path to target directory for output file(s)
+
+        infiles (list): infiles to original program call -> can be None
 
     """
 
@@ -45,30 +48,36 @@ class TreePlacer:
             'support',
             )
 
-    def __init__(self, seq_dict, alignment, to_place, target_dir, **kwargs):
+    def __init__(self, seq_dict, alignment, to_place, target_dir, infiles=[], **kwargs):
         # Required
-        self._seq_dict  = seq_dict   # Produced by Mapping
-        self._alignment = alignment  # Should be the file handle
-        self._to_place  = to_place   # Sequences to place in tree
-        self._num_seqs  = len(to_place)
-        self._outdir    = target_dir
+        self._seq_dict   = seq_dict   # Produced by Mapping
+        self._alignment  = alignment  # Should be the file handle
+        self._to_place   = self._parse_sequences(to_place)
+        # self._to_place  = to_place   # Sequences to place in tree
+        self._num_seqs   = len(self._to_place)
+        self._outdir     = target_dir
+        self._infiles    = infiles
+        self._remove_tmp = False
         # Optional vars or in config
         for var in self._config_vars:
             try:
                 value = kwargs[var]
             except KeyError:
                 value = config['ARGS'][var]
+            if var == 'support':
+                value = int(value)
             setattr(self, var, value)
-        # Internal cached value for LeafSeq objects
-        self._leafseq_dict       = {}
-        self._original_leafseqs  = []
-        self._original_leaves    = []
         # Internal defaults; change each time through __call__ loop
+        # Filepaths
         self._current_seq_path   = ""
         self._current_align_path = ""
         self._current_phy_path   = ""
         self._current_tree_path  = ""
+        # Internal structures for Tree/LeafSeq objects
         self._current_tree_obj   = None
+        self._leafseq_dict       = {}
+        self._original_leafseqs  = []
+        self._original_leaves    = []
         # Classification information
         self._classified         = {}  # Classified Seq objects
         self._monophyletic       = []  # Info on monophyletic sequences
@@ -97,7 +106,7 @@ class TreePlacer:
                     scroll_log.BraceMessage(
                         "Placing sequence number {} of {}",
                         (i+1),self._num_seqs),
-                    2,
+                    3,
                     'INFO',
                     status_logger,
                     )
@@ -115,7 +124,7 @@ class TreePlacer:
             self._root_tree(added_leaf)
             # Write new tree to output?
             # Get actual node
-            added_node = new_tree&added_leaf
+            added_node = self._current_tree_obj&added_leaf
             first_ancestor = added_node.up
             # Now determine monophyly
             if not _tree.is_node_monophyletic(
@@ -136,9 +145,27 @@ class TreePlacer:
                 self._monophyletic.append(leaf_info)
                 # Set info on seq object and add to list
                 self._add_classified_seq(group,seq_obj)
+        # Clear line with status_logger information
+        scroll_log.log_newlines(console_logger)
         # Clean up
         if self._remove_tmp:
             tmp_dir.cleanup()
+
+
+    def _parse_sequences(self, seq_path):
+        """Parse sequences passed as argument"""
+        try:
+            # Need to worry about format?!
+            return sf.seqfile_to_scrollseqs(seq_path)
+        except:  # Make more specific eventually!
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "FATAL -> Failed to parse sequences for tree placing"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            sys.exit(0)  # Replace later?
 
 
     def return_classified_seqs(self):
@@ -248,7 +275,9 @@ class TreePlacer:
         """Creates a mapping based on new tree and mapping objects"""
         # Create a new Mapping
         mapping = Mapping(
-                alignfile=self._alignment,
+                self._infiles,  # Infiles -> might be empty list
+                # alignfile=self._alignment,
+                alignfile=self._current_align_path,
                 treefile=self._current_tree_path,
                 infmt='fasta',
                 alignfmt='fasta',
@@ -262,7 +291,10 @@ class TreePlacer:
         tree_list = _util.flatten_dict_to_list(tree_dict)
         # Get a list of just descriptions
         seq_descr = [record.description for record in seq_list]
-        # Now match
+        # Now match -> create new mapping each time!
+        self._leafseq_dict = {}
+        self._original_leafseqs = []
+        self._original_leaves = []
         for leafseq in tree_list:
             try:
                 # Get maching entry from original alignment
@@ -436,5 +468,5 @@ class TreePlacer:
             self._classified[group].append(seq_obj)
         except KeyError:
             self._classified[group] = []
-            self._classified[group].apepnd(seq_obj)
+            self._classified[group].append(seq_obj)
 

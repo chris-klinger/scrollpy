@@ -3,6 +3,7 @@ This module contains the main AlignIter object.
 """
 
 import os
+import tempfile
 import bisect
 
 import numpy as np
@@ -22,7 +23,7 @@ from scrollpy.util import _util,_tree
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class AlignIter:
@@ -234,7 +235,7 @@ class AlignIter:
             scroll_log.log_message(
                     scroll_log.BraceMessage(
                         "Performing tree iteration {} of many", (iter_num+1)),
-                    2,
+                    3,
                     'INFO',
                     status_logger,
                     )
@@ -277,6 +278,8 @@ class AlignIter:
 
             # If not optimal, keep going
             iter_num += 1
+        # Prevent final status_logger line being overwritten
+        scroll_log.log_newlines(console_logger)
 
 
     def _bisect_run(self):
@@ -285,7 +288,7 @@ class AlignIter:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
                     "Performing tree iteration 1 of many"),
-                2,
+                3,
                 'INFO',
                 status_logger,
                 )
@@ -316,6 +319,8 @@ class AlignIter:
                 self._start_length,  # Alignment length
                 self._current_support,
                 )
+        # Prevent final status_logger ling being overwritten
+        scroll_log.log_newlines(console_logger)
 
 
     def _bisect_alignment(self, start, stop, prev_support, iter_num=2):
@@ -327,7 +332,7 @@ class AlignIter:
             scroll_log.log_message(
                     scroll_log.BraceMessage(
                         "Performing tree iteration {} of many", iter_num),
-                    2,
+                    3,
                     'INFO',
                     status_logger,
                     )
@@ -529,7 +534,7 @@ class AlignIter:
         """Add support over all nodes"""
         self._current_support = _tree.get_total_support(
                 self._current_tree_obj)
-        print("Current support is: {}".format(self._current_support))
+        # print("Current support is: {}".format(self._current_support))
 
 
     def _is_optimal(self):

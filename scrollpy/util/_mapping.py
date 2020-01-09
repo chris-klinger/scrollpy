@@ -33,7 +33,7 @@ from scrollpy.util._counter import Counter
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class Mapping:
@@ -236,6 +236,13 @@ class Mapping:
         for group,labels in self._mapping.items():
             self._seq_dict[group] = []
             for label in labels:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Matching label {} to mapping",label),
+                        2,
+                        'INFO',
+                        file_logger,
+                        )
                 try:
                     scrollseq_obj = None
                     leafseq_obj = None
@@ -286,6 +293,7 @@ class Mapping:
                     )
             if matched_seq in self._found_seqs:  # Uses same as seqfiles
                 # Duplicate mapping; not allowed
+                print("Raising error from _get_alignseq()")
                 raise ValueError  # Caught by handling function
             # Otherwise, get associated record
             index = self._align_descriptions.index(matched_seq)
@@ -310,6 +318,7 @@ class Mapping:
             matched_seq = get_best_name_match(label, self._seq_descriptions)
             if matched_seq in self._found_seqs:
                 # Duplicate mapping
+                print("Raising error from _get_scrollseq()")
                 raise ValueError  # Caught by handling function
             # Otherwise, get associated record by index
             index = self._seq_descriptions.index(matched_seq)
@@ -331,9 +340,12 @@ class Mapping:
         if not self._leaves:  # No associated tree object
             raise KeyError  # Caught by handling function
         else:
+            # print("Looking for {}".format(label))
             matched_leaf = get_best_name_match(label, self._leaf_names)
+            # print("Matched leaf is {}".format(matched_leaf))
             if matched_leaf in self._found_leaves:
                 # Duplicate mapping
+                print("Raising error from _get_leafseq()")
                 raise ValueError # Caught by handling function
             # Otherwise, get associated node by index
             index = self._leaf_names.index(matched_leaf)

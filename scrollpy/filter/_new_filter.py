@@ -28,7 +28,7 @@ from scrollpy.util._util import decompose_sets
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class Filter:
@@ -136,7 +136,7 @@ class Filter:
                             "Group length prevented filtering {} with score {} from group {}\n",
                             r_obj.acession, score, group,
                             ),
-                        2,
+                        1,
                         'WARNING',
                         file_logger,
                         )
@@ -362,7 +362,7 @@ class IdentityFilter(GenericFilter):
                             "No aligned region detected between {} and {}\n",
                             header1, header2,
                             ),
-                        2,
+                        1,
                         'WARNING',
                         console_logger, file_logger,
                         )

@@ -11,10 +11,12 @@ import warnings
 from ete3 import Tree
 from ete3.parser.newick import NewickError
 
+from scrollpy import scroll_log
+
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 def read_tree(inpath, tree_format):
@@ -34,16 +36,16 @@ def read_tree(inpath, tree_format):
             try:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Trying to read Newick file {}\n", inpath),
+                            "Trying to read Newick file {}", inpath),
                         2,
                         'INFO',
-                        console_logger, file_logger,
+                        file_logger,
                         )
                 return _read_newick_tree(inpath)
             except NewickError:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Could not read Newick file {}; exiting\n", inpath),
+                            "Could not read Newick file {}; exiting", inpath),
                         1,
                         'ERROR',
                         console_logger, file_logger,
@@ -72,7 +74,7 @@ def _read_newick_tree(inpath):
         scroll_log.log_message(
                 scroll_log.BraceMessage(
                     "Could not load tree with branches, leaves, and support\n"),
-                2,
+                1,
                 'WARNING',
                 file_logger,  # Don't bother writing to console
                 )
@@ -83,7 +85,7 @@ def _read_newick_tree(inpath):
         scroll_log.log_message(
                 scroll_log.BraceMessage(
                     "Could not load tree with branches and leaves\n"),
-                2,
+                1,
                 'WARNING',
                 file_logger,
                 )
@@ -94,7 +96,7 @@ def _read_newick_tree(inpath):
         scroll_log.log_message(
                 scroll_log.BraceMessage(
                     "Could not load tree in flexible format\n"),
-                2,
+                1,
                 'WARNING',
                 file_logger,
                 )

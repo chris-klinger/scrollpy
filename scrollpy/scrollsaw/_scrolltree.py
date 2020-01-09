@@ -8,7 +8,7 @@ from scrollpy.files import sequence_file as sf
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 class ScrollTree:
@@ -54,7 +54,7 @@ class ScrollTree:
         """
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Calculating pairwise distance between all tree leaves\n"),
+                    "Calculating pairwise distances between all tree leaves\n"),
                 2,
                 'INFO',
                 console_logger, file_logger,

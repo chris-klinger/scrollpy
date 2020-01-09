@@ -22,17 +22,20 @@ config = ConfigParser(
 
 # Set up loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 
 def load_config_file():
     """Populates config values"""
     scroll_log.log_message(
-            scroll_log.BraceMessage("Loading configs from {}",config_file),
+            scroll_log.BraceMessage("Loading config information from {}",config_file),
             2,
             'INFO',
             console_logger, file_logger,
             )
+    # Keep track of multiple possible duplicates
+    duplicate_sections = []
+    duplicate_options  = []
     try:
         with open(config_file, 'r') as cf:
             config.read_file(cf)
@@ -46,10 +49,7 @@ def load_config_file():
                 exc_info=True,
                 )
         sys.exit(0)
-    # Keep track of multiple possible duplicates
-    duplicate_sections = []
-    duplicate_options  = []
-    # Add on Errors
+    # Check for duplicates
     except DuplicateSectionError as dse:
         dupliate_sections.append(dse.section)
         scroll_log.log_message(

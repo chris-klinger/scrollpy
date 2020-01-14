@@ -12,9 +12,11 @@ configuration defined by the user.
 
 import os
 import sys
+import re
 import shutil
 import logging
 from logging import StreamHandler
+import traceback
 import textwrap
 import tempfile
 import datetime
@@ -186,7 +188,7 @@ def _get_generic_logname(sep='_'):
     return sep.join(("scrollpy",fmtnow,"log.txt"))
 
 
-def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
+def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
     """Log a message object to any number of loggers.
 
     Args:
@@ -197,17 +199,21 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_info=None):
 
         *loggers (obj): one or more loggers to log the msg_obj
 
-        exc_info (tuple): exception information
+        # exc_info (tuple): exception information
+        exc_obj (obj): Exception object from a handling block
+
     """
-    if exc_info:  # logging an exception
+    if exc_obj:  # logging an exception
         for logger in loggers:
-            if isinstance(logger.handler, logging.FileHandler):
-                logger.exception(msg_obj,
-                        exc_info=exc_info,
-                        extra={'vlevel':verbosity})
-            else:  # Writing to console instead
-                logger.error(msg_obj,  # Do not include exc_info
-                        extra={'vlevel':verbosity})
+            # Capture traceback information
+            tb_obj = exc_obj.__traceback__
+            tb_str = traceback.format_tb(tb_obj)[0]
+            # Add necessary info to msg_obj
+            msg_obj.lines = tb_str.split(',')
+            msg_obj.exception = True
+            # Log as error with traceback info
+            logger.error(msg_obj,
+                    extra={'vlevel':verbosity})
     elif level == 'DEBUG':
         for logger in loggers:
             logger.debug(msg_obj,
@@ -241,12 +247,9 @@ def log_newlines(*loggers, number=1):
             # Get current formatter and replace with blank_format
             if not logger.handlers:  # Not the root logger
                 target_name = '.'.join(logger.name.split('.')[:2])
-                # print("Looking for parent logger {}".format(target_name))
                 target_logger = logging.getLogger(target_name)
             else:
                 target_logger = logger
-            # print("Using target logger {}".format(target_logger.name))
-            # print("Target logger has handlers {}".format(target_logger.handlers))
             current_handler = target_logger.handlers[0]  # Each logger has only one handler
             current_formatter = current_handler.formatter
             current_handler.setFormatter(raw_format)
@@ -284,8 +287,6 @@ class StreamOverwriter(StreamHandler):
             msg = self.format(record)
             stream = self.stream
             # Add necessary columns
-            # columns,lines = shutil.get_terminal_size(
-            #         fallback=(80,20))
             columns = _get_current_terminal_width()
             full_line = msg + ((columns - len(msg)) * ' ')
             # issue 35046: merged two stream.writes into one.
@@ -306,10 +307,11 @@ class BraceMessage:
     When logged, the __str__ method is called in place of
     trying to format a plain string message.
     """
-    def __init__(self, msg, *args, newline=False, lines=[], **kwargs):
+    def __init__(self, msg, *args, newline=False, exception=False, lines=[], **kwargs):
         self.msg = msg
         self.lines = lines
         self.newline = newline
+        self.exception = exception
         self.args = args
         self.kwargs = kwargs
         self.wrapped = None  # Initialize to an empty string
@@ -433,7 +435,8 @@ class ConsoleFilter(GenericFilter):
         Uses textwrap.fill() to create a single line for writing; which
         is set to the 'formatted' attr of the Message object.
         """
-        if record.exc_info:  # Has exception info
+        # if record.exc_info:  # Has exception info
+        if record.msg.exception:
             self._format_exception(record)
         else:
             if record.msg.has_lines():
@@ -478,7 +481,7 @@ class ConsoleFilter(GenericFilter):
         for line in record.msg.get_lines():
             line = record.msg.format_string(line)
             if firstline:
-                header,new_msg = _add_header(record.levelname, line)
+                header,new_msg = self._add_header(record.levelname, line)
                 to_join.append(new_msg)
             else:
                 to_join.append(line)
@@ -488,9 +491,38 @@ class ConsoleFilter(GenericFilter):
                 header=header).fill(joined))
 
 
-    def _format_exception(self, ex_info):
+    def _format_exception(self, record):
         """Takes captured traceback info and formats it nicely"""
-        pass
+        # Capture just the end part of the file extension
+        lines = record.msg.get_lines()
+        raw_location = lines[0].rstrip().lstrip()
+        basename,module = os.path.split(raw_location)
+        # Shorten basename to scrollpy package only
+        short_baselist = []
+        prev_name = None
+        for name in basename.split(os.path.sep)[::-1]:  # In reverse order
+            if prev_name == 'scrollpy':
+                if name != 'scrollpy':
+                    break  # Reached top of package dir
+            # Otherwise, continue
+            short_baselist.append(name)
+            prev_name = name
+        # Reverse short_basename to run in normal dir order
+        short_baselist.reverse()
+        # Add the module name
+        short_baselist.append(module)
+        # Finally, get proper representation
+        short_basename = os.path.sep.join(short_baselist)
+        # Line number is found as second element
+        line_num = lines[1].rstrip().lstrip()
+        added_msg = " ; Error occurred in {} at {}".format(
+                short_basename, line_num)
+        # Add to the original message object
+        _message = record.msg.get_msg()
+        message = _message + added_msg
+        record.msg.msg = message
+        # Now call normal formatting code
+        self._format_message(record)
 
 
 class FileFilter(GenericFilter):
@@ -553,16 +585,16 @@ class FileFilter(GenericFilter):
 
     def _format_lines(self, record):
         """Useful for exception or other collection-based messages"""
-        header = _get_header(record)
+        header = self._get_header(record)
         joined = ' '.join(record.msg.get_lines())
         record.msg.add_wrapped(self._get_text_wrapper(
                 header=header).fill(joined))
 
 
-    def _format_exception(self, ex_info):
+    def _format_exception(self, record):
         """Takes captured traceback info and formats it nicely"""
-        pass
-
+        # Simple; just call _format_lines
+        self._format_lines(record)
 
 
 class OutputFilter(GenericFilter):

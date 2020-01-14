@@ -485,6 +485,8 @@ def main():
 
     # info_options.add_argument("--spinner",
     #         action = "store_true")
+    info_options.add_argument("--exc-test",
+            action = "store_true")
 
     # Parse all arguments
     args = parser.parse_args()
@@ -596,6 +598,20 @@ def main():
             )
         # print(_usage)
         sys.exit(0)
+
+    # if args.exc_test:
+    #     try:
+    #         raise ValueError("A generic error message here")
+    #     except ValueError as e:
+    #         scroll_log.log_message(
+    #                 scroll_log.BraceMessage("Application code raised a {}",
+    #                     type(e).__name__),
+    #                 1,
+    #                 'ERROR',
+    #                 console_logger, file_logger,
+    #                 exc_obj=e,
+    #                 )
+    #     sys.exit(0)
 
 
     ##############################################################################

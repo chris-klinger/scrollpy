@@ -13,6 +13,7 @@ from Bio import AlignIO
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 from scrollpy.alignments.eval_align import AlignEvaluator
 from scrollpy.filter._new_filter import LengthFilter
 from scrollpy.trees.maketree import TreeBuilder
@@ -494,15 +495,14 @@ class AlignIter:
         except ValueError:  # Raised when length is None
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Unexpected length {} when resolving outpaths; exiting\n",
+                        "Unexpected length {} when resolving outpaths",
                         current_align_length,
                         ),
                     1,
                     'ERROR',
                     console_logger, file_logger,
-                    exc_info=True,
                     )
-            sys.exit(0)
+            raise FatalScrollPyError  # Signal program termination
 
 
     def _make_tree(self):

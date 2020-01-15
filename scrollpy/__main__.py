@@ -16,6 +16,8 @@ from scrollpy import scroll_log
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy import util
+# Exception classes
+from scrollpy import FatalScrollPyError
 # Execution classes
 from scrollpy import Mapping
 from scrollpy import Filter
@@ -68,6 +70,22 @@ def _write_project_information():
 
 _usage = "Usage message"
 
+##################################################################################
+# GET MODULE LOGGER NAMES
+##################################################################################
+
+# In order to log messages outside of main(), logger names need to be
+# defined as globals; actual loggers themselves are still configured
+# in main() based on user input
+
+name = 'scrollpy'  # can't use __name__ since it becomes __main__
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_loggers(name)
+
+
+##################################################################################
+# MAIN FUNCTION FOR PROGRAM EXECUTION
+##################################################################################
 
 def main():
     ##############################################################################
@@ -501,7 +519,7 @@ def main():
     config.set("ARGS", 'verbosity', str(args.verbosity))
 
     # Set up loggers
-    name = 'scrollpy'  # can't use __name__ since it becomes __main__
+    # name = 'scrollpy'  # can't use __name__ since it becomes __main__
     out = args.out if args.out else current_dir
     logfile_path = scroll_log.get_logfile(
             args.no_log,      # Whether to log to file
@@ -524,7 +542,7 @@ def main():
                 ),
             )
     # Create console logger and add handler to it
-    console_logger = scroll_log.get_console_logger(name)
+    # console_logger = scroll_log.get_console_logger(name)
     console_logger.addHandler(console_handler)
 
     # Configure status handler
@@ -536,7 +554,7 @@ def main():
                 ),
             )
     # Create status logger and add handler to it
-    status_logger = scroll_log.get_status_logger(name)
+    # status_logger = scroll_log.get_status_logger(name)
     status_logger.addHandler(status_handler)
 
     # Configure file handler
@@ -549,7 +567,7 @@ def main():
                 ),
             )
     # Create file logger and add handler to it
-    file_logger = scroll_log.get_file_logger(name)
+    # file_logger = scroll_log.get_file_logger(name)
     file_logger.addHandler(file_handler)
 
     # Configure output handler
@@ -562,7 +580,7 @@ def main():
                 ),
             )
     # Create output logger and add handler to it
-    output_logger = scroll_log.get_output_logger(name)
+    # output_logger = scroll_log.get_output_logger(name)
     output_logger.addHandler(output_handler)
 
 
@@ -600,6 +618,7 @@ def main():
         sys.exit(0)
 
     # if args.exc_test:
+    #     raise FatalScrollPyError
     #     try:
     #         raise ValueError("A generic error message here")
     #     except ValueError as e:
@@ -659,7 +678,7 @@ def main():
                 'ERROR',  # level
                 console_logger, file_logger,  # loggers
                 )
-        sys.exit(0)
+        raise FatalScrollPyError
 
     # Check for duplicates and quit if any exist
     duplicates = util.check_duplicate_paths(*all_paths)
@@ -679,7 +698,7 @@ def main():
                     'ERROR',  # level
                     console_logger, file_logger,  # loggers
                     )
-        sys.exit(0)
+            raise FatalScrollPyError
 
     # Check to make sure all paths are good!
     non_existent = util.check_input_paths(*all_paths)
@@ -692,7 +711,7 @@ def main():
                     'ERROR',
                     console_logger, file_logger,
                     )
-        sys.exit(0)
+            raise FatalScrollPyError
 
     # Check whether the output directory exists; if not, try to make it
     if not args.out:
@@ -962,9 +981,33 @@ def main():
             )
 
 
+##############################################################################
+# DEFINE CLEANUP ACTIONS IN CASE OF EARLY TERMINATION
+##############################################################################
+
+def run_cleanup():
+    """Removes files and performs other cleanup"""
+    sys.exit(0)  # For now
+
+
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        sys.exit("\n Keyboard Interrupt detected: terminating")
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Keyboard interrupt detected; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        run_cleanup()
+        # sys.exit("\n Keyboard Interrupt detected: terminating")
+    except FatalScrollPyError:
+        scroll_log.log_message(
+                scroll_log.BraceMessage("ScrollPy has encountered a fatal error; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        run_cleanup()
 

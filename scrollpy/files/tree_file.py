@@ -12,6 +12,7 @@ from ete3 import Tree
 from ete3.parser.newick import NewickError
 
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 
 
 # Get module loggers
@@ -45,12 +46,12 @@ def read_tree(inpath, tree_format):
             except NewickError:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Could not read Newick file {}; exiting", inpath),
+                            "Could not read Newick file {}", inpath),
                         1,
                         'ERROR',
                         console_logger, file_logger,
                         )
-                sys.exit(0)  # Exit cleanly
+                raise FatalScrollPyError
     else:
         pass  # Add support for other file formats later?
 
@@ -70,10 +71,10 @@ def _read_newick_tree(inpath):
     # Try to load with strict format first
     try:
         tree = Tree(inpath, format=2)  # Strict branch+leaves+support
-    except(NewickError):
+    except NewickError:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not load tree with branches, leaves, and support\n"),
+                    "Could not load tree with branches, leaves, and support"),
                 1,
                 'WARNING',
                 file_logger,  # Don't bother writing to console
@@ -81,10 +82,10 @@ def _read_newick_tree(inpath):
     # Load a less strict format after
     try:
         tree = Tree(inpath, format=3)  # Strict branch+leaves
-    except(NewickError):
+    except NewickError:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not load tree with branches and leaves\n"),
+                    "Could not load tree with branches and leaves"),
                 1,
                 'WARNING',
                 file_logger,
@@ -92,10 +93,10 @@ def _read_newick_tree(inpath):
     # Finally give up and try most flexible
     try:
         tree = Tree(inpath, format=0)  # Flexible with support values
-    except(NewickError):
+    except NewickError:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not load tree in flexible format\n"),
+                    "Could not load tree in flexible format"),
                 1,
                 'WARNING',
                 file_logger,

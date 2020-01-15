@@ -88,23 +88,3 @@ class ScrollTree:
         self._ordered_seqs = sorted(all_seqs)
 
 
-
-"""
-Pseudo-code
-
-initialize an object with a mapping and a tree file
-    somehow have to make sure that the mapping file matches the treefile?!
-    -could allow partial matches or enforce strict
-        -strict could mean that all tree labels are required to be present in
-        the mapping or that an exact one-to-one match is required?
-
-if sequence file(s) were included, try to map tip labels to sequence objects
-    -here, it really should be the case that a one-to-one relationship is
-    required
-
-using the mapping, go through each group and calculate pairwise tree distances
-for all members using a cached tree. Update internal "removed" dict based on
-this.
-"""
-
-

@@ -279,6 +279,7 @@ def calculate_real_time(t_delta):
             hours,minutes = _split_time(minutes)
             return (hours,minutes,seconds)
 
+
 def _split_time(value, divisible=60):
     """
     Splits time values to get a whole and remainder.

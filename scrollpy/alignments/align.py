@@ -20,6 +20,8 @@ from Bio.Align import Applications
 from Bio.Application import ApplicationError
 
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
+from scrollpy import ValidationError
 
 
 # Get module loggers
@@ -57,15 +59,16 @@ class Aligner:
                 self.inpath = inpath
             if self._validate('outpath', outpath, self._validate_outpath):
                 self.outpath = outpath
-        except ValueError:
+        # except ValueError as e:
+        except ValidationError as e:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "One or more alignment parameters are invalid; exiting"),
+                    scroll_log.BraceMessage(""),
                     1,
                     'ERROR',
                     console_logger, file_logger,
-                    exc_info=True,
+                    exc_obj=e,
                     )
+            raise FatalScrollPyError
         # For finer control, can supply command list instead
         self.cmd_list = cmd_list
         # Should eventually validate kwargs? Or leave for BioPython?
@@ -171,7 +174,8 @@ class Aligner:
             # Should we keep validation inside class?
             # "Self" argument here is implicit in passed function object
             try:
-                is_valid = validation_method(value, **kwargs) # May raise exception
+                # is_valid = validation_method(value, **kwargs) # May raise exception
+                is_valid = False
             except FileNotFoundError:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
@@ -200,10 +204,11 @@ class Aligner:
             elif is_valid:
                 return True
             else:  # Validation method returned False or raised Exception
-                raise ValueError(
-                        "Invalid parameter {} for {} while calling alignment".format(
-                            value, name),
-                        )
+                # raise ValueError(
+                #         "Invalid parameter {} for {} while calling alignment".format(
+                #             value, name),
+                #         )
+                raise ValidationError(value, name)
         # Raise error if no method provided?
 
 

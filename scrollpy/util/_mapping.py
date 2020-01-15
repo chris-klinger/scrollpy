@@ -21,6 +21,8 @@ from contextlib import suppress
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import DuplicateSeqError
+from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy.alignments import parser as af
 from scrollpy.files import tree_file as tf
@@ -125,7 +127,7 @@ class Mapping:
                     'ERROR',
                     console_logger, file_logger,
                     )
-            sys.exit(0)
+            raise FatalScrollPyError
         # Return seq dict
         return self._seq_dict
 
@@ -143,7 +145,7 @@ class Mapping:
                         'ERROR',
                         console_logger, file_logger,
                         )
-                sys.exit(0)  # Mapping cannot be completed
+                raise FatalScrollPyError
             # Filepaths are unique, but group names are not guaranteed to be
             if _test:
                 group = _unique_group_name(group, seen={})
@@ -227,7 +229,7 @@ class Mapping:
                         'ERROR',
                         console_logger, file_logger,
                         )
-                sys.exit(0)  # Mapping cannot be completed
+                raise FatalScrollPyError
         self._mapping[group] = self._leaf_names  # Alias leaf labels
 
 
@@ -273,7 +275,8 @@ class Mapping:
                         self._seq_dict[group].append(leafseq_obj)
                     else:
                         self._seq_dict[group].append(scrollseq_obj)
-                except ValueError:  # Indicates a duplicate sequence
+                # except ValueError:  # Indicates a duplicate sequence
+                except DuplicateSeqError:
                     self._duplicates.add(label)
 
 
@@ -293,8 +296,8 @@ class Mapping:
                     )
             if matched_seq in self._found_seqs:  # Uses same as seqfiles
                 # Duplicate mapping; not allowed
-                print("Raising error from _get_alignseq()")
-                raise ValueError  # Caught by handling function
+                raise DuplicateSeqError(label)  # Caught by handling function
+                # raise ValueError  # Caught by handling function
             # Otherwise, get associated record
             index = self._align_descriptions.index(matched_seq)
             record = self._align_records[index]
@@ -318,8 +321,8 @@ class Mapping:
             matched_seq = get_best_name_match(label, self._seq_descriptions)
             if matched_seq in self._found_seqs:
                 # Duplicate mapping
-                print("Raising error from _get_scrollseq()")
-                raise ValueError  # Caught by handling function
+                raise DuplicateSeqError(label)  # Caught by handling function
+                # raise ValueError  # Caught by handling function
             # Otherwise, get associated record by index
             index = self._seq_descriptions.index(matched_seq)
             record = self._record_list[index]
@@ -345,8 +348,8 @@ class Mapping:
             # print("Matched leaf is {}".format(matched_leaf))
             if matched_leaf in self._found_leaves:
                 # Duplicate mapping
-                print("Raising error from _get_leafseq()")
-                raise ValueError # Caught by handling function
+                raise DuplicateSeqError(label)  # Caught by handling function
+                # raise ValueError # Caught by handling function
             # Otherwise, get associated node by index
             index = self._leaf_names.index(matched_leaf)
             node = self._leaves[index]

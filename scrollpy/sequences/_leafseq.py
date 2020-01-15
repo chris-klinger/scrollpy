@@ -109,8 +109,8 @@ class LeafSeq:
         if self._seq:
             self._seq._write(file_obj, outfmt)
         else:
-            raise AttributeError("LeafSeq object {} missing associated\
-                    ScrollSeq object".format(self))
+            raise AttributeError("LeafSeq object {} missing associated "
+                    "ScrollSeq object".format(self))
 
 
     def _write_by_id(self, file_obj):
@@ -118,8 +118,8 @@ class LeafSeq:
         if self._seq:
             self._seq._write_by_id(file_obj)
         else:
-            raise AttributeError("LeafSeq object {} missing associated\
-                    ScrollSeq object".format(self))
+            raise AttributeError("LeafSeq object {} missing associated "
+                    "ScrollSeq object".format(self))
 
 
     @property

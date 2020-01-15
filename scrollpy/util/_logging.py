@@ -207,9 +207,17 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
         for logger in loggers:
             # Capture traceback information
             tb_obj = exc_obj.__traceback__
-            tb_str = traceback.format_tb(tb_obj)[0]
+            # tb_str = traceback.format_tb(tb_obj)[0]
+            tb_stack = traceback.extract_tb(tb_obj,1)[0]
+            msg_obj.lines = [
+                    "ScrollPy threw a {}".format(exc_obj.__class__.__name__),
+                    "in module {}".format(tb_stack.filename),
+                    "on line {}".format(tb_stack.lineno),
+                    "while executing {}: ".format(tb_stack.name),
+                    "{}".format(exc_obj.__str__()),
+                    ]
             # Add necessary info to msg_obj
-            msg_obj.lines = tb_str.split(',')
+            # msg_obj.lines = tb_str.split(',')
             msg_obj.exception = True
             # Log as error with traceback info
             logger.error(msg_obj,
@@ -495,31 +503,32 @@ class ConsoleFilter(GenericFilter):
         """Takes captured traceback info and formats it nicely"""
         # Capture just the end part of the file extension
         lines = record.msg.get_lines()
-        raw_location = lines[0].rstrip().lstrip()
-        basename,module = os.path.split(raw_location)
-        # Shorten basename to scrollpy package only
-        short_baselist = []
-        prev_name = None
-        for name in basename.split(os.path.sep)[::-1]:  # In reverse order
-            if prev_name == 'scrollpy':
-                if name != 'scrollpy':
-                    break  # Reached top of package dir
-            # Otherwise, continue
-            short_baselist.append(name)
-            prev_name = name
-        # Reverse short_basename to run in normal dir order
-        short_baselist.reverse()
-        # Add the module name
-        short_baselist.append(module)
-        # Finally, get proper representation
-        short_basename = os.path.sep.join(short_baselist)
-        # Line number is found as second element
-        line_num = lines[1].rstrip().lstrip()
-        added_msg = " ; Error occurred in {} at {}".format(
-                short_basename, line_num)
-        # Add to the original message object
+        exc_msg = lines[-1]  # Last element
+        # raw_location = lines[0].rstrip().lstrip()
+        # basename,module = os.path.split(raw_location)
+        # # Shorten basename to scrollpy package only
+        # short_baselist = []
+        # prev_name = None
+        # for name in basename.split(os.path.sep)[::-1]:  # In reverse order
+        #     if prev_name == 'scrollpy':
+        #         if name != 'scrollpy':
+        #             break  # Reached top of package dir
+        #     # Otherwise, continue
+        #     short_baselist.append(name)
+        #     prev_name = name
+        # # Reverse short_basename to run in normal dir order
+        # short_baselist.reverse()
+        # # Add the module name
+        # short_baselist.append(module)
+        # # Finally, get proper representation
+        # short_basename = os.path.sep.join(short_baselist)
+        # # Line number is found as second element
+        # line_num = lines[1].rstrip().lstrip()
+        # added_msg = " ; Error occurred in {} at {}".format(
+        #         short_basename, line_num)
+        # # Add to the original message object
         _message = record.msg.get_msg()
-        message = _message + added_msg
+        message = _message + exc_msg
         record.msg.msg = message
         # Now call normal formatting code
         self._format_message(record)
@@ -577,10 +586,18 @@ class FileFilter(GenericFilter):
 
         XXXX-XX-XX ZZ-ZZ-ZZ file.root.module WARNING <msg>
 
-        Base it only on name? All output from one module will be at the
-        same indentation level.
+        Although it will not get printed, need an accurate representation of
+        the actual header's length in order to print over multiple lines.
+
         """
-        return record.name
+        # return record.name
+        now = datetime.datetime.now()
+        fmtnow = ("{0:%Y-%m-%d-%H-%M-%S}".format(now))
+        return "{asctime} | {name:^35} | {levelname:^10} |".format(
+                asctime=fmtnow,
+                name=record.name,
+                levelname='WARNING',  # Longest levelname option
+                )
 
 
     def _format_lines(self, record):

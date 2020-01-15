@@ -21,6 +21,7 @@ from numpy import mean,median,std
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 from scrollpy.alignments import align,parser
 from scrollpy.files import sequence_file as sf
 from scrollpy.util._util import decompose_sets
@@ -346,14 +347,14 @@ class IdentityFilter(GenericFilter):
             if identical > total:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Fatal error when totalling identical positions for {} and {}\n",
+                            "Fatal error when totalling identical positions for {} and {}",
                             header1, header2,
                             ),
                         1,
                         'ERROR',
                         console_logger, file_logger,
                         )
-                sys.exit(0)  # Replace eventually?
+                raise FatalScrollPyError
             try:
                 percent_identical = identical/total * 100
             except ZeroDivisionError:  # No aligned region

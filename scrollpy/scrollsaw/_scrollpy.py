@@ -8,6 +8,7 @@ from itertools import combinations
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._collection import ScrollCollection
@@ -18,11 +19,6 @@ from scrollpy.filter._filter import Filter
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
         scroll_log.get_module_loggers(__name__)
-
-# console_logger = scroll_log.get_console_logger(__name__)
-# status_logger  = scroll_log.get_status_logger(__name__)
-# file_logger    = scroll_log.get_file_logger(__name__)
-# output_logger  = scroll_log.get_output_logger(__name__)
 
 
 class ScrollPy:
@@ -120,9 +116,7 @@ class ScrollPy:
             group = self._groups[0]
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Adding collection object for single group {}\n",
-                        group,
-                        ),
+                        "Adding collection object for single group {}", group),
                     3,
                     'INFO',
                     console_logger, file_logger,

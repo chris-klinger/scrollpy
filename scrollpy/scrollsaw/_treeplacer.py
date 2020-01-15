@@ -10,6 +10,7 @@ from Bio import SeqIO
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
@@ -160,12 +161,12 @@ class TreePlacer:
         except:  # Make more specific eventually!
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "FATAL -> Failed to parse sequences for tree placing"),
+                        "Failed to parse sequences for tree placing"),
                     1,
                     'ERROR',
                     console_logger, file_logger,
                     )
-            sys.exit(0)  # Replace later?
+            raise FatalScrollPyError
 
 
     def return_classified_seqs(self):
@@ -322,7 +323,7 @@ class TreePlacer:
                     'ERROR',
                     console_logger, file_logger,
                     )
-            sys.exit(0)  # Replace with Exception eventually?!
+            raise FatalScrollPyError
             # print("Could not map all original tree labels")
         # Made it to this point, should be fine
         self._original_leaves = [leaf.name for leaf in
@@ -340,12 +341,12 @@ class TreePlacer:
             # FATAL ERROR! -> terminate execution eventually
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "FATAL -> Detected more than one added sequence"),
+                        "Detected more than one added sequence"),
                     1,
                     'ERROR',
                     console_logger, file_logger,
                     )
-            sys.exit(0)
+            raise FatalScrollPyError
             # print("More than one added leaf!")
         # Return only value in list
         return added_leaves[0]

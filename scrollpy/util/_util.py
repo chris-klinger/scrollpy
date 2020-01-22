@@ -154,6 +154,29 @@ def non_blank_lines(file_handle):
                 yield line
 
 
+def modify_model_name(model, program):
+    """
+    Returns an appropriate string for an evolutionary model based on
+    the program that is applying the model.
+
+    Args:
+        model (str): name of the evolutionary model
+
+        program (str): name of the program
+
+    Returns:
+        (str) model name for use in program call
+
+    """
+    prot_models = ['LG', 'WAG']
+    nuc_models = ['GTR','JC69','HKY85']
+
+    if program == 'RAxML':
+        if model in prot_models:  # Or use input alphabet variable?!
+            return ''.join(('PROTGAMMA',model))
+        return 'GTRGAMMA'  # This is true even for other nuc models!
+
+
 def split_input(string, chunk_size=80):
     """Splits a string into a series of substrings.
 

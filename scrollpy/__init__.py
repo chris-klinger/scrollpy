@@ -4,6 +4,7 @@
 ############################
 
 from scrollpy.util import _logging as scroll_log  # LOAD FIRST!!!
+from scrollpy.util._logging import BraceMessage
 from scrollpy.config._config import config
 from scrollpy.config._config import load_config_file
 from scrollpy.util import _util as util

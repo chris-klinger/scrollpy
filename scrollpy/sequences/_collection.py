@@ -8,8 +8,11 @@ import os
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy.files import sequence_file as sf
-from scrollpy.alignments import align
-from scrollpy.distances import distance, parser
+# from scrollpy.alignments import align
+from scrollpy import Aligner
+from scrollpy import DistanceCalc
+# from scrollpy.distances import distance, parser
+from scrollpy.distances import parser
 #from scrollpy.config._config import config
 
 
@@ -102,7 +105,8 @@ class ScrollCollection:
     def _get_alignment(self):
         """Convenience function"""
         msa_path = self._get_outpath('align')
-        aligner = align.Aligner(
+        # aligner = align.Aligner(
+        aligner = Aligner(
                 self.align_method,
                 config['ALIGNMENT'][self.align_method], # Cmd to execute
                 inpath = self._seq_path,
@@ -115,11 +119,14 @@ class ScrollCollection:
     def _get_distances(self):
         """Convenience function"""
         dist_path = self._get_outpath('distance')
-        distcalc = distance.DistanceCalc(self.dist_method,
+        # distcalc = distance.DistanceCalc(self.dist_method,
+        distcalc = DistanceCalc(
+                self.dist_method,
                 config['DISTANCE'][self.dist_method], # Cmd to execute
-                model = self.dist_matrix, # Model to use for distance
                 inpath = self._align_path,
-                outpath = dist_path)
+                outpath = dist_path,
+                model = self.dist_matrix, # Model to use for distance
+                )
         distcalc() # Actually calculates distances; may raise ApplicationError
         if self.dist_method == 'RAxML': # RAxML is weird; may need to generalize this
             suffix = os.path.split(dist_path)[1]

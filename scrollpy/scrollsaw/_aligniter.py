@@ -14,9 +14,11 @@ from Bio import AlignIO
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import FatalScrollPyError
-from scrollpy.alignments.eval_align import AlignEvaluator
-from scrollpy.filter._new_filter import LengthFilter
-from scrollpy.trees.maketree import TreeBuilder
+# from scrollpy.alignments.eval_align import AlignEvaluator
+from scrollpy import AlignEvaluator
+# from scrollpy.filter._new_filter import LengthFilter  # Don't need?!
+# from scrollpy.trees.maketree import TreeBuilder
+from scrollpy import TreeBuilder
 from scrollpy.alignments import parser
 from scrollpy.files import tree_file
 from scrollpy.util import _util,_tree

@@ -10,9 +10,12 @@ from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
-from scrollpy.sequences._scrollseq import ScrollSeq
-from scrollpy.sequences._collection import ScrollCollection
-from scrollpy.filter._filter import Filter
+from scrollpy import ScrollSeq
+from scrollpy import ScrollCollection
+from scrollpy import Filter
+# from scrollpy.sequences._scrollseq import ScrollSeq
+# from scrollpy.sequences._collection import ScrollCollection
+# from scrollpy.filter._filter import Filter
 #from scrollpy.util import _util
 
 

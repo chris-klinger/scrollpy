@@ -8,14 +8,17 @@ validation and logging code.
 
 import os
 import sys
+import re
 import errno
 import subprocess
 from subprocess import SubprocessError
 
-from Bio.Align import Applications
-from Bio.Applications import ApplicationError
+from Bio.Align import Applications as AA
+from Bio.Phylo import Applications as PA
+from Bio.Application import ApplicationError
 
 from scrollpy import scroll_log
+from scrollpy import config
 from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 from scrollpy import ValidationError
@@ -235,6 +238,7 @@ class Runner:
                         )
             else:
                 # Create output directory
+                pass  # TO-DO!!!
         # Check whether the file already exists
         elif os.path.exists(outpath):
             if no_clobber:
@@ -269,7 +273,7 @@ class Aligner(Runner):
         Subclass of Runner to handle running alignments.
 
         """
-        Runner.__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
     # def __str__(self):
@@ -338,7 +342,8 @@ class Aligner(Runner):
                 file_logger,
                 )
         # Set up method
-        cmdline = Applications.MafftCommandline(
+        # cmdline = Applications.MafftCommandline(
+        cmdline = AA.MafftCommandline(
             self.cmd, input=self.inpath, **self.kwargs)
         # Try to run
         try:
@@ -412,7 +417,7 @@ class AlignEvaluator(Runner):
     # Tuple of valid commands
     _commands = (
             'zorro',
-            'zorro-mac',
+            'zorro_mac',
             )
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
@@ -420,7 +425,7 @@ class AlignEvaluator(Runner):
         Subclass of Runner to handle evaluating alignment columns.
 
         """
-        Runner.__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
     # def __str__(self):
@@ -469,7 +474,7 @@ class AlignEvaluator(Runner):
                 cmd = os.path.basename(command)
             else:
                 cmd = command
-            if cmd not in ('zorro', 'zorro-mac'):
+            if cmd not in self._commands:
                 return False
         else:  # Add more methods later
             return False
@@ -533,7 +538,12 @@ class DistanceCalc(Runner):
         Subclass of Runner to handle running distance calculations.
 
         """
-        Runner.__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        try:
+            self.model = kwargs['model']
+        except KeyError:
+            raise ValidationError(
+                    "No evolutionary model provided for distance calculation")
 
 
     # def __str__(self):
@@ -608,6 +618,7 @@ class DistanceCalc(Runner):
                 file_logger,
                 )
         # Set up method
+        dirname,outname = os.path.split(self.outpath)
         # Specify distance calculation
         self.kwargs['-f'] = 'x'
         # Convert in and out file paths to RAxML arguments
@@ -623,7 +634,8 @@ class DistanceCalc(Runner):
             arg_string = '--' + self.model
             self.kwargs[arg_string] = ''  # just need to add the arg itself
         # Call command line with modified args
-        cmdline = Applications.RaxmlCommandline(
+        # cmdline = Applications.RaxmlCommandline(
+        cmdline = PA.RaxmlCommandline(
             self.cmd,
             **self.kwargs,
             )
@@ -667,7 +679,11 @@ class TreeBuilder(Runner):
         Subclass of Runner to handle running tree building
 
         """
-        Runner.__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
+        try:
+            self.model = kwargs['model']
+        except KeyError:
+            self.model = None
 
 
     # def __str__(self):
@@ -768,9 +784,10 @@ class TreeBuilder(Runner):
                     exc_obj=e,
                     )
         # Capture information
-        with open(self.outpath, 'w') as o:
-            decoded_out = cmdline.stdout.decode()
-            o.write(decoded_out)
+        # OUTPUT FILE IS THE SUMMARY FILE!
+        # with open(self.outpath, 'w') as o:
+        #     decoded_out = cmdline.stdout.decode()
+        #     o.write(decoded_out)
         decoded_stderr = cmdline.stderr.decode()
         scroll_log.log_message(
                 BraceMessage(decoded_stderr),
@@ -780,7 +797,7 @@ class TreeBuilder(Runner):
                 )
 
 
-        def _run_raxml(self):  # TO-DO: Fix this!!!
+    def _run_raxml(self):  # TO-DO: Fix this!!!
         """Use SubProcess to run RAxML"""
         # Log information
         scroll_log.log_message(
@@ -805,7 +822,8 @@ class TreeBuilder(Runner):
             arg_string = '--' + self.model
             self.kwargs[arg_string] = ''  # just need to add the arg itself
         # Call command line with modified args
-        cmdline = Applications.RaxmlCommandline(
+        # cmdline = Applications.RaxmlCommandline(
+        cmdline = PA.RaxmlCommandline(
             self.cmd,
             **self.kwargs,
             )

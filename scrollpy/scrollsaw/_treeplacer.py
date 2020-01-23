@@ -15,8 +15,10 @@ from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
 from scrollpy.files import msa_file as mf
 from scrollpy.util import _tree,_util
-from scrollpy.alignments.align import Aligner
-from scrollpy.trees.maketree import TreeBuilder
+from scrollpy import Aligner
+from scrollpy import TreeBuilder
+# from scrollpy.alignments.align import Aligner
+# from scrollpy.trees.maketree import TreeBuilder
 from scrollpy.util._mapping import Mapping
 
 

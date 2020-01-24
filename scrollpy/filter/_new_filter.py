@@ -66,6 +66,20 @@ class Filter:
         self._removed = {}  # Mirrors self._seq_dict
 
 
+    def __repr__(self):
+        return "{}({!r}, **{!r})".format(
+                self.__class__.__name__,
+                self.seq_dict,
+                self.kwargs,
+                )
+
+    def __str__(self):
+        return "{} {}".format(
+                self._filter_method,
+                self.__class__.__name__,
+                )
+
+
     def __call__(self):
         """Filter and return"""
         # First, determine appropriate subclass to call
@@ -177,10 +191,26 @@ class GenericFilter:
             self._filter_score = kwargs["filter_score"]
         except KeyError:
             self._filter_score = config["ARGS"]["filter_score"]
+        # Store kwargs for __repr__
+        self.kwargs = kwargs
         # Internal defaults
         self._indices = []
         self._to_remove = []
 
+
+    def __repr__(self):
+        return "{}({!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._seq_list,
+                self._method,
+                self.kwargs,
+                )
+
+    def __str__(self):
+        return "{} employing {}".format(
+                self.__class__.__name__,
+                self._method,
+                )
 
     def __call__(self):
         """Implement in subclass"""

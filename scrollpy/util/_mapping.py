@@ -69,6 +69,8 @@ class Mapping:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Keep kwargs for __repr__
+        self.kwargs = kwargs
         # Internal counter
         self._counter = Counter()
         # Internal defaults
@@ -92,6 +94,32 @@ class Mapping:
         except KeyError:
             self._test = False  # False by default
 
+
+    def __repr__(self):
+        return "{}({!r}, {!r}, {!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._infiles,
+                self._alignfile,
+                self._treefile,
+                self._mapfile,
+                self.kwargs,
+                )
+
+    def __str__(self):
+        # Determine num of each
+        num_infiles = len(self._infiles)
+        num_alignfiles = 1 if self._alignfile else 0
+        num_treefiles = 1 if self._treefile else 0
+        num_mapfile = 1 if self._mapfile else 0
+        # Report numbers in __str__
+        return "{} with {} input files, {} alignment file(s), "
+            "{} tree file(s), and {} mapping file(s)".format(
+                self.__class__.__name__,
+                num_infiles,
+                num_alignfiles,
+                num_treefiles,
+                num_mapfiles,
+                )
 
     def __call__(self):
         """Run internal functions to create an internal _seq_dict object"""

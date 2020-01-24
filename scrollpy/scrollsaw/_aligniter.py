@@ -60,6 +60,8 @@ class AlignIter:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Keep kwargs for __repr__
+        self.kwargs = kwargs
         # Internal default that does not change each time through __call__
         self._start_length       = None
         self._start_obj          = None
@@ -80,14 +82,20 @@ class AlignIter:
         self.iter_info          = []
 
 
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
+    def __repr__(self):
+        return "{}({!r}, {!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._alignment,
+                self._outdir,
+                self._num_columns,
+                self.kwargs,
+                )
 
-
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
+    def __str__(self):
+        return "{} using {}".format(
+                self.__class__.__name__,
+                self.col_method,
+                )
 
 
     def __call__(self):

@@ -21,17 +21,31 @@ class ScrollTree:
 
     def __init__(self, seq_dict, **kwargs):
         self._seq_dict = seq_dict
+        # Save kwargs for __repr__
+        self.kwargs = kwargs
         # Internal defaults
         self._ordered_seqs = []
         self._cached = {}  # For faster leaf distance lookup
 
 
-    #def __str__(self):
-    #    pass  # TO-DO
+    def __repr__(self):
+        return "{}({!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._seq_dict,
+                self.kwargs,
+                )
 
-
-    #def __repr__(self):
-    #    pass  # TO-DO
+    def __str__(self):
+        num_groups = len(self._seq_dict.keys())
+        # Each group in self._seq_dict is a list of ScrollSeq objects
+        # _seq.dict.values() returns a list of lists, which chain flattens
+        num_seqs = len(list(chain(*self._seq_dict.values())))
+        # Return dimensions of ScrollPy
+        return "{} object with {} groups and {} sequences".format(
+                self.__class__.__name__,
+                num_groups,
+                num_seqs,
+                )
 
 
     def __call__(self):

@@ -70,6 +70,8 @@ class TreePlacer:
             if var == 'support':
                 value = int(value)
             setattr(self, var, value)
+        # Save kwargs for __repr__
+        self.kwargs = kwargs
         # Internal defaults; change each time through __call__ loop
         # Filepaths
         self._current_seq_path   = ""
@@ -87,14 +89,23 @@ class TreePlacer:
         self._not_monophyletic   = []  # Info on non-monophyletic sequences
 
 
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
+    def __repr__(self):
+        return "{}({!r}, {!r}, {!r}, {!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._seq_dict,
+                self._alignemnt,
+                self._to_place,
+                self._outdir,
+                self._infiles,
+                self.kwargs,
+                )
 
-
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
+    def __str__(self):
+        return "{} using {} for alignment and {} for phylogeny reconstruction".format(
+                self.__class__.__name__,
+                self.align_method,
+                self.tree_method,
+                )
 
 
     def __call__(self):

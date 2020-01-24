@@ -55,20 +55,36 @@ class ScrollCollection:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Store kwargs for __repr__
+        self.kwargs = kwargs
         # Internal defaults
         self._seq_path = None # Path to unaligned sequence file
         self._dist_path = None # Path to the distance file
         self._dist_dict = None # Parsed distance file list
 
 
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
+    def __repr__(self):
+        return "{}({!r}, {!r}, {!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._outdir,
+                self.seq_list,
+                self._group,
+                self._opt_group,
+                self.kwargs,
+                )
 
-
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
+    def __str__(self):
+        if self._opt_group:  # Two groups
+            return "{} with two groups: {} and {}".format(
+                    self.__class__.__name__,
+                    self._group,
+                    self._opt_group,
+                    )
+        else:
+            return "{} with one group: {}".format(
+                    self.__class__.__name__,
+                    self._group,
+                    )
 
 
     def __call__(self):

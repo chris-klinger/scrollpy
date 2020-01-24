@@ -27,29 +27,36 @@ class ScrollSeq:
 
     """
     def __init__(self, id_num, group, seq_record=None):
-            #accession=None, name=None, description=None, seq=None): # property attrs
         self._id = id_num
         self._group = group
+        self._record = seq_record
+        # Internal defaults
         self._distance = 0.0 # Initialize float counter for distance
         self._fvalue = None  # Value used to filter
         self._record = seq_record
-        # All remaining attributes are internal properties
-
-
-    def __str__(self):
-        """Default to BioPython str if present; otherwise basic"""
-        if self._record:
-            return self._record.__str__()  # Does this work?
-        else:
-            pass # TO-DO
 
 
     def __repr__(self):
-        """Probably need something here, not just parsed object"""
+        return "{}({!r}, {!r}, {!r})".format(
+                self.__class__.__name__,
+                self._id,
+                self._group,
+                self._record,
+                )
+
+
+    def __str__(self):
+        # Either use sequence or record there is none
         if self._record:
-            return self._record.__repr__()  # Does this work?
+            str_seq = self._record.__str__()
         else:
-            pass # TO-DO
+            str_seq = "no sequence"
+        # Return string has same format either way
+        return "{} #{} with {}".format(
+                self.__class__.__name__,
+                self._id,
+                str_seq,
+                )
 
 
     def __iadd__(self, other):

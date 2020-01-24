@@ -19,6 +19,14 @@ class Counter:
     def __init__(self):
         pass
 
+    def __repr__(self):
+        return "{}".format(self.__class__.__name__)
+
+    def __str__(self):
+        return "{}: {}".format(
+                self.__class__.__name__,
+                self.current_count(),  # Add current value
+                )
 
     def __call__(self):
         """Increments Class counter and returns current value"""

@@ -5,6 +5,7 @@ This module contains the main ScrollPy object.
 import os
 import tempfile
 from itertools import combinations
+from itertools import chain
 
 from scrollpy import config
 from scrollpy import scroll_log
@@ -50,6 +51,8 @@ class ScrollPy:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Save kwargs for __repr__
+        self.kwargs = kwargs
         # Internal defaults
         self._groups = list(self._seq_dict.keys())
         self._ordered_seqs = []
@@ -58,13 +61,26 @@ class ScrollPy:
         self._remove_tmp = False
 
 
-    #def __str__(self):
-    #    """TO-DO"""
-    #    pass
+    def __repr__(self):
+        return "{}({!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self._seq_dict,
+                self.target_dir,
+                self.kwargs,
+                )
 
-    #def __repr__(self):
-    #    """TO-DO"""
-    #    pass
+    def __str__(self):
+        num_groups = len(self._seq_dict.keys())
+        # Each group in self._seq_dict is a list of ScrollSeq objects
+        # _seq.dict.values() returns a list of lists, which chain flattens
+        num_seqs = len(list(chain(*self._seq_dict.values())))
+        # Return dimensions of ScrollPy
+        return "{} object with {} groups and {} sequences".format(
+                self.__class__.__name__,
+                num_groups,
+                num_seqs,
+                )
+
 
     def __call__(self):
         """Runs Scrollsaw"""

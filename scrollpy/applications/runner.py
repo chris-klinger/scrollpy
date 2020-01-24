@@ -84,14 +84,22 @@ class Runner:
         self.kwargs = kwargs
 
 
-    def __str__(self):
-        """Override in subclass"""
-        raise NotImplementedError
-
-
     def __repr__(self):
-        """Override in subclass"""
-        raise NotImplementedError
+        return "{}({!r}, {!r}, {!r}, {!r}, {!r}, **{!r})".format(
+                self.__class__.__name__,
+                self.method,
+                self.cmd,
+                self.inpath,
+                self.outpath,
+                self.cmd_list,
+                self.kwargs,
+                )
+
+    def __str__(self):
+        return "{} for running {}".format(
+                self.__class__.__name__,
+                self.method,
+                )
 
 
     def __call__(self):
@@ -276,15 +284,6 @@ class Aligner(Runner):
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
-
-
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
-
 
     def __call__(self):
         """
@@ -428,16 +427,6 @@ class AlignEvaluator(Runner):
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
-
-
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
-
-
     def __call__(self):
         """
         Use BioPython commandline wrapper or SubProcess module to run
@@ -521,7 +510,6 @@ class AlignEvaluator(Runner):
                 )
 
 
-
 class DistanceCalc(Runner):
 
     # Tuple of valid methods
@@ -544,16 +532,6 @@ class DistanceCalc(Runner):
         except KeyError:
             raise ValidationError(
                     "No evolutionary model provided for distance calculation")
-
-
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
-
-
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
 
 
     def __call__(self):
@@ -684,16 +662,6 @@ class TreeBuilder(Runner):
             self.model = kwargs['model']
         except KeyError:
             self.model = None
-
-
-    # def __str__(self):
-    #     """TO-DO"""
-    #     pass
-
-
-    # def __repr__(self):
-    #     """TO-DO"""
-    #     pass
 
 
     def __call__(self):

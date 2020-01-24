@@ -34,18 +34,30 @@ class LeafSeq:
         self._distance = 0.0  # Initialize float counter for distance
 
 
+    def __repr__(self):
+        """Use constituent objects"""
+        return "{}({!r}, {!r}, {!r}, {!r})".format(
+                self.__class__.__name__,
+                self._id,
+                self._group,
+                self._node,
+                self._seq,
+                )
+
+
     def __str__(self):
         """Use constituent objects"""
         if self._seq:
-            return "{} : {}".format(self._node, self._seq)
+            return "{}: {} {}".format(
+                    self.__class__.__name__,
+                    self._node,
+                    self._seq,
+                    )
         else:
-            return "{}".format(self._node)
-
-
-    def __repr__(self):
-        """Use constituent objects"""
-        return "LeafSeq({!r}, {!r}, {!r}, {!r})".format(
-                self._id, self._group, self._node, self._seq)
+            return "{}: {}".format(
+                    self.__class__.__name__,
+                    self._node,
+                    )
 
 
     def __iadd__(self, other):

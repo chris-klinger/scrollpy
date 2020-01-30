@@ -26,12 +26,13 @@ from scrollpy import Filter
 
 
 class ScrollPy:
-    """Main ScrollPy object; based on user input, run is variable.
+    """Main ScrollPy object for evaluating sequences by genetic distance.
 
     Args:
-        seq_dict (dict): a dictionary of mapped group/object pairs
-
-        target_dir (str): path to target directory for main output file.
+        seq_dict (dict): A dictionary of mapped group/object pairs
+        target_dir (str): Path to target directory for main output file.
+        **kwargs: Optional arguments for alignment and distance methods.
+            If not specified, values are obtained from global config.
 
     """
     # Class var list
@@ -83,7 +84,17 @@ class ScrollPy:
 
 
     def __call__(self):
-        """Runs Scrollsaw"""
+        """Runs sequence-based (traditional) Scrollsaw.
+
+        Runs the main program function of Scrollsaw, as detailed in:
+            Elias et al. 2012, J Cell Sci.
+
+        Creates pairwise ScrollCollection instances for all input files,
+        which subsequently align sequences and calculate distances between
+        sequences based on the alignment. Sorting then yields those
+        sequences with the minimum mutual pairwise distance.
+
+        """
         # If no tmpdir is None, make a temporary directory
         if not self.target_dir:
             self._remove_tmp = True  # Signal for removal
@@ -122,15 +133,7 @@ class ScrollPy:
 
 
     def _make_collections(self):
-        """Creates all possible pairwise ScrollCollection objects.
-
-        Args:
-            (self.infiles)
-            (self._groups)
-
-        Returns:
-            a list of ScrollCollection objects
-        """
+        """Creates all possible pairwise ScrollCollection objects."""
         if len(self._groups) == 1: # only one group
             group = self._groups[0]
             scroll_log.log_message(
@@ -150,7 +153,7 @@ class ScrollPy:
         for group1,group2 in combinations(self._groups,2): # pairwise
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "Adding collection object for groups {} and {}\n",
+                        "Adding collection object for groups {} and {}",
                         group1, group2,
                         ),
                     3,
@@ -171,14 +174,7 @@ class ScrollPy:
 
 
     def _sort_distances(self):
-        """Sorts all objects in an internal list.
-
-        Args:
-            (self._seq_dict)
-
-        Returns:
-            Creates an ordered list of ScrollSeq objects (self._ordered_seqs)
-        """
+        """Sorts all ScrollSeq objects and stores in internal list."""
         all_seqs = []
         for k,v in self._seq_dict.items():
             all_seqs.extend(v)

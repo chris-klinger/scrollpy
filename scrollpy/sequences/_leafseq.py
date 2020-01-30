@@ -13,16 +13,18 @@ from functools import total_ordering
 
 @total_ordering
 class LeafSeq:
-    """Represents a terminal leaf node and associated sequene (optional).
+    """Represents a terminal leaf node and associated sequence (optional).
+
+    Each LeafSeq object is a thin wrapper over an underlying ETE3 Node
+    object to allow for associating extra parameters such as ID, group,
+    a sequence object, and a distance counter. Attribute access to the
+    underlying objects is intercepted and delegated appropriately.
 
     Args:
-        id_num (int): unique ID number to assign to instance
-
-        group (str): group to which the sequence belongs
-
-        tree_node  (obj): ETE TreeNode object
-
-        seq_obj (obj): ScrollSeq object (default: None)
+        id_num (int): Unique ID number to assign to instance.
+        group (str): Group to which the sequence belongs.
+        tree_node  (obj): ETE3 TreeNode object.
+        seq_obj (obj): Optional ScrollSeq object. Defaults to None.
 
     """
     def __init__(self, id_num, group, tree_node, seq_obj=None):
@@ -61,7 +63,15 @@ class LeafSeq:
 
 
     def __iadd__(self, other):
-        """Adds distance to internal float"""
+        """Adds distance to internal float.
+
+        Adds distances during tree leaf comparisons by incrementing
+        internal distance counter.
+
+        Raises:
+            ValueError: Raised if the value to be added is negative.
+
+        """
         # Note, this could also throw an OverflowError if distance is very large
         distance = float(other) # Throws ValueError if conversion isn't possible
         if distance < 0.0:
@@ -87,7 +97,21 @@ class LeafSeq:
 
 
     def __getattr__(self, name):
-        """Delegate calls to underlying object(s)"""
+        """Delegates call to underlying object(s).
+
+        Attribute access is passed first to ETE3 Node objects, as each
+        LeafSeq must be associated with a Node, and subsequently to the
+        Seq object (which is optional).
+
+        If an attribute is callable, the internal function of the object
+        is wrapped and then returned. This allows, for example, function
+        calls that compare distances between leaves.
+
+        Raises:
+            AttributeError: Raised if a requested attribute cannot be
+                found in any internal objects.
+
+        """
         underlying_obj = None
         try:
             attr = getattr(self._node, name)
@@ -115,8 +139,15 @@ class LeafSeq:
 
 
     def _write(self, file_obj, outfmt="fasta"):
-        """Delegate to underlying ScrollSeq object or raise AttributeError if
-        instance has no sequence object set.
+        """Writes an associated sequence to a file.
+
+        Uses BioPython Seq object writing method internally, if an
+        associated sequence exists for the instance.
+
+        Raises:
+            AttributeError: Raised if no sequence object is set for the
+                instance.
+
         """
         if self._seq:
             self._seq._write(file_obj, outfmt)
@@ -126,7 +157,16 @@ class LeafSeq:
 
 
     def _write_by_id(self, file_obj):
-        """As above, delegate or raise AttributeError"""
+        """Writes an associated sequence to a file by its ID.
+
+        Uses ScrollSeq custome writing method internally, if an
+        associated sequence exists for the instance.
+
+        Raises:
+            AttributeError: Raised if no sequence object is set for the
+                instance.
+
+        """
         if self._seq:
             self._seq._write_by_id(file_obj)
         else:
@@ -136,7 +176,16 @@ class LeafSeq:
 
     @property
     def id_num(self):
-        """Ensure ID is set; raise AttributeError if not"""
+        """Obtains an ID number for the instance.
+
+        Returns:
+            int: The ID number for the instance.
+
+        Raises:
+            AttributeError: Raised if self._id is Nonetype. Each instance
+                requires a unique ID.
+
+        """
         if not self._id:
             raise AttributeError(
                 "Missing ID for LeafSeq object {}".format(self))
@@ -145,9 +194,21 @@ class LeafSeq:
 
     @id_num.setter
     def id_num(self):
+        """Prevents changing LeafSeq ID after instantiation.
+
+        Raises:
+            AttributeError: Raised on any set call.
+
+        """
         raise AttributeError("Cannot change LeafSeq ID after instantiation")
 
 
     @id_num.deleter
     def id_num(self):
+        """Prevents deleting LeafSeq ID at any time.
+
+        Raises:
+            AttributeError: Raised on any delattr call.
+
+        """
         raise AttributeError("Cannot delete LeafSeq ID")

@@ -32,6 +32,30 @@ from scrollpy.util._util import modify_model_name
 
 
 class Runner:
+    """Generic BaseClass for all third-party application running classes.
+
+    Handles argument validation that will be the same across programs,
+    such as checking file paths.
+
+    Args:
+        method (str): Name of the method to run.
+        cmd (str): Command (if executable is in PATH) or full path
+            to the executable.
+        inpath (str): Full path to input file.
+        outpath (str): Full path for program output.
+        cmd_list (list, optional): If provided, a pre-constructed list
+            of commands for the subprocess interface. Default to None.
+        **kwargs: Optional additional parameters for the program.
+
+    Attributes:
+        method (str): Name of the method to run.
+        cmd (str): Command, or full path to program executable.
+        inpath (str): Full path to the input file.
+        outpath (str): Full path for program output.
+        cmd_list (list): Command list for subprocess module. May be None.
+        kwargs (dict): Additional parameters. May be empty.
+
+    """
 
     # Tuple of valid methods
     _methods = None   # Override in subclass
@@ -40,22 +64,15 @@ class Runner:
     _commands = None  # Override in subclass
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
-        """
-        Generic BaseClass for all third-party application running classes.
-        Handles argument validation that will be the same across programs,
-        such as checking file paths.
+        """Performs argument validation prior to setting attributes.
 
-        Args:
-            method (str): name of the method to run
+        For each passed attribute, validate it using the _validate method.
+        If the validation call suceeds, set the instance attribute;
+        otherwise, quit program execution.
 
-            cmd (str): command (if executable is in PATH) or full path
-                to the executable
-
-            inpath (str): full path to input file
-
-            outpath (str): full path for program output
-
-            **kwargs: additional parameters for the program (optional)
+        Raises:
+            FatalScrollPyError: Raised if any argument validation call
+                raises a ValidationError.
 
         """
         try:
@@ -108,21 +125,23 @@ class Runner:
 
 
     def _validate(self, name, value, validation_method, **kwargs):
-        """
+        """Validate an input parameter using other methods.
+
         Calls the required validation method to check input parameters
         during class instantiation (prior to program call).
 
         Args:
-            name (str): name of the arg to validate
+            name (str): Name of the parameter to validate.
+            value (str): Value passed to the class constructor.
+            validation_method (str): Name of the validation function.
+            **kwargs: Optional additional parameter information.
 
-            value (str): value passed to the class constructor
+        Returns:
+            True if parameter validation is successful.
 
-            validation_method (str): name of the validation function
-
-            **kwargs: additional parameter information (optional)
-
-        Returns: True if parameter validation is successful; raises
-            ValidationError if not.
+        Raises:
+            ValidationError: Raised if validation of the input value
+                fails.
 
         """
         if validation_method is not None: # was provided
@@ -167,14 +186,16 @@ class Runner:
 
 
     def _validate_method(self, method_name):
-        """
-        Checks whether the method provided is in class tuple.
+        """Checks whether the method provided is in class tuple.
 
         Args:
-            method_name (str): name of the method
+            method_name (str): Name of the method to check.
 
         Returns:
-            True if method_name in self._methods; False otherwise
+            True if method_name in self._methods; False otherwise.
+
+        Raises:
+            NotImplementedError: Raised if self._methods is None.
 
         """
         if not self._methods:
@@ -185,19 +206,24 @@ class Runner:
 
 
     def _validate_command(self, command, method=None):
-        """Override in subclass"""
+        """Override in subclass."""
         raise NotImplementedError
 
 
     def _validate_inpath(self, inpath):
-        """
-        Checks whether the specified input file actually exists.
+        """Checks whether the specified input file actually exists.
 
         Args:
-            inpath (str): full path to specified input file
+            inpath (str): Full path to specified input file.
 
         Returns:
-            True if file exists; raises FileNotFoundError if not
+            True if file exists.
+
+        Raises:
+            FileNotFoundError: Raised if the specified file path cannot
+                be found on the system.
+            AttributeError: Raised if the specified file path is a
+                directory.
 
         """
         if not os.path.exists(inpath):
@@ -220,16 +246,25 @@ class Runner:
 
 
     def _validate_outpath(self, outpath):
-        """
-        Checks if specified output file already exists. If so, checks
-        whether "no_clobber" is set in config file <do something>.
+        """Checks if the specified output file already exists.
+
+        First, checks whether the output directory exists. If not, checks
+        the value of the <no_create> setting. If set to True, raise an
+        error. Otherwise, create the directory.
+
+        If the specified file already exists, checks the value of the
+        <no_clobber> setting. If set to True, modify the output filepath
+        so that it does not clash. Otherwise, the file is overridden.
 
         Args:
-            outpath (str): full path to specified output file
+            outpath (str): Full path to specified output file.
 
         Returns:
-            True if output file can be created; raises FileNotFoundError
-            if the specified directory does not exist.
+            True if the output file can be created.
+
+        Raises:
+            FileNotFoundError: Raised if the specified directory does not
+                exist and user arguments prevent creation.
 
         """
         # Gobal settings in config
@@ -262,6 +297,13 @@ class Runner:
 
 
 class Aligner(Runner):
+    """Subclass of Runner to handle running alignments.
+
+    All Runner subclasses must define class attributes _methods and
+    _commands, as well as methods for validating and running program
+    commands.
+
+    """
 
     # Tuple of valid methods
     _methods = (
@@ -277,17 +319,15 @@ class Aligner(Runner):
             )
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
-        """
-        Subclass of Runner to handle running alignments.
-
-        """
+        """Delegate instantiation to Runner with no changes."""
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
 
     def __call__(self):
-        """
-        Use BioPython commandline wrapper or SubProcess module to run
+        """Run the alignment program based on method attribute.
+
+        Uses BioPython commandline wrapper or SubProcess module to run
         third-party program and write/log output.
 
         """
@@ -302,16 +342,14 @@ class Aligner(Runner):
 
 
     def _validate_command(self, command, method=None):
-        """
-        Determine whether the specified command makes sense for the method.
+        """Validate the specified command based on the method attribute.
 
         Args:
-            command (str): specified command to execute
-
-            method (str): method to run the command with
+            command (str): Specified command to execute.
+            method (str): Method to run the command with.
 
         Returns:
-            True if the command is valid, False otherwise
+            bool: True if the command is valid; False otherwise.
 
         """
         if not method:
@@ -332,7 +370,7 @@ class Aligner(Runner):
 
 
     def _run_mafft(self):
-        """Use BioPython application wrapper to run Mafft"""
+        """Use BioPython application wrapper to run Mafft."""
         # Log information
         scroll_log.log_message(
                 BraceMessage( "Calling Mafft to align sequences"),
@@ -367,7 +405,7 @@ class Aligner(Runner):
 
 
     def _run_mafftadd(self):
-        """Use SubProcess to run Mafft with non-standard arguments"""
+        """Use SubProcess to run Mafft with non-standard arguments."""
         # Log information
         scroll_log.log_message(
                 BraceMessage( "Calling Mafft to add sequences"),
@@ -407,6 +445,13 @@ class Aligner(Runner):
 
 
 class AlignEvaluator(Runner):
+    """Subclass of Runner to handle evaluating alignment columns.
+
+    All Runner subclasses must define class attributes _methods and
+    _commands, as well as methods for validating and running program
+    commands.
+
+    """
 
     # Tuple of valid methods
     _methods = (
@@ -420,15 +465,13 @@ class AlignEvaluator(Runner):
             )
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
-        """
-        Subclass of Runner to handle evaluating alignment columns.
-
-        """
+        """Delegate instantiation to Runner with no changes."""
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
     def __call__(self):
-        """
+        """Evaluate alignment columns based on method attribute.
+
         Use BioPython commandline wrapper or SubProcess module to run
         third-party program and write/log output.
 
@@ -442,16 +485,14 @@ class AlignEvaluator(Runner):
 
 
     def _validate_command(self, command, method=None):
-        """
-        Determine whether the specified command makes sense for the method.
+        """Validate the specified command based on the method attribute.
 
         Args:
-            command (str): specified command to execute
-
-            method (str): method to run the command with
+            command (str): Specified command to execute.
+            method (str): Method to run the command with.
 
         Returns:
-            True if the command is valid, False otherwise
+            True if the command is valid; False otherwise.
 
         """
         if not method:
@@ -511,6 +552,13 @@ class AlignEvaluator(Runner):
 
 
 class DistanceCalc(Runner):
+    """Subclass of Runner to handle evaluating alignment columns.
+
+    All Runner subclasses must define class attributes _methods and
+    _commands, as well as methods for validating and running program
+    commands.
+
+    """
 
     # Tuple of valid methods
     _methods = (
@@ -522,20 +570,30 @@ class DistanceCalc(Runner):
     _commands = None  # RAxML works differently
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
-        """
-        Subclass of Runner to handle running distance calculations.
+        """Delegate instantiation to Runner.
+
+        Similar to other SubClass __init__ calls, but additionally
+        requires a <model> variable be specified by keyword arg.
+
+        Raises:
+            ValidationError: Raised when no <model> is supplied. Other
+                parameter validation may also raise ValidationError.
 
         """
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
         try:
             self.model = kwargs['model']
         except KeyError:
-            raise ValidationError(
-                    "No evolutionary model provided for distance calculation")
+            if not cmd_list:
+                raise ValidationError(
+                        "No evolutionary model provided for tree building")
+            else:
+                self.model = None
 
 
     def __call__(self):
-        """
+        """Calculate inter-sequence distances based on method attribute.
+
         Use BioPython commandline wrapper or SubProcess module to run
         third-party program and write/log output.
 
@@ -549,16 +607,14 @@ class DistanceCalc(Runner):
 
 
     def _validate_command(self, command, method=None):
-        """
-        Determine whether the specified command makes sense for the method.
+        """Validate the specified command based on the method attribute.
 
         Args:
-            command (str): specified command to execute
-
-            method (str): method to run the command with
+            command (str): Specified command to execute.
+            method (str): Method to run the command with.
 
         Returns:
-            True if the command is valid, False otherwise
+            True if the command is valid; False otherwise.
 
         """
         if not method:
@@ -587,7 +643,7 @@ class DistanceCalc(Runner):
 
 
     def _run_raxml(self):
-        """Use SubProcess to run RAxML"""
+        """Use SubProcess to run RAxML."""
         # Log information
         scroll_log.log_message(
                 BraceMessage( "Calling RAxML to evaluate distances"),
@@ -640,6 +696,13 @@ class DistanceCalc(Runner):
 
 
 class TreeBuilder(Runner):
+    """Subclass of Runner to handle building phylogenies.
+
+    All Runner subclasses must define class attributes _methods and
+    _commands, as well as methods for validating and running program
+    commands.
+
+    """
 
     # Tuple of valid methods
     _methods = (
@@ -653,19 +716,30 @@ class TreeBuilder(Runner):
             )
 
     def __init__(self, method, cmd, inpath, outpath, cmd_list=None, **kwargs):
-        """
-        Subclass of Runner to handle running tree building
+        """Delegate instantiation to Runner.
+
+        Similar to other SubClass __init__ calls, but additionally
+        requires a <model> variable be specified by keyword arg.
+
+        Raises:
+            ValidationError: Raised when no <model> is supplied. Other
+                parameter validation may also raise ValidationError.
 
         """
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
         try:
             self.model = kwargs['model']
         except KeyError:
-            self.model = None
+            if not cmd_list:
+                raise ValidationError(
+                        "No evolutionary model provided for tree building")
+            else:
+                self.model = None
 
 
     def __call__(self):
-        """
+        """Calculate inter-sequence distances based on method attribute.
+
         Use BioPython commandline wrapper or SubProcess module to run
         third-party program and write/log output.
 
@@ -681,16 +755,14 @@ class TreeBuilder(Runner):
 
 
     def _validate_command(self, command, method=None):
-        """
-        Determine whether the specified command makes sense for the method.
+        """Validate the specified command based on the method attribute.
 
         Args:
-            command (str): specified command to execute
-
-            method (str): method to run the command with
+            command (str): Specified command to execute.
+            method (str): Method to run the command with.
 
         Returns:
-            True if the command is valid, False otherwise
+            True if the command is valid; False otherwise.
 
         """
         if not method:

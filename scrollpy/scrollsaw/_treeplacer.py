@@ -28,18 +28,24 @@ from scrollpy.util._mapping import Mapping
 
 
 class TreePlacer:
-    """Main TreePlacer object; based on user input, run is variable.
+    """Main TreePlacer object used to place sequences in a given tree.
+
+    Assuming a mapping that matches each leaf in a tree to a known group
+    of sequences (e.g. a monophyletic group), sequences can be added one
+    at a time to the corresponding alignment for placement in the tree.
+
+    For each sequence, it can be found in the tree, and its parent nodes
+    traversed to classify it based on a support threshold.
 
     Args:
-        seq_dict (dict): starting dict produced from a Mapping
-
-        alignment (obj): parsed BioPython alignment object
-
-        to_place (str): path to target file of sequences to place
-
-        target_dir (str): path to target directory for output file(s)
-
-        infiles (list): infiles to original program call -> can be None
+        seq_dict (dict): A dictionary of mapped group:object pairs.
+        alignment (obj): A parsed BioPython alignment object.
+        to_place (str): The full path to a file of sequences to place.
+        target_dir (str): The full path to a directory for output file(s).
+        infiles (list): The list of infiles to provided during initial
+            program call. Defaults to an empty list.
+        **kwargs: Optional arguments for alignment/tree parameters and a
+            support threshold. If not specified, taken from global config.
 
     """
 
@@ -109,7 +115,15 @@ class TreePlacer:
 
 
     def __call__(self):
-        """Runs TreePlacer"""
+        """Runs TreePlacer to place sequences.
+
+        For each sequence, build a new alignment and tree object, parse
+        the tree object, and identify where the added sequence falls in
+        the tree. If the first parent node of the added sequence is
+        monophyletic, attempt to classify. Otherwise, determine all
+        groups that the sequence might be similar to.
+
+        """
         if not self._outdir:
             self._remove_tmp = True
             tmp_dir = tempfile.TemporaryDirectory()
@@ -167,7 +181,15 @@ class TreePlacer:
 
 
     def _parse_sequences(self, seq_path):
-        """Parse sequences passed as argument"""
+        """Parses a file to return ccorresponding ScrollSeq objects.
+
+        Args:
+            seq_path (str): Full path to a file with sequences.
+
+        Returns:
+            list: A list of ScrollSeq objects.
+
+        """
         try:
             # Need to worry about format?!
             return sf.seqfile_to_scrollseqs(seq_path)
@@ -183,12 +205,22 @@ class TreePlacer:
 
 
     def return_classified_seqs(self):
-        """Returns all classified SrollSeq objects"""
+        """Returns all classified SrollSeq objects."""
         return self._classified
 
 
     def _make_new_files(self, seq_obj):
-        """Calls other internal functions"""
+        """Makes all required files for each new sequence.
+
+        Essentially a convenience function that calls several internal
+        functions one at a time to first add a new sequence to an existing
+        alignment, then convert the alignment to phylip and construct a
+        phylogeny.
+
+        Args:
+            seq_obj (obj): The target sequence object.
+
+        """
         # Create a new sequence file
         self._current_seq_path = self._get_outpath(seq_obj,'seq')
         # Add to existing alignemnt
@@ -202,8 +234,19 @@ class TreePlacer:
         self._make_tree()
 
 
+    # Similar to other functions - can this be extracted?
     def _get_outpath(self, seq_obj, out_type):
-        """Similar to other class functions - maybe this can be extrated?"""
+        """Obtains the full path to an output file.
+
+        Args:
+            seq_obj (obj): The target sequence object.
+            out_type (str): The type of output file needed. Should be
+                one of <seq>, <align>, <phylip>, or <tree>.
+
+        Returns:
+            str: Full path to the output file.
+
+        """
         # Is name guaranteed to be unique?
         basename = seq_obj.name
         # Create a new subdir for each run?
@@ -222,7 +265,16 @@ class TreePlacer:
 
 
     def _add_seq_to_alignment(self, seq_obj):
-        """Calls MAFFT to add sequences to an existing alignment"""
+        """Calls external method to add a sequence to an alignment.
+
+        Creates and runs an instance of the Aligner class in order to
+        add the sequence to an alignment. For now, only provide option
+        to use MAFFT; more sequences could be added in future.
+
+        Args:
+            seq_obj (obj): The sequence to be added to the alignment.
+
+        """
         with open(self._current_seq_path,'w') as seq_file:
             # seq_obj.write(seq_file)  # Temporary input file
             seq_obj._write(  # ScrollSeq _write method now
@@ -253,7 +305,12 @@ class TreePlacer:
 
 
     def _make_tree(self):
-        """Calls IQ-TREE to construct a tree"""
+        """Calls external method to evaluate alignment columns.
+
+        Creates and runs an instance of the TreeBuilder class in
+        order to construct a phylogeny.
+
+        """
         if self.tree_method == 'Iqtree':
             build_command = [
                     '-nt',  # Number of processors
@@ -286,7 +343,19 @@ class TreePlacer:
 
 
     def _update_tree_mappings(self):
-        """Creates a mapping based on new tree and mapping objects"""
+        """Creates a mapping based on new tree and mapping objects.
+
+        In order to properly evaluate each separate tree, the associated
+        node object for each LeafSeq needs to be updated each time. This
+        also means associating each label with a label from the original
+        mapping in order to identify the added sequence in each case.
+
+        Raises:
+            FatalScrollPyError: Raised if a 1-to-1 relationship between
+                sequences in the original mapping and sequences in the
+                new mapping cannot be established.
+
+        """
         # Create a new Mapping
         mapping = Mapping(
                 self._infiles,  # Infiles -> might be empty list
@@ -344,7 +413,12 @@ class TreePlacer:
 
 
     def _get_added_leaf(self):
-        """Finds the added leaf in a tree object"""
+        """Finds the added leaf in a tree object.
+
+        Returns:
+            str: The name attribute of the added leaf.
+
+        """
         # Get all leaf names in current tree
         current_leaves = [leaf.name for leaf in self._current_tree_obj]
         # Added leaves are those not found initially
@@ -366,7 +440,14 @@ class TreePlacer:
 
 
     def _root_tree(self, added_leaf):
-        """Randomly selects a group to root on"""
+        """Randomly selects a group to root the tree on.
+
+        In order for the node traversal to work as expected, it is
+        useful to root the tree on a group that is irrelevant for the
+        purposes of classifying the current leaf. This typically means
+        a group that is not within the parent node of the added seq.
+
+        """
         for group,leaves in self._leafseq_dict.items():
             # get_group_outgroup function needs TreeNode objects
             group_list = [leafseq._node for leafseq in leaves]
@@ -381,7 +462,28 @@ class TreePlacer:
 
 
     def _classify_node(self, start_node):
-        """Finds info about a non-monophyletic node"""
+        """Details information about a non-monophyletic node.
+
+        It may still be useful to know which groups a given sequence is
+        familiar to, as well as whether those groups are complete under
+        the starting (parental node). This can help determine whether the
+        sequence in question places well, or disrupts the topology to a
+        great extent.
+
+        Starting with the parental node, check for the number of groups
+        under the node, whether each of these is monophyletic and, if so,
+        whether they are complete.
+
+        Args:
+            start_node (obj): An ETE3 tree Node object.
+
+        Returns:
+            list: A list of information useful for output. Includes at
+                a minimum the starting node support, the number of groups
+                under the node, and then any information for each
+                monophyletic group under the node.
+
+        """
         output_info = []
         # Starting from added_leaf ancestor
         # Support value first
@@ -428,7 +530,30 @@ class TreePlacer:
 
 
     def _classify_monophyletic_node(self, start_node):
-        """Finds monophyly information about a node"""
+        """Details information about a monophyletic node.
+
+        If the first node encountered traversing towards the root from the
+        added leaf is monophyletic, it is possible to identify the larger
+        monophyletic group for classification purposes.
+
+        Starting with the parental node, check the support and then walk
+        back upwards progressively until the last monophyletic node is
+        identified (and check if it is the same node or not). Depending on
+        the support value for each of these nodes, a tentative identity
+        assignment can be completed.
+
+        Args:
+            start_node (obj): An ETE3 tree Node object.
+
+        Returns:
+            tuple: A two member tuple, with the monophyletic group name
+                and a list of information useful for output. The list
+                includes the starting group, starting  node support,
+                whether the last ancestral node is different and its
+                support (or 'NA'), whether the group is complete, and
+                a putative classification for the sequence.
+
+        """
         output_info = []
         # Get detailed information about first node
         node_groups = _tree.get_node_groups(
@@ -476,7 +601,13 @@ class TreePlacer:
 
 
     def _add_classified_seq(self, group, seq_obj):
-        """Add to internal dict"""
+        """Adds classified sequence information to internal dict.
+
+        Args:
+            group (str): The group the sequence is classified into.
+            seq_obj (obj): The actual sequence object.
+
+        """
         seq_obj._group = group
         try:
             self._classified[group].append(seq_obj)

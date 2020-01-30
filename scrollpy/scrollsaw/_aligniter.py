@@ -30,12 +30,27 @@ from scrollpy.util import _util,_tree
 
 
 class AlignIter:
-    """Main AlignIter object; calls methods to select optimal columns.
+    """Main AlignIter object for selecting alignment columns.
+
+    Alignment columns are evaluated using an external method and then
+    selected for iterative removal. At each stage, a tree is constructed
+    using a fast tree-building method to obtain an estimate of the tree
+    quality. This measure is objective, but for now it is calculated as
+    the sum of bootstrap supports across all nodes.
+
+    Once no more columns can be removed, or once the resulting tree
+    support falls below a given threshold, the iteration stops and the
+    best-scoring alignment across iteration is considered 'optimal'.
 
     Args:
-        alignment (str): alignment file handle
-
-        target_dir (str): path to target directory for output file(s)
+        alignment (str): The full path to the alignment file.
+        target_dir (str): The full path to a directory for output files.
+        num_columns (int): Optional argument specifying an explicit
+            number of alignment columns to remove at each iteration. If
+            not specified, the number if calculated. Defaults to None.
+        **kwargs: Additional keyword arguments for specifying alignment
+            and tree-building paramets. If not specified, these are
+            obtained from global config.
 
     """
 
@@ -99,7 +114,11 @@ class AlignIter:
 
 
     def __call__(self):
-        """Runs AlignIter"""
+        """Runs AlignIter.
+
+        Calls other internal methods depending on instance variables.
+
+        """
         if not self._outdir:
             self._remove_tmp = True
             tmp_dir = tempfile.TemporaryDirectory()
@@ -140,12 +159,12 @@ class AlignIter:
 
 
     def get_optimal_alignment(self):
-        """User can request optimal alignment"""
+        """Convenience access method for the optimal alignment."""
         return self._optimal_alignment
 
 
     def _parse_alignment(self):
-        """Make it easier to parse alignment"""
+        """Calls external methods to parse alignment file."""
         align_object = parser.parse_alignment_file(
                 self._alignment,  # filepath
                 self.alignfmt,   # alignment type
@@ -157,7 +176,7 @@ class AlignIter:
 
 
     def _parse_tree(self):
-        """Convenience"""
+        """Calls external methods to parse tree file."""
         tree_obj = tree_file.read_tree(
                 self._current_tree_path,
                 'newick',
@@ -167,7 +186,7 @@ class AlignIter:
 
 
     def _write_current_alignment(self):
-        """Convenience"""
+        """Uses BioPython methods to write alignment file."""
         AlignIO.write(
                 self._align_obj,
                 self._current_phy_path,
@@ -176,7 +195,18 @@ class AlignIter:
 
 
     def _get_outpath(self, out_type, length=None):
-        """Similar to other class functions"""
+        """Obtain the full path to an output file.
+
+        Args:
+            out_type (str): The type of output file needed. Should be
+                one of <columns>, <phylip>, or <tree>.
+            length (int): Optional current length of the alignment.
+                Defaults to None.
+
+        Returns:
+            str: Full path to the output file.
+
+        """
         align_name = os.path.basename(self._alignment)
         basename = align_name.rsplit('.',1)[0]
         # Outfile depends on out_type
@@ -197,7 +227,15 @@ class AlignIter:
 
 
     def _calculate_columns(self, column_path):
-        """Runs external program"""
+        """Calls external method to evaluate alignment columns.
+
+        Creates and runs an instance of the AlignEvaluator class in
+        order to evaluate alignment columns.
+
+        Args:
+            column_path (str): Full path to the expected output file.
+
+        """
         if self.col_method == 'zorro':
             # Very short command
             column_command = [
@@ -216,7 +254,7 @@ class AlignIter:
 
 
     def _evaluate_columns(self, column_path):
-        """Parse output file into internal attribute"""
+        """Calls external methods to parse column file."""
         columns = []
         if self.col_method == 'zorro':
             for i,line in enumerate(
@@ -235,7 +273,18 @@ class AlignIter:
 
 
     def _hist_run(self):
-        """Progressively remove low scoring columns"""
+        """Progressively remove low scoring columns by binning columns.
+
+        At each iteration, calculates the binning of column scores using
+        NumPy and removes a number of columns based on the lowest bin
+        count and the fraction of columns remaining compared to the
+        original alignment.
+
+        Each iteration also checks whether the optimal alignment has
+        likely been reached; this test depends on the current tree
+        score and all previous scores.
+
+        """
         # Enter loop
         optimal = False
         # Determine whether calculations are needed
@@ -294,7 +343,18 @@ class AlignIter:
 
 
     def _bisect_run(self):
-        """Progressively bisect alignment to find local max"""
+        """Progressively bisect an alignment to find a local max.
+
+        At each iteration, bisects the remaining alignment based on the
+        previous number of removed columns and tree score. In short, if
+        the previous bisection increases the score, the upper half of the
+        remaining bound is chosen; otherwise, the lower half is chosen.
+
+        Unlike histogram runs, this method recurs until the number of
+        removed columns no longer changes, without checking optimality
+        criteria at the end of each iteration.
+
+        """
         # Run first iteration
         scroll_log.log_message(
                 scroll_log.BraceMessage(
@@ -335,7 +395,26 @@ class AlignIter:
 
 
     def _bisect_alignment(self, start, stop, prev_support, iter_num=2):
-        """Recursive bisection"""
+        """Recursively bisect an alignment.
+
+        A separate recursive function called from self._bisect_run().
+        Each recursive call has a start and stop over the alignment
+        columns as well as a reference to the previous tree score. The
+        number of columns to be removed increases or decreases
+        according to the new tree score.
+
+        Args:
+            start (int): The start value for the current iteration.
+            stop (int): The stop value for the current iteration.
+            prev_support (int): The tree score for the previous iteration.
+            iter_num (int): A counter tracking the number of iterations
+                that have ocurred.
+
+        Returns:
+            Recursive call returns when the number of columns calculated
+                for removal is less than 1.
+
+        """
         num_cols = (stop-start)/2
         if num_cols < 1:
             return
@@ -400,7 +479,14 @@ class AlignIter:
 
 
     def _calculate_num_columns(self):
-        """Calculate number of columns to remove based on values"""
+        """Calculates the number of columns to remove.
+
+        Uses the NumPy.histogram method to bin the current alignment
+        scores, and calculates a number to remove based on the size
+        of the first bin and the fraction of alignment columns
+        remaining (compared to the original length).
+
+        """
         # Length of columns
         curr_length = len(self._columns)
         fraction_remaining = curr_length/self._start_length
@@ -419,7 +505,16 @@ class AlignIter:
 
 
     def _remove_columns(self, number):
-        """Removes <number> of alignment columns from current object"""
+        """Removes a number of columns from the current alignment.
+
+        Removing alignment columns is not straight-forward, as it
+        requires updating indexes for all remaining column scores so that
+        they still correspond to the right column in the alignment.
+
+        Args:
+            number (int): The number of columns to remove.
+
+        """
         # Iter while keeping track of indices
         indices = []
         values = []
@@ -438,7 +533,17 @@ class AlignIter:
 
 
     def _remove_cols_from_align(self, indices):
-        """Remove indices from alignment"""
+        """Remove columns from an alignment by indices.
+
+        Column removal is difficult because removing columns changes the
+        real position of remaining columns. To simplify this process,
+        build a separate alignment that is the sum of columns to keep by
+        leveraging BioPython alignment slicing.
+
+        Args:
+            indices (list): A list of all alignment positions to remove.
+
+        """
         # Build up a list of slice indices
         last_val = len(indices)-1
         previous = None
@@ -470,7 +575,17 @@ class AlignIter:
 
 
     def _shift_cols(self, indices):
-        """Shifts all index,value pairs in internal list based on indices"""
+        """Updates alignment column indices following removal.
+
+        Rather than keep track of all shifting values as they are removed,
+        sort remaining columns and place them in a new list based on
+        their place in the previous list. Then shift the index itself by
+        the change in position.
+
+        Args:
+            indices (list): A list of all remaining alignment positions.
+
+        """
         # Sort so bisect works
         sorted_indices = sorted(indices)
         # Now iter over alignment columns
@@ -489,7 +604,16 @@ class AlignIter:
 
 
     def _get_current_outpaths(self):
-        """Determine current phylip/tree outpath names"""
+        """Determine current phylip/tree outpaths.
+
+        Called during alignment iteration to obtain full filepaths based
+        on current alignment length.
+
+        Raises:
+            FatalScrollPyError: Raised if either filepath cannot be
+                obtained for any reason.
+
+        """
         # Length of all sequences should be the same, use first one
         current_align_length = len(self._align_obj[0].seq)
         # Use to calculate current values
@@ -516,7 +640,7 @@ class AlignIter:
 
 
     def _make_tree(self):
-        """Call tree program to make new tree"""
+        """Calls external methods to build a phylogeny."""
         if self.tree_method == 'Iqtree':
             build_command = [
                     '-nt',  # Number of processors
@@ -541,14 +665,27 @@ class AlignIter:
 
 
     def _calculate_support(self):
-        """Add support over all nodes"""
+        """Adds support over all nodes."""
         self._current_support = _tree.get_total_support(
                 self._current_tree_obj)
         # print("Current support is: {}".format(self._current_support))
 
 
     def _is_optimal(self):
-        """Determines whether to continue iterating"""
+        """Determines whether the current alignment is likely oprtimal.
+
+        Called during each iteration of a histogram run. Compares the
+        current tree support to all supports from previous iterations and
+        determines whether it represent an outlier (|zscore| > 2).
+
+        In order for the calculation to have meaning, there must be at
+        least three previous values for comparison.
+
+        Returns:
+            True if the current tree is an outlier from previous trees;
+                False otherwise.
+
+        """
         if len(self._all_supports) <=3:
             # print("Getting more values")
             return False  # Need more values
@@ -571,7 +708,12 @@ class AlignIter:
 
 
     def _evaluate_info(self):
-        """Add an extra column to self.iter_info"""
+        """Determines whether each iteration is optimal or sub-optimal.
+
+        Called prior to writing output, adds an extra value to each item
+        in self.iter_info.
+
+        """
         for i,sub_list in  enumerate(sorted(
             self.iter_info,
             key=lambda x:x[3],  # Tree support

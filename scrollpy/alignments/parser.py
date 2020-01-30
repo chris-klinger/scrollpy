@@ -22,12 +22,17 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     raises an exception and try manual parsing.
 
     Args:
-        file_path (str): Path to alignment file to parse
+        file_path (str): Path to alignment file to parse.
         file_type (str): Name of alignment format; see Bio.AlignIO for
-            details on support formats
+            details on supported formats.
+        to_dict (bool): Whether to return a dictionary representing the
+            alignment instead of an object. Defaults to True.
 
     Returns:
-        A dict of <header> : <sequence> pairs
+        dict: A dictionary of <header>:<sequence> pairs if to_dict is
+            True.
+        obj: A BioPython alignment object is to_dict is False.
+
     """
     try:
         alignment =  AlignIO.read(file_path,file_type)
@@ -46,14 +51,31 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     return alignment
 
 
-def _bio_align_to_dict(align_obj, align_dict=None):
-    """Uses the sequence ID and sequence attribute to build a dict
+def _bio_align_to_dict(align_obj): #align_dict=None):
+    """Uses the sequence ID and sequence attribute to build a dict.
+
+    Args:
+        align_obj (obj): BioPython alignment object.
+
+    Returns:
+        dict: A dictionary of <header>:<sequence> pairs.
+
     """
     return {record.id:str(record.seq) for record in align_obj}
 
 
 def write_alignment_file(align_obj, file_path, file_type):
-    """Uses Align.IO internally"""
+    """Writes an alignment object to a target file.
+
+    Uses Align.IO functionality internally.
+
+    Args:
+        align_obj (obj): BioPython alignment object.
+        file_path (str): Full path to the target file.
+        file_type (str): Name of the alignment file to write. See the
+            Bio.AlignIO documentation for supported formats.
+
+    """
     AlignIO.write(
             align_obj,
             file_path,

@@ -29,10 +29,11 @@ def _get_sequences(file_handle, file_format="fasta"):
     Arguments:
         file_handle (str): Full path to the file to parse
         file_format (str): SeqIO-compatible format string.
-            Defaults to "fasta"
+            Defaults to "fasta".
 
     Returns:
         list: List of SeqRecord objects
+
     """
     with open(file_handle,'r') as i:
         records = [record for record in SeqIO.parse(i, file_format)]
@@ -51,7 +52,7 @@ def seqfile_to_scrollseqs(file_handle, file_format="fasta"):
             Defaults to "fasta".
 
     Returns:
-        (list): List of ScrollSeq objects.
+        list: List of ScrollSeq objects.
 
     """
     scroll_seqs = []
@@ -79,7 +80,8 @@ def _cat_sequence_lists(*seq_lists):
         *seq_lists: A collection of iterables with SeqRecord objects
 
     Returns:
-        A list of SeqRecord objects.
+        list: A list of SeqRecord objects.
+
     """
     combined = []
     for seq_list in seq_lists:
@@ -95,11 +97,12 @@ def _sequence_list_to_dir(out_dir, seq_list):
     FASTA format for further use.
 
     Arguments:
-        out_dir (str): Full path to the directory in which to place file
-        seq_list (list): List of SeqRecord objects
+        out_dir (str): Full path to the directory in which to place file.
+        seq_list (list): List of SeqRecord objects.
 
     Returns:
-        Full path to the output file
+        str: The full path to the output file.
+
     """
     out_handle = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     out_path = os.path.join(out_dir, out_handle)
@@ -116,11 +119,9 @@ def _sequence_list_to_file(seq_list, outpath, outfmt = "fasta"):
     to a file in FASTA format.
 
     Arguments:
-        seq_list (list): List of ScrollSeq objects
-        outpath (str): Full outfile path
+        seq_list (list): List of ScrollSeq objects.
+        outpath (str): Full outfile path.
 
-    Returns:
-        None
     """
     with open(outpath, 'w') as o: # Assume outpath is already checked
         for seq_object in seq_list:
@@ -133,11 +134,9 @@ def _sequence_list_to_file_by_id(seq_list, outpath):
     No longer uses Bio.SeqIO but rather a simple FASTA-based formatter.
 
     Arguments:
-        seq_list (list): List of ScrollSeq objects
-        outpath (str): Full outfile path
+        seq_list (list): List of ScrollSeq objects.
+        outpath (str): Full outfile path.
 
-    Returns:
-        None
     """
     with open(outpath, 'w') as o:
         for seq_object in seq_list:

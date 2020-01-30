@@ -24,11 +24,12 @@ def read_tree(inpath, tree_format):
     """Parses a plain text file containing a tree representation.
 
     Args:
-        inpath (str): full path to input tree file
-        tree_format (str): tree format, for example "newick"
+        inpath (str): The full path to input tree file.
+        tree_format (str): Tree format, for example "newick".
 
     Returns:
-        ETE3 tree object representing file's contents
+        obj: An ETE3 tree object representing the tree.
+
     """
     if tree_format == 'newick':
         # ETE3 still opens in 'U' mode; suppress warning about deprecation
@@ -57,16 +58,18 @@ def read_tree(inpath, tree_format):
 
 
 def _read_newick_tree(inpath):
-    """Called by read_tree with tree_format="newick"
+    """Called by read_tree with tree_format="newick".
 
     Args:
-        inpath (str): full path to input tree file
+        inpath (str): The full path to input tree file.
 
     Returns:
-        ETE3 tree object representing file's contents
+        obj: An ETE3 tree object representing the tree.
 
     Raises:
-        NewickError: unable to read the newick file's contents
+        NewickError: Raised to indicate that it was not possible to read
+            the newick file's contents.
+
     """
     # Try to load with strict format first
     try:

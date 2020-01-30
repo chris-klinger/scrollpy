@@ -1,13 +1,25 @@
-"""
-Contains classes for configuring console output and logging in ScrollPy.
+"""Contains classes for configuring console output and logging in ScrollPy.
 
 Using the logging module, filters are applied to all input based on
-verbosity and log level arguments defined by the user. The base logger
-is configured to DEBUG, but usually only attaches one or two handlers
-with ERROR level instead.
+verbosity and log level arguments defined by the user. The base logger is
+configured to DEBUG, but usually only attaches one or two handlers with
+ERROR level instead.
 
-Verbosity of each is controlled by a filter and is based on the
-configuration defined by the user.
+In practice, the verbosity of each output is controlled by a filter and is
+based on the configuration defined by the user, whereby the decision to
+output the message is based on whether it meets the 'verbosity' (for
+output to the terminal) and/or 'log_level' (for output to the logfile)
+settings. Each message has an associated value for its level.
+
+This is facilitated by using a custom BraceMessage class, which also
+allows client code to make use of the new {} style string formatting.
+
+
+Attributes:
+    rich_format: A logging.Formatter instance for logfile output
+    raw_format: A logging.Formatter instance for stderr messages
+    blank_format: A logging.Formatter instance for writing blank lines
+
 """
 
 import os
@@ -28,6 +40,13 @@ from scrollpy import config
 
 # Random utility funtion used in some classes
 def _get_current_terminal_width():
+    """Utility function that measures the terminal width.
+
+    Returns:
+        int: The width of the current terminal. If this value cannot be
+            obtained, returns a fallback value of 80.
+
+    """
     columns,lines = shutil.get_terminal_size(
             fallback=(80,20))
     return columns
@@ -58,7 +77,18 @@ blank_format = logging.Formatter(fmt="")
 
 
 def get_console_logger(name):
-    """Convenience function to return based on __name__"""
+    """Obtain the console logger for a module.
+
+    The console logger is responsible for logging normal program progress
+    calls to the console/terminal.
+
+    Args:
+        name (str): Name of the logger. Should be __name__.
+
+    Returns:
+        obj: A Logger instance, based on name.
+
+    """
     name = "C." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -66,7 +96,14 @@ def get_console_logger(name):
 
 
 def get_status_logger(name):
-    """Convenience function to return based on __name__"""
+    """Obtain the status logger for a module.
+
+    The status logger is responsible for logging specific progress
+    messages on a single line to the console.
+
+    See get_console_logger docstring for more detail.
+
+    """
     name = "S." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -74,7 +111,13 @@ def get_status_logger(name):
 
 
 def get_file_logger(name):
-    """Convenience function to return based on __name__"""
+    """Obtain the file logger for a module.
+
+    The file logger is responsible for logging to the logfile.
+
+    See get_console_logger docstring for more detail.
+
+    """
     name = "F." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -82,7 +125,14 @@ def get_file_logger(name):
 
 
 def get_output_logger(name):
-    """Convenience function to return based on __name__"""
+    """Obtain the status logger for a module.
+
+    The output logger is responsible for logging output of third-party
+    applications to the logfile.
+
+    See get_console_logger docstring for more detail.
+
+    """
     name = "O." + str(name)
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
@@ -90,7 +140,19 @@ def get_output_logger(name):
 
 
 def get_module_loggers(mod_name):
-    """Convenience function to return based on __name__"""
+    """Obtain all of the loggers for a given module.
+
+    Primarily a convenience function to return all four possible logger
+    objects based on a module's __name__ attribute.
+
+    Args:
+        mod_name: The name of the module (should be __name__).
+
+    Returns:
+        tuple: A tuple of four logger objects in the order console,
+            status, file, and output logger.
+
+    """
     c_logger = get_console_logger(mod_name)
     s_logger = get_status_logger(mod_name)
     f_logger = get_file_logger(mod_name)
@@ -106,7 +168,7 @@ def get_module_loggers(mod_name):
 
 def get_logfile(not_logging=False, logpath=None, outdir=None,
         create_dirs=True, no_clobber=False, sep='_'):
-    """Returns the name to the logfile
+    """Returns the full path to a logfile for each program run.
 
     Checks whether a logfile is needed, and, if so, whether the desired
     file exists. If the specified dir does not exist, makes the dir
@@ -116,16 +178,13 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
     specified, creates a generic logfile in 'outdir'.
 
     Args:
-        logging (bool): whether a logfile is needed
-
-        logpath (str): specified name/path for logfile
-
-        outdir (str): path to directory for output files
-
-        create_dirs (bool): whether to create missing directories
-
+        not_logging (bool): If the user has specified not to log.
+            Default to False.
+        logpath (str): Specified name/path for the logfile.
+        outdir (str): Full path to the directory for output files.
+        create_dirs (bool): Whether to create missing directories.
+            Default to True.
         no_clobber (bool): whether to overwrite existing files
-
         sep (str): separator for filenames
 
     Returns:
@@ -175,14 +234,29 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
 
 
 def _get_temp_log_path():
-    """Returns path to a closes temp object -> Should be removed"""
+    """Obtains the path to a temporary logfile.
+
+    Returns:
+        str: The full path to a temporary logfile. The file that the path
+            refers to should is closed and must be reopened.
+
+    """
     tmpfile = tempfile.NamedTemporaryFile(delete=False)  # Can close and not delete it
     tmpfile.close()  # Log handler trys to open file in mode='a'
     return tmpfile.name  # Path name
 
 
 def _get_generic_logname(sep='_'):
-    """Returns a string that should be unique"""
+    """Obtains a logfile name.
+
+    Args:
+        sep (str): The separator character used between name elements.
+            Defaults to '_'.
+
+    Returns:
+        str: The logfile name.
+
+    """
     now = datetime.datetime.now()
     fmtnow = ("{0:%Y-%m-%d-%H-%M-%S}".format(now))
     return sep.join(("scrollpy",fmtnow,"log.txt"))
@@ -192,15 +266,13 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
     """Log a message object to any number of loggers.
 
     Args:
-        msg_obj (obj): BraceMessage obj to log
-
+        msg_obj (obj): BraceMessage obj to log.
+        verbosity (int): The relative urgency of the message.
         level (string): Logging module level name, one of:
-            'DEBUG','INFO','WARNING','ERROR','CRITICAL'
-
-        *loggers (obj): one or more loggers to log the msg_obj
-
-        # exc_info (tuple): exception information
-        exc_obj (obj): Exception object from a handling block
+            'DEBUG','INFO','WARNING','ERROR','CRITICAL'.
+        *loggers: One or more loggers to log the msg_obj.
+        exc_obj (obj): Exception object from a handling block.
+            Defaults to None.
 
     """
     if exc_obj:  # logging an exception
@@ -241,11 +313,11 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
 
 
 def log_newlines(*loggers, number=1):
-    """
-    Log a blank line on one or more loggers.
+    """ Log one or more blank lines on one or more loggers.
 
     Args:
-        *loggers: one or more loggers to log a newline
+        *loggers: One or more loggers to log a newline.
+        number (int): The number of newlines to log. Defaults to 1.
 
     """
     if number < 1:
@@ -275,20 +347,29 @@ def log_newlines(*loggers, number=1):
 
 
 class StreamOverwriter(StreamHandler):
-    """
-    Subclass built-in StreamHandler to enable writing to the screen
-    in place for status updates/messages, etc.
+    """Subclasses logging.StreamHandler to write in place.
+
+    Standard logging handlers append newline characters to each logged
+    message internally. Subclassing and replacing the StreamHandler's
+    terminator attribute overrides this behaviour.
+
+    Attributes:
+        terminator (str): Terminating character for logged messages.
+
     """
 
     terminator='\r'
 
     def emit(self, record):
-        """
-        Emit a record.
+        """ Emit a record.
 
-        Follows exact same logic as original StreamHandler, but uses
-        '\r' instead of '\n' as writing terminator and provides some
+        Follows exact same logic as the original StreamHandler, but uses
+        '\r' instead of '\n' as the line terminator and provides some
         additional logic to fill entire blank lines.
+
+        Args:
+            record (obj): A BraceMessage object, or other record object
+                that provides a __str__ method.
 
         """
         try:
@@ -307,13 +388,35 @@ class StreamOverwriter(StreamHandler):
 
 
 class BraceMessage:
-    """Hack to use {} style formatting in Logging.
+    """Provides a message class for logging that uses brace formatting.
 
-    Bonus advantage is that it can be unpacked with more
-    ease and handled in filtering classes.
+    When logged, the __str__ method is called, allowing the class to
+    handle all of the necessary string formatting prior to the handler
+    emitting the record.
 
-    When logged, the __str__ method is called in place of
-    trying to format a plain string message.
+    Args:
+        msg (str): The string message to be logged, may or may not contain
+            brace-style formatted values.
+        *args: If the passed msg has brace placeholders, *args will be
+            used to replace each in positional order.
+        newline (bool): Whether the logging call is intended just to write
+            one or more newlines. Defaults to False.
+        exception (bool): Whether the message contains exception information.
+            Defaults to False.
+        lines (list): Information to write that is passed as a list rather
+            than as a single string. Default to [].
+        **kwargs: If the passed msg has named brace placeholders, **kwargs
+            will be used to replace each.
+
+    Attributes:
+        msg (str): A string message to be logged.
+        lines (list): A list of strings to be logged. May be empty.
+        newline (bool): Whether newlines are being logged.
+        exception (bool): Whether exception information is being logged.
+        args: Values to be used for string formatting.
+        kwargs: Values to be used for string formatting.
+        wrapped: Stores a message that has been processed by a handler.
+
     """
     def __init__(self, msg, *args, newline=False, exception=False, lines=[], **kwargs):
         self.msg = msg
@@ -326,7 +429,7 @@ class BraceMessage:
 
 
     def __str__(self):
-        """Writes formatted string if possible; msg if not"""
+        """Writes a formatted string if possible; self.msg if not"""
         if self.wrapped:
             return self.wrapped
         else:
@@ -339,7 +442,7 @@ class BraceMessage:
 
 
     def get_msg(self):
-        """Hide underlying interface"""
+        """Simple access method for external handlers"""
         return self.msg
 
 
@@ -349,12 +452,12 @@ class BraceMessage:
 
 
     def has_lines(self):
-        """Hide underlying interface"""
+        """Simple access method for external handlers"""
         return len(self.lines) > 0
 
 
     def get_lines(self):
-        """Hide underlying interface"""
+        """Simple access method for external handlers"""
         return self.lines
 
 
@@ -362,10 +465,14 @@ class GenericFilter:
     """Baseclass for each other Filter class to inherit from.
 
     Args:
-        verbosity (int): argument specifying the filtering level
+        verbosity (int): Specifies the filtering level.
+        silent (bool): Whether to produce output. Defaults to False.
+        width (int): Width to wrap text to. Defaults to 78.
 
-        silent (bool): if True, no output is produced, regardless
-            of verbosity
+    Attributes:
+        verbosity (int): Desired output level for filtering.
+        silent (bool): If True, filter produces no output.
+        width (int): The width that text will be wrapped to.
 
     Methods:
         filter (self, record): wrap message and return it, along with
@@ -380,7 +487,20 @@ class GenericFilter:
 
 
     def filter(self, record):
-        """Filter message based on set verbosity"""
+        """Filter a record message based on set verbosity
+
+        If a message has a lower verbosity level than the instance value,
+        wrap the message and return it to be passed onto the Handler.
+
+        Args:
+            record (obj): A BraceMessage object.
+
+        Returns:
+            bool: False is silent is set to True or if the record's
+                verbosity level is higher than the set value. Otherwise,
+                modify the record message and return True.
+
+        """
         if self.silent:
             return False
         elif record.vlevel <= self.verbosity:  # Opposite of logging levels
@@ -400,7 +520,17 @@ class GenericFilter:
 
 
     def _get_text_wrapper(self, width=None, header='ScrollPy'):
-        """Returns a wrapper for subsequent use on text"""
+        """Obtains a text wrapping object for use on formatted text.
+
+        Args:
+            width (int): Specified width for text. Defaults to None.
+            header (str): A header that has been added to the text, if
+                necessary. Defaults to 'ScrollPy'.
+
+        Returns:
+            obj: An instance of textwrap.TextWrapper to wrap text.
+
+        """
         if not width:
             width = self.width
         return textwrap.TextWrapper(
@@ -426,7 +556,10 @@ class ConsoleFilter(GenericFilter):
 
     By default, wraps string to 78 characters.
 
-    Only includes a leader for WARNING or ERROR, not info
+    Only includes a leader for WARNING or ERROR, not info.
+
+    For more documentation, see baseclass docstring.
+
     """
     def __init__(self, verbosity, silent=False):
         term_width = _get_current_terminal_width()
@@ -434,14 +567,11 @@ class ConsoleFilter(GenericFilter):
 
 
     def _modify_message(self, record):
-        """Writes to stderr based on record.level:
+        """Modify a message appropriately.
 
-            INFO    -> no header
-            WARNING -> header
-            ERROR   -> header + traceback?
+        Args:
+            record (obj): The BraceMessage object to filter.
 
-        Uses textwrap.fill() to create a single line for writing; which
-        is set to the 'formatted' attr of the Message object.
         """
         # if record.exc_info:  # Has exception info
         if record.msg.exception:
@@ -454,7 +584,19 @@ class ConsoleFilter(GenericFilter):
 
 
     def _format_message(self, record):
-        """Add a nice header to each message for console output"""
+        """Handle message formatting and wrapping.
+
+        If the record is a newline, simply add the empty string to the
+        record's wrapped attribute. Otherwise, add a header (if the level
+        is 'WARNING' or 'ERROR', and then wrap text.
+
+        Uses textwrap.fill() to create a single line for writing; which
+        is set to the 'wrapped' attr of the Message object.
+
+        Args:
+            record (obj): The BraceMessage object to format.
+
+        """
         _message = record.msg.get_msg()
         # If newline, don't add anything
         if record.msg.newline:
@@ -470,7 +612,22 @@ class ConsoleFilter(GenericFilter):
 
 
     def _add_header(self, level, string):
-        """Adds a header to a string"""
+        """Adds a header to the string based on the message level.
+
+        The message is modified based on the level:
+
+            INFO    -> no header
+            WARNING -> header
+            ERROR   -> header + traceback?
+
+        Args:
+            level (int): The message's associated logging level.
+            string (str): The string to add a header to.
+
+        Returns:
+            str: Same as input string, but with a header prepended.
+
+        """
         if level == 'INFO':
             header = 'ScrollPy: '
         elif level == 'WARNING':
@@ -482,8 +639,14 @@ class ConsoleFilter(GenericFilter):
         return (header,formatted)
 
 
+    # Is this necessary?
     def _format_lines(self, record):
-        """Useful for exception or other collection-based messages"""
+        """Formats multiple lines into a single message.
+
+        Args:
+            record (obj): A BraceMessage object to format.
+
+        """
         firstline = True
         to_join = []
         for line in record.msg.get_lines():
@@ -500,33 +663,19 @@ class ConsoleFilter(GenericFilter):
 
 
     def _format_exception(self, record):
-        """Takes captured traceback info and formats it nicely"""
-        # Capture just the end part of the file extension
+        """Formats an exception to display only some information.
+
+        Captured exception information is already stored in the record's
+        lines attribute. Extract only the associated msg attribute from
+        the original exception and format it.
+
+        Args:
+            record (obj): A BraceMessage object to format.
+
+        """
         lines = record.msg.get_lines()
         exc_msg = lines[-1]  # Last element
-        # raw_location = lines[0].rstrip().lstrip()
-        # basename,module = os.path.split(raw_location)
-        # # Shorten basename to scrollpy package only
-        # short_baselist = []
-        # prev_name = None
-        # for name in basename.split(os.path.sep)[::-1]:  # In reverse order
-        #     if prev_name == 'scrollpy':
-        #         if name != 'scrollpy':
-        #             break  # Reached top of package dir
-        #     # Otherwise, continue
-        #     short_baselist.append(name)
-        #     prev_name = name
-        # # Reverse short_basename to run in normal dir order
-        # short_baselist.reverse()
-        # # Add the module name
-        # short_baselist.append(module)
-        # # Finally, get proper representation
-        # short_basename = os.path.sep.join(short_baselist)
-        # # Line number is found as second element
-        # line_num = lines[1].rstrip().lstrip()
-        # added_msg = " ; Error occurred in {} at {}".format(
-        #         short_basename, line_num)
-        # # Add to the original message object
+        # Add to the original message object
         _message = record.msg.get_msg()
         message = _message + exc_msg
         record.msg.msg = message
@@ -537,9 +686,10 @@ class ConsoleFilter(GenericFilter):
 class FileFilter(GenericFilter):
     """Class to handle logging messages to a logfile.
 
-    By default, wraps string to 92 characters.
+    By default, wraps string to 128 characters.
 
     Similar to ConsoleLogger.
+
     """
     def __init__(self, verbosity, silent=False):
         GenericFilter.__init__(self, verbosity, silent)
@@ -547,10 +697,11 @@ class FileFilter(GenericFilter):
 
 
     def _modify_message(self, record):
-        """Writes to file based on standard logging formatting:
+        """Modify a message appropriately.
 
-        Uses textwrap.fill() to create a single line for writing; which
-        is set to the 'formatted' attr of the Message object.
+        Args:
+            record (obj): The BraceMessage object to filter.
+
         """
         if record.exc_info:  # Has exception info
             self._format_exception(record)
@@ -562,7 +713,19 @@ class FileFilter(GenericFilter):
 
 
     def _format_message(self, record):
-        """Simply wraps the message"""
+        """Handle message formatting and wrapping.
+
+        If the record is a newline, simply add the empty string to the
+        record's wrapped attribute. Otherwise, add a header (if the level
+        is 'WARNING' or 'ERROR', and then wrap text.
+
+        Uses textwrap.fill() to create a single line for writing; which
+        is set to the 'wrapped' attr of the Message object.
+
+        Args:
+            record (obj): The BraceMessage object to format.
+
+        """
         _message = record.msg.get_msg()
         # Do not apply formatting if newline
         if record.msg.newline:
@@ -578,16 +741,26 @@ class FileFilter(GenericFilter):
 
 
     def _get_header(self, record):
-        """Don't need header, except for length
+        """Obtains a full header that mirrors rich formatting.
 
-        Format is fmt = "{} | {} | {} | {}".format(asctime, name, levelname, message),
-        datefmt = '%Y-%m-%d %H:%M:%S',
-        typically something like:
+        In order for the text wrapping to work properly, need to obtain
+        a string that is the same as the rich_format Formatter defined in
+        this module.
+
+        Format is fmt = "{} | {} | {} | {}".format(
+            asctime, name, levelname, message)
+        Where the datefmt = '%Y-%m-%d %H:%M:%S'.
+
+        This is typically something like:
 
         XXXX-XX-XX ZZ-ZZ-ZZ file.root.module WARNING <msg>
 
-        Although it will not get printed, need an accurate representation of
-        the actual header's length in order to print over multiple lines.
+        Args:
+            record (obj): A BraceMessage object to be formatted.
+
+        Returns:
+            str: A string representing the corresponding header in the
+                logfile; importantly, it has the same length.
 
         """
         # return record.name
@@ -601,7 +774,12 @@ class FileFilter(GenericFilter):
 
 
     def _format_lines(self, record):
-        """Useful for exception or other collection-based messages"""
+        """Formats multiple lines into a single message.
+
+        Args:
+            record (obj): A BraceMessage object to format.
+
+        """
         header = self._get_header(record)
         joined = ' '.join(record.msg.get_lines())
         record.msg.add_wrapped(self._get_text_wrapper(
@@ -609,7 +787,16 @@ class FileFilter(GenericFilter):
 
 
     def _format_exception(self, record):
-        """Takes captured traceback info and formats it nicely"""
+        """Formats an exception to include all of the information.
+
+        Captured exception information is already stored in the record's
+        lines attribute. Unlike ConsoleFilter class, FileFilter objects
+        will simply format all captured information.
+
+        Args:
+            record (obj): A BraceMessage object to format.
+
+        """
         # Simple; just call _format_lines
         self._format_lines(record)
 
@@ -617,7 +804,8 @@ class FileFilter(GenericFilter):
 class OutputFilter(GenericFilter):
     """Class to handle logging third party program output to log/stderr.
 
-    Very simple - just return as 'formatted'
+    Very simple - just return as 'formatted'.
+
     """
     def __init__(self, verbosity, silent=False):
         GenericFilter.__init__(self, verbosity, silent)
@@ -625,8 +813,6 @@ class OutputFilter(GenericFilter):
 
     def _modify_message(self, record):
         """Even simpler than FileFilter, just return"""
-        #message = record.msg.get_msg()  # Should be piped output
-        #record.msg.add_wrapped(message)
         pass
 
 

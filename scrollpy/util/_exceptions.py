@@ -1,11 +1,12 @@
-"""
-Contains exception classes for Scrollpy.
+"""Contains exception classes for use throughout ScrollPy."""
 
-"""
 
 class ScrollPyError(Exception):
-    """
-    Catch-all exception for errors specific to the ScrollPy library.
+    """Baseclass for all exceptions specific to the ScrollPy library.
+
+    Args:
+        msg (str): A message to be stored within the instance.
+            Default None.
 
     """
     def __init__(self, msg=None):
@@ -16,10 +17,13 @@ class ScrollPyError(Exception):
 
 
 class FatalScrollPyError(ScrollPyError):
-    """
-    Raised from within other code blocks to signal that an error has
-    occurred that cannot be recovered and the program should run any
-    cleanup code before exiting.
+    """Error indicating that the program should terminate execution.
+
+    Raised from within other blocks of code to signal the program to clean
+    up and halt further execution.
+
+    Note:
+        Should only ever be caught by main().
 
     """
     def __init__(self, msg=None):
@@ -29,9 +33,18 @@ class FatalScrollPyError(ScrollPyError):
 
 
 class DuplicateSeqError(ScrollPyError):
-    """
+    """Error indicating the presence of redundant sequences.
+
     Raised during sequence mapping when two or more labels are mapped to
-    the same sequence object.
+    the same sequence object. These labels may or may not refer to the
+    same (identical) sequences, but their mapping is not unique.
+
+    Args:
+        seq_name (str): Name of the duplcate sequence detected.
+        msg (str): Optional message (see baseclass). Default None.
+
+    Attributes:
+        seq_name (str): Name of the duplicate sequence detected.
 
     """
     def __init__(self, seq_name, msg=None):
@@ -43,8 +56,19 @@ class DuplicateSeqError(ScrollPyError):
 
 
 class ValidationError(ScrollPyError):
-    """
-    Raised during parameter validation.
+    """Error indicating that a parameter has failed a validation call.
+
+    Raised from code blocks that perform validation on input parameters
+    during program execution.
+
+    Args:
+        param (str): The name of the parameter passed.
+        value: The value passed for the parameter. The parameter type is
+            not set and will depend on the calling context.
+
+    Attributes:
+        param (str): The name of the parameter passed.
+        value: The value passed for the parameter.
 
     """
     def __init__(self, param, value, msg=None):

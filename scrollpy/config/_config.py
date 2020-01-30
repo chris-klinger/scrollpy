@@ -9,6 +9,7 @@ from configparser import DuplicateSectionError
 from configparser import DuplicateOptionError
 
 from scrollpy import scroll_log
+from scrollpy import FatalScrollPyError
 
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -26,9 +27,21 @@ config = ConfigParser(
 
 
 def load_config_file():
-    """Populates config values"""
+    """Populates internal config dictionary based on file.
+
+    Open the configuration file and use it to populate config values. This
+    variable is imported by other modules during program execution to
+    provide user-specified values and/or sensible defaults.
+
+    Raises:
+        FatalScrollPyError: Raised if the specified config file cannot be
+            opened, or if any duplicate sections and/or options are found
+            in the file.
+
+    """
     scroll_log.log_message(
-            scroll_log.BraceMessage("Loading config information from {}",config_file),
+            scroll_log.BraceMessage(
+                "Loading config information from {}", config_file),
             2,
             'INFO',
             console_logger, file_logger,
@@ -42,19 +55,20 @@ def load_config_file():
     except IOError as ie: # Could not find file
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not find or open config file; exiting"),
+                    "Could not find or open config file."),
                 1,
                 'ERROR',
                 console_logger, file_logger,
                 exc_info=True,
                 )
-        sys.exit(0)
+        # sys.exit(0)
+        raise FatalScrollPyError
     # Check for duplicates
     except DuplicateSectionError as dse:
         dupliate_sections.append(dse.section)
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Dupliate config section {} detected\n", dse.section),
+                    "Dupliate config section {} detected.", dse.section),
                 1,
                 'ERROR',
                 console_logger, file_logger,
@@ -63,7 +77,7 @@ def load_config_file():
         dupliate_options.append(doe.option)
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Dupliate config option {} detected\n", doe.option),
+                    "Dupliate config option {} detected.", doe.option),
                 1,
                 'ERROR',
                 console_logger, file_logger,
@@ -82,7 +96,8 @@ def load_config_file():
                 'ERROR',
                 console_logger, file_logger,
                 )
-        sys.exit(0)
+        # sys.exit(0)
+        raise FatalScrollPyError
     # Duplicate setions only
     elif duplicate_sections:
         scroll_log.log_message(
@@ -94,7 +109,8 @@ def load_config_file():
                 'ERROR',
                 console_logger, file_logger,
                 )
-        sys.exit(0)
+        # sys.exit(0)
+        raise FatalScrollPyError
     # Duplicate options only
     elif duplicate_options:
         scroll_log.log_message(
@@ -106,6 +122,6 @@ def load_config_file():
                 'ERROR',
                 console_logger, file_logger,
                 )
-        sys.exit(0)
-
+        # sys.exit(0)
+        raise FatalScrollPyError
 

@@ -14,11 +14,12 @@ def parse_distance_file(file_path, file_type):
 
     Args:
         file_path (str): Path to file with distances to parse.
-        file_type (str): Name of the program that generated
-            the distances. For details, see DistanceCalc class.
+        file_type (str): Name of the program that generated the
+            distances. For details, see DistanceCalc class.
 
     Returns:
-        Dictionary of <name> : <distance> pairs
+        dict: A dictionary of <name>:<distance> pairs.
+
     """
     if file_type == 'RAxML':
         return _parse_raxml_distances(file_path)
@@ -38,7 +39,8 @@ def _parse_raxml_distances(file_path):
         file_path (str): Path to file with distances to parse.
 
     Returns:
-        Dictionary of <name> : <distance> pairs
+        dict: A dictionary of <name>:<distance> pairs.
+
     """
     distances = {}
     for line in non_blank_lines(file_path): # Generator

@@ -5,12 +5,14 @@ is unique, need to be able to store Class attribute count data across
 multiple instances of a class.
 """
 
-
+# TO-DO
+# RENAME CLASS NOT TO OVERRIDE collections.Counter
 class Counter:
-    """
-    Presents a Singleton-like interface for global counting. As many
-    instances as want can spawn and be tied to a single global class
-    attribute.
+    """Presents a Singleton-like interface for global counting.
+
+    As many instances as want can spawn and be tied to a single global
+    class attribute. All lookup and update calls are tied to the class
+    attribute and so are communicated across instances.
 
     """
 

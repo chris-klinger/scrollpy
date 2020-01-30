@@ -1,5 +1,9 @@
-"""
-Module to hold utility functions.
+"""Contains general utility functions for use throughout Scrollpy.
+
+There is no pattern to the functions included in this module, in terms of
+their function. Rather, they are used throughout other program modules and
+therefore are defined once rather than in multiple places.
+
 """
 
 import os
@@ -10,34 +14,36 @@ import math
 import datetime
 
 
-def file_exists_user_spec(file_path):
-    """If a file already exists that would be created, should warn the user
-    and give them the option to either delete the old file or keep it.
+# REMOVE?
+# def file_exists_user_spec(file_path):
+#     """If a file already exists that would be created, should warn the user
+#     and give them the option to either delete the old file or keep it.
 
-    Alternatively, if the file exists, could just quit instead?
+#     Alternatively, if the file exists, could just quit instead?
 
-    For now, provide all the options?
-    """
-    good_input = False
-    while not good_input:
-        spec = input("Target file {} exists; overwrite? (y/Y/n/N/q/Q) --> ".format(
-            file_path))
-        spec = spec.strip() # Remove all whitespace
-        if spec in ('y','Y','n','N','q','Q'):
-            break
-    if spec in ('q','Q'): # Exit requested, do immediately
-        sys.exit("Quit execution; {} exists".format(file_path))
-    return spec # Otherwise, let caller decide what to do
+#     For now, provide all the options?
+#     """
+#     good_input = False
+#     while not good_input:
+#         spec = input("Target file {} exists; overwrite? (y/Y/n/N/q/Q) --> ".format(
+#             file_path))
+#         spec = spec.strip() # Remove all whitespace
+#         if spec in ('y','Y','n','N','q','Q'):
+#             break
+#     if spec in ('q','Q'): # Exit requested, do immediately
+#         sys.exit("Quit execution; {} exists".format(file_path))
+#     return spec # Otherwise, let caller decide what to do
 
 
 def file_exists(file_path):
-    """Checks whether a file exists
+    """Checks whether a file exists.
 
     Args:
-        file_path (str): Full path to file to check
+        file_path (str): Full path to the file to check.
 
     Returns:
-        True if file exists; False otherwise
+        True if the file exists; False otherwise.
+
     """
     if os.path.isfile(file_path):  # Specifically a FILE
         return True
@@ -45,13 +51,14 @@ def file_exists(file_path):
 
 
 def dir_exists(dir_path):
-    """Checks whether a directory exists
+    """Checks whether a directory exists.
 
     Args:
-        dir_path (str): Full path to dir to check
+        dir_path (str): Full path to the directory to check.
 
     Returns:
-        True if dir exists; False otherwise
+        True if the directory exists; False otherwise.
+
     """
     if os.path.isdir():  # Specifically a DIR
         return True
@@ -59,13 +66,14 @@ def dir_exists(dir_path):
 
 
 def ensure_dir_exists(dir_path):
-    """Given a path, try to make it; quit execution if not possible.
+    """Given a path, try to make it.
 
     Args:
-        dir_path (str): Full path to directory to make
+        dir_path (str): Full path to the directory to make.
 
-    Returns:
-        None; may raise OSError
+    Raises:
+        OSError: directory already exists or creation failed.
+
     """
     try:
         os.makedirs(dir_path)
@@ -81,14 +89,14 @@ def get_nonredundant_filepath(dir_path, filename, suffix=1):
     """Given a directory and a filename, return a unique filename.
 
     Args:
-        dir_path (str): full path to the directory
-
-        filename (str): name of file to check
-
-        suffix (int): integer value to append to create unique filenames
+        dir_path (str): Full path to the directory.
+        filename (str): Name of the file to check.
+        suffix (int): Integer value to append to create unique filenames.
+            Defaults to 1.
 
     Returns:
-        Full path to unique filename
+        The full path to a unique filename.
+
     """
     test_path = os.path.join(dir_path, filename)
     if not os.path.isfile(test_path):
@@ -107,10 +115,11 @@ def check_input_paths(*paths):
     """Checks a series of paths for existence.
 
     Args:
-        *paths (str): One or more (full) paths to check
+        *paths (str): One or more (full) paths to check.
 
     Returns:
-        (Possibly empty) list of non-existent filepaths
+        list: A list of non-existent filepaths. May be empty.
+
     """
     bad_paths = []
     for path in paths:
@@ -123,10 +132,11 @@ def check_duplicate_paths(*paths):
     """Checks a series of paths for duplicates.
 
     Args:
-        *paths (str): One or more (full) paths to check
+        *paths (str): One or more (full) paths to check.
 
     Returns:
-        (Possibly empty) list of duplicate filepaths
+        list: A list of duplicate filepaths. May be empty.
+
     """
     seen = set()
     duplicates = []
@@ -139,13 +149,15 @@ def check_duplicate_paths(*paths):
 
 
 def non_blank_lines(file_handle):
-    """Function to generate lines with characters.
+    """Creates a generator of non-empty lines in a file.
 
     Args:
-        file_handle (str): Path to file (not open file object)
+        file_handle (str): Full path to the file.
 
-    Returns:
-        iterator of all lines that are not '\n'.
+    Yields:
+        str: The next non-empty line in the file.
+            Empty lines have only carriage returns, e.g. `\n`.
+
     """
     with open(file_handle,'r') as i:
         for line in i:
@@ -155,17 +167,18 @@ def non_blank_lines(file_handle):
 
 
 def modify_model_name(model, program):
-    """
-    Returns an appropriate string for an evolutionary model based on
-    the program that is applying the model.
+    """Modifies the name of an evolutionary model for use in a program.
+
+    Some phylogenetic programs take model inputs in a format that
+    requires more than just the model name itself (for example, RAxML
+    modifies protein models with `PROTGAMMA` or similar).
 
     Args:
-        model (str): name of the evolutionary model
-
-        program (str): name of the program
+        model (str): The name of the evolutionary model to modify.
+        program (str): The name of the program that will use the model.
 
     Returns:
-        (str) model name for use in program call
+        str: The modified model name for use in program call.
 
     """
     prot_models = ['LG', 'WAG']
@@ -180,14 +193,20 @@ def modify_model_name(model, program):
 def split_input(string, chunk_size=80):
     """Splits a string into a series of substrings.
 
+    Sometimes writing long strings (like sequences) to output files would
+    result in lines that run off a standard terminal window. This splits a
+    long string into separate strings of at most a given length. The final
+    sub-string is often less than the specified size.
+
     Args:
-        string (str): String to split
-        chunk_size (int): Length of sub-strings to return. Returns the
-            original string if greater than the strings length. If not,
-            the final sub-string is at most chunk_size long. Default:80.
+        string (str): String to split.
+        chunk_size (int): Length of sub-strings to return. Default 80.
 
     Returns:
-        A list of sub-strings.
+        list: A list of strings. If the input string is the same length or
+            shorter than chunk_size, the list has only one item. If not,
+            the final sub-string is at most chunk_size long.
+
     """
     num_chunks = len(string)//chunk_size # // floor division to emulate python 2 behaviour
     if (len(string) % chunk_size != 0):
@@ -201,9 +220,31 @@ def split_input(string, chunk_size=80):
 
 
 def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
-    """Recursively flatten a list of tuple identifiers to find all those that
-    are at least <threshold> percent identical to at least one other member of
-    the same set.
+    """Merges sets of tuples based on comparing tuple members.
+
+    Recurisvely flatten tuples within a set by comparing each member of a
+    tuple with each member of every other tuple. If the membership test
+    passes, the two tuples are merged (ignoring any additional redundant
+    members).
+
+    Allows for pairwise comparisons of similarity between all members of a
+    large group (for example, sequences in an alignment), to be grouped
+    into the largest possible groups in which each member has at least one
+    other member that is at least X% similar to each other, depending on
+    the functional call used to generate the original pair-wise tuples.
+
+    Args:
+        set_of_tuples (set): A set of tuples to process.
+        old_set_of_tuples(set): Holds a reference to the previous value
+            of set_of_tuples during recursive calls. Default None.
+        merged (set): Avoids aggregating redundant new tuples during
+            each recursive call. Default None.
+
+    Returns:
+        set: The final set of merged tuples. The number of tuples in the
+            final set is bounded as 1<n<O, where O is the number of
+            tuples in the original set passed as a function argument.
+
     """
     # Recurred versions or initialize new set
     old_set_of_tuples = old_set_of_tuples if old_set_of_tuples else set()
@@ -242,9 +283,16 @@ def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
         return decompose_sets(new_set_of_tuples,set_of_tuples,merged)  # Recur
 
 
+# This could probably be replaced by itertools.chain()
 def flatten_dict_to_list(input_dict):
-    """Simply steps through all key,value pairs and adds them
-    to a flat list
+    """Gathers all values from across dictionary keys.
+
+    Args:
+        input_dict (dict): A dictionary to flatten.
+
+    Returns:
+        list: A list of all values across dictionary keys.
+
     """
     out_list = []
     for _,v in input_dict.items():
@@ -254,15 +302,19 @@ def flatten_dict_to_list(input_dict):
 
 
 def time_list(t_delta):
-    """
-    Returns a tuple of time increments from a timedelta object.
+    """Returns a tuple of time increments from a timedelta object.
+
+    By implementation, datetime.timedelta objects in Python only store
+    days, seconds, and microseconds. In order to output total runtime to
+    users in a more friendly way, need to convert these values to smaller
+    increments (e.g. minutes, hours, etc.).
 
     Args:
-        t_delta (obj): A datetime.timedelta object
+        t_delta (obj): A datetime.timedelta object.
 
     Returns:
-        times (tuple): A tuple of time increments in order:
-            days, hours, minutes, seconds, microseconds
+        tuple: A tuple of time increments in order of
+            days, hours, minutes, seconds, and microseconds.
 
     """
     hours = 0
@@ -281,14 +333,13 @@ def time_list(t_delta):
 
 
 def calculate_real_time(t_delta):
-    """
-    Calculates minutes and hours from a timedelta object.
+    """ Calculates minutes and hours from a timedelta object.
 
     Args:
-        t_delta (obj): A datetime.timedelta object
+        t_delta (obj): A datetime.timedelta object.
 
     Returns:
-        times (tuple): A tuple of hours, minutes, seconds
+        tuple: A tuple of hours, minutes, and seconds.
 
     """
     seconds = t_delta.seconds
@@ -304,17 +355,15 @@ def calculate_real_time(t_delta):
 
 
 def _split_time(value, divisible=60):
-    """
-    Splits time values to get a whole and remainder.
+    """ Splits time values to get a whole and remainder.
 
     Args:
-        value (int): An initial value for the smaller increment
-
-        divisible (int): The number of small increments in the larger
-            default: 60
+        value (int): An initial value for the smaller increment.
+        divisible (int): The number of smaller increments required to make
+            up one larger increment. Default 60.
 
     Returns:
-        values (tuple): A tuple of whole, remainder increment values
+        tuple: A tuple of whole, remainder increment values.
 
     """
     d_value = value/divisible  # Create a float no matter what

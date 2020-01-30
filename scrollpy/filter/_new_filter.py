@@ -36,11 +36,10 @@ class Filter:
     """Main class to handle filtering ScrollSeq objects by length.
 
     Args:
-        seq_dict (dict): Dictionary of 'group':[<ScrollSeq>s] pairs to filter
-
-    Returns:
-        two dictionaries; the input dictionary with sequences removed, and
-        a similar dictionary of removed sequences.
+        seq_dict (dict): Dictionary of <group>:[<ScrollSeqs>] pairs to
+            filter.
+        **kwargs: If specified, contains information dictating how
+            filtering occurs; defaults to config values.
 
     """
 
@@ -54,6 +53,7 @@ class Filter:
             )
 
     def __init__(self, seq_dict, **kwargs):
+        """Sets values by arguments or through config."""
         self._seq_dict = seq_dict
         for var in _config_vars:
             try:
@@ -81,7 +81,17 @@ class Filter:
 
 
     def __call__(self):
-        """Filter and return"""
+        """Performs filtering and returns filtered and removed sequences.
+
+        Calls an instance of LengthFilter or IdentityFilter based on the
+        filtering method and calls the resulting instance to actually
+        perform the filtering.
+
+        Returns:
+            dict: Two dictionaries; the input dictionary with sequences
+            removed, and a similar dictionary of removed sequences.
+
+        """
         # First, determine appropriate subclass to call
         if self._filter_method.upper() in length_methods:
             filterer = LengthFilter
@@ -116,19 +126,36 @@ class Filter:
 
 
     def return_remaining_seqs(self):
-        """Returns all sequences not removed as a dict"""
+        """Returns all sequences not removed as a dict.
+
+        Simple access method for outside calls.
+
+        Returns:
+            dict: Original sequences remaining after filtering.
+
+        """
         return self._seq_dict
 
 
     def return_removed_seqs(self):
-        """Returns all sequences removed as a dict"""
+        """Returns all sequences removed as a dict.
+
+        Simple acccess method for outside calls.
+
+        Returns:
+            dict: Sequences removed during filtering.
+
+        """
         return self._removed
 
 
     def _remove_by_list(self):
-        """Given a list of (<SeqObj>,<score>) tuples to remove,
-        try to remove each from internal dict and add to removal dict;
-        fails only if too many entries for a given group exist.
+        """Remove values identified by filtering.
+
+        Given a list of (<SeqObj>,<score>) tuples to remove, try to remove
+        each from internal dict and add to removal dict. If too many
+        entries for a given group exist, log a warning and pass silently.
+
         """
         for r_obj,score in self._to_remove:  # Assume subclass returns sorted
             group = self._get_group_for_seq_obj(r_obj)
@@ -156,9 +183,20 @@ class Filter:
                         file_logger,
                         )
 
-
+    # Do we need this? -> SeqObj should have a ._group attribute!
     def _get_group_for_seq_obj(self, seq_obj):
-        """Iters through internal dict until found"""
+        """Identifies the group for a given sequence object.
+
+        Iterates through the internal dict until the sequence object is
+        found, and then returns the corresponding group.
+
+        Args:
+            seq_obj: Sequence object.
+
+        Returns:
+            str: The name of the group the object is in.
+
+        """
         group=None
         for group,objs in self._seq_dict.items():
             if seq_obj in objs:
@@ -168,7 +206,18 @@ class Filter:
 
 
     def _group_lengths_ok(self, group):
-        """Checks if removing an item would reduce group length below threshold"""
+        """Determines whether more sequences could be removed from a group.
+
+        Checks if removing an item would reduce the number of items in the
+        group below a set threshold.
+
+        Args:
+            group (str): The name of the group.
+
+        Returns:
+            bool: True if more sequences can be removed; False otherwise.
+
+        """
         if len(self._seq_dict[group]) > self._filter_threshold:
             return True  # > not >= because this is prior to removal!
         return False
@@ -178,11 +227,10 @@ class GenericFilter:
     """Generic subclass that defines methods for returning indices.
 
     Args:
-        seq_objs (list): List of ScrollSeq objects for filtering
+        seq_objs (list): List of ScrollSeq objects for filtering.
+        method (str): The method to use for filtering.
+        **kwargs: Optional additional parameters for filtering.
 
-    Returns:
-        a single list of (<group>,<SeqObj>,<value>) members for use in
-        parent classes removal methods.
     """
     def __init__(self, seq_list, method, **kwargs):
         self._seq_list = seq_list
@@ -213,18 +261,29 @@ class GenericFilter:
                 )
 
     def __call__(self):
-        """Implement in subclass"""
+        """Implement in subclass.
+
+        Each call method should perform filtering and return a list of
+        sequences for the calling class to remove.
+
+        Returns:
+            list: A single list of (<group>,<SeqObj>,<value>) members for
+            use in parent class removal methods.
+
+        """
         raise NotImplementedError
 
 
 class LengthFilter(GenericFilter):
     """Subclass for filtering by length.
+
+    Uses raw sequence lengths and a distribution to determine those that
+    are significantly different from the average.
+
     """
 
     def __call__(self):
-        """Create a list of lengths, calculate based on self._method,
-        and then populate internal _to_remove list.
-        """
+        """Filter based on length."""
         # Create lengths
         self._create_lengths()
         # Calculate the metrics and populate internal list
@@ -235,7 +294,16 @@ class LengthFilter(GenericFilter):
 
 
     def _create_lengths(self, ordered=False):
-        """Populate internal _lengths and _indices"""
+        """Obtains the lengths for all sequence objects.
+
+        Populates internal _lengths and _indices. Sequences may either
+        be sorted by length, or added in the input order.
+
+        Args:
+            ordered (bool): Whether to sort sequences by length.
+                Defaults to False.
+
+        """
         unordered = []
         for seq_obj in self._seq_list:  # ScrollSeq objects
             unordered.append([seq_obj,len(seq_obj)])
@@ -250,7 +318,15 @@ class LengthFilter(GenericFilter):
 
 
     def _get_removal_indices(self, values):
-        """Add to internal list if values are above a threshold"""
+        """Obtain indices of values to remove based on a threshold.
+
+        For each value that exceeds the threshold, add to the internal
+        self._to_remove attribute.
+
+        Args:
+            values (list): List of calculated values for filtering.
+
+        """
         above = [(i,v) for i,v in enumerate(values) if v>=self._filter_score]
         for i,zscore in above:  # Index matches the original length and indices lists
             seq_obj,length = self._indices[i]
@@ -270,7 +346,17 @@ class LengthFilter(GenericFilter):
 
     @staticmethod
     def calculate_zscore(values, absval=True):
-        """Return an n-length list of z-scores"""
+        """Calculates Z-scores for sequence lengths.
+
+        Args:
+            values (list): Sequence lengths to calculate Z-scores.
+            absval (bool): Whether to return |zscore| or the raw zscore,
+                i.e. whether to ensure zscores are positive. Defaults to True.
+
+        Returns:
+            list: A list of calculated Z-scores.
+
+        """
         smean = mean(values)
         s = std(values)
         if absval:
@@ -280,7 +366,7 @@ class LengthFilter(GenericFilter):
 
 
     def _remove_by_zscore(self):
-        """Calculates z-scores and removes all above a given threshold"""
+        """Calculates z-scores and removes all above a given threshold."""
         zscores = calculate_zscores(self._lengths)
         self._get_removal_indices(zscores)
 
@@ -288,18 +374,34 @@ class LengthFilter(GenericFilter):
     @staticmethod
     def calculate_mad(values):
         """Return an n-length list of modified z-scores"""
-        pass
+        pass  # TO-DO
 
 
     def _remove_by_mad(self):
         """Calculates modified z-scores and removes all above a given threshold"""
-        pass
+        pass  # TO-DO
 
 
 class IdentityFilter(GenericFilter):
-    """Subclass for filtering by inter-sequence similarity.
+    """Subclass for filtering by sequence similarity.
+
+    Applies pairwise sequence similarities to build up a set of all
+    sequences that are above a certain similarity score. These are then
+    decomposed into a smaller number of larger sequence groups.
+
     """
     def __init__(self, seq_list, method, outdir=None, **kwargs):
+        """Delegates to BaseClass.
+
+        Similar to the BaseClass __init__ method, but allows an additional
+        <outdir> argument for producing aligned files between sequence
+        groups.
+
+        Args:
+            outdir (str): Optional full path to output directory. If not
+                specified, use a temporary directory. Defaults to None.
+
+        """
         super().__init__(seq_list, method, **kwargs)
         if not outdir:
             import tempfile
@@ -314,9 +416,7 @@ class IdentityFilter(GenericFilter):
 
 
     def __call__(self):
-        """Create a list of tuples and then reduce down to those to be
-        removed; add to internal list and then return.
-        """
+        """Filter based on similarity."""
         # Make sequence file
         self._make_tmp_seqfile()
         # Align
@@ -331,7 +431,12 @@ class IdentityFilter(GenericFilter):
 
 
     def _make_tmp_seqfile(self):
-        """Writes all ScrollSeq objects to a temporary outfile for aligning
+        """Writes all ScrollSeq objects to a temporary outfile.
+
+        Sequences need to be written prior to aligning, as some programs
+        (for example MAFFT) do not allow for sequences to be fed in
+        through a pipe such as stdin.
+
         """
         seq_path = self._get_filter_outpath('seqs')
         sf._sequence_list_to_file_by_id(self._seq_list,seq_path)
@@ -339,8 +444,7 @@ class IdentityFilter(GenericFilter):
 
 
     def _align_seqs(self):
-        """Calls alignment program on temporary sequence file
-        """
+        """Calls alignment program on temporary sequence file."""
         msa_path = self._get_filter_outpath('align')
         aligner = align.Aligner(
                 self._align_method,
@@ -353,8 +457,15 @@ class IdentityFilter(GenericFilter):
 
 
     def _build_identity_set(self):
-        """Parses alignment file and builds up a set of sequences that are at
+        """Builds a set of similar sequences from an alignment.
+
+        Parses alignment file and builds up a set of sequences that are at
         least <threshold> percent identical to each other.
+
+        Raises:
+            FatalScrollPyError: Raised if the number of identical residues
+                between two sequences is more than the total number.
+
         """
         self._align_dict = parser.parse_alignment_file(
                 self._align_path,
@@ -411,15 +522,26 @@ class IdentityFilter(GenericFilter):
 
 
     def _add_filter_score_to_obj(self, header, score):
-        """Finds right object and adds score"""
+        """Adds a score to an object based on sequence header.
+
+        Score is added directly to seq_obj._fvalue.
+
+        Args:
+            header (str): The sequence header.
+            score (int): The similarity score for the object.
+
+        """
         for seq_obj in self._seq_list:
             if seq_obj._id in header:
                 seq_obj._fvalue = score
 
 
     def _remove_by_identity(self):
-        """Recursively decompose identical tuple pairs and pick all IDs out of
-        indices, add them to self._to_remove.
+        """Select sequences for removal based on similarity.
+
+        Recursively decomposes identical tuple pairs and pick all IDs out
+        of the indices to add them to self._to_remove.
+
         """
         initial_set = self._build_identity_set()
         tuples_to_remove = decompose_sets(initial_set)
@@ -436,8 +558,17 @@ class IdentityFilter(GenericFilter):
 
 
     def _get_filter_outpath(self, out_type):
-        """Similar to Collection._get_outpath; returns a complete filepath
-        based on the type of output required and self._name to avoid clobbering
+        """Obtains a sensible outpath for sequences.
+
+        File extension is determined by the type of output specified
+        (align/seqs).
+
+        Args:
+            out_type (str): Specifies the output file extension.
+
+        Returns:
+            str: Full path to the output file.
+
         """
         basename = "filter_seqs"
         if out_type == 'seqs':

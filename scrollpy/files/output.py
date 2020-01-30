@@ -20,27 +20,17 @@ from scrollpy.util import _util
 class BaseWriter:
     """Base writing class from which other writing classes derive.
 
+    Writers should expose a public method to write information, and have
+    private methods for filtering data and obtaining an appropriate output
+    file to write to.
+
     Args:
-        sp_object (obj): either a ScrollPy or ScrollTree object to use
-            for writing information.
+        sp_object (obj): A ScrollPy run object that has been previously
+            called to fill its internal objects. Should be an instance of
+            AlignIter, ScrollPy, ScrollTree, or TreePlacer.
+        out_path (str): Full path to the dir/file to write. It is assumed
+            that this path has already been validated.
 
-        out_path (str): full path to the dir/file to write. Assumed that
-            this path has already been checked (exists/is valid).
-
-    Methods:
-        write():
-            Args:
-                (self)
-
-            Returns:
-                raises NotImplementedError (sublass overrides)
-
-        _filter():
-            Args:
-                (self)
-
-            Returns:
-                raises NotImplementedError (sublass overrides)
     """
     def __init__(self, sp_object, out_path):
         self._sp_object = sp_object
@@ -48,35 +38,36 @@ class BaseWriter:
 
 
     def write(self):
+        """Override in SubClass."""
         raise NotImplementedError
-
 
     def _filter(self):
+        """Override in SubClass."""
         raise NotImplementedError
 
+    def _get_filepath(self):
+        """Override in SubClass."""
+        raise NotImplementedError
 
 
 class AlignWriter(BaseWriter):
-    """AlignWriter subclass of BaseWriter baseclass.
+    """SubClass of BaseWriter to handle writing alignments.
 
-    Methods:
-        write(): TO-DO
-
-        _filter():
-            Args:
-                (self)
-            Returns:
-                raises NotImplementedError (does not override parent)
-
-        _get_outpath(): TO-DO
+    Uses BioPython internally to write alignments in multiple formats.
 
     """
     def __init__(self, sp_object, out_path):
+        """Delegate to BaseClass"""
         BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
-        """Obtain optimal alignment and write to file"""
+        """Obtain optimal alignment and write to file.
+
+        Access the optimal alignment stored on AlignIter object through
+        a public method and then call BioPython to write it to file.
+
+        """
         target_obj = self._sp_object
         # If AlignIter, want optimal alignment
         if isinstance(target_obj,AlignIter):
@@ -96,7 +87,21 @@ class AlignWriter(BaseWriter):
 
 
     def _get_filepath(self, align_name, align_type):
-        """Obtain a reasonable outpath"""
+        """Obtains the full path to an output file.
+
+        Uses the name and type of the alignment to retrieve a filepath.
+
+        If the output directory does not exist, create it unless the
+        <no_create> config variable is set. If the output file exists,
+        overwrite it unless the <no_clobber> config variable is set; if
+        it is set, obtain a different filename instead.
+
+        Args:
+            align_name (str): Name to use for the output file.
+            align_type (str): Format of the output alignment. For more
+                details, see the BioPython Align.IO documentation.
+
+        """
         # Probably just use an external method once that is written?
         no_clobber = bool(config['ARGS']['no_clobber'])
         sep = config['ARGS']['filesep']
@@ -122,31 +127,23 @@ class AlignWriter(BaseWriter):
 
 
 class SeqWriter(BaseWriter):
-    """SeqWriter subclass of BaseWriter baseclass.
+    """SubClass of BaseWriter to handle writing alignments.
 
-    Methods:
-        write():
-            Args:
-                (self)
+    Uses BioPython internally to write alignments in multiple formats.
 
-            Returns:
-                calls filter to return a list of ScrollSeq objects.
-                    Creates an output file for each group and writes.
-
-        _filter():
-            Args:
-                (self)
-
-            Returns:
-                returns a list of [group,[ScrollSeqObjs]] pairs to use
-                    for writing.
     """
     def __init__(self, sp_object, out_path):
+        """Delegate to BaseClass."""
         BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
-        """Filters sequences and writes to one or more files."""
+        """Writes sequences to one or more output files.
+
+        First filters sequences using internal _filter method, and then
+        creates an output file for each group to write to.
+
+        """
         # What we output depends on input object
         target_obj = self._sp_object
         # If ScrollPy/ScrollTree, want some number of sequences
@@ -195,7 +192,20 @@ class SeqWriter(BaseWriter):
 
 
     def _filter(self, mode='some'):
-        """Returns only a number of sequences as specified by the user."""
+        """Returns only a number of sequences as specified by the user.
+
+        User has the option to limit the number of sequences output for
+        group using the <number> config parameter.
+
+        Args:
+            mode (str, optional): If specified, controls which sequences
+                to retrieve for writing. Possible options are <some>,
+                <remaining>, <removed>, and <classified>. Defaults to some.
+
+        Returns:
+            list: A list of [group,[ScrollSeqObjs]] pairs to write.
+
+        """
         # Build up dictionary to return
         seqs = {}
         # If mode is 'some', need to filter
@@ -228,7 +238,21 @@ class SeqWriter(BaseWriter):
 
 
     def _get_filepath(self, group, seq_type='scrollsaw'):
-        """Returns an appropriate filepath"""
+        """Obtains the full path to an output file.
+
+        Uses the name and type of the alignment to retrieve a filepath.
+
+        If the output directory does not exist, create it unless the
+        <no_create> config variable is set. If the output file exists,
+        overwrite it unless the <no_clobber> config variable is set; if
+        it is set, obtain a different filename instead.
+
+        Args:
+            align_name (str): Name to use for the output file.
+            align_type (str): Format of the output alignment. For more
+                details, see the BioPython Align.IO documentation.
+
+        """
         # Probably just use an external method once that is written?
         no_clobber = bool(config['ARGS']['no_clobber'])
         sep = config['ARGS']['filesep']
@@ -254,31 +278,30 @@ class SeqWriter(BaseWriter):
 
 
 class TableWriter(BaseWriter):
-    """TableWriter subclass of BaseWriter baseclass.
+    """SubClass of BaseWriter to handle writing alignments.
 
-    Methods:
-        write():
-            Args:
-                (self)
+    Uses BioPython internally to write alignments in multiple formats.
 
-            Returns:
-                calls filter to return a list of lines to write.
-                    Open the output file and writes the lines.
-
-        _filter():
-            Args:
-                (self)
-
-            Returns:
-                returns a list: [header<sep>group<sep>distance]
     """
     def __init__(self, sp_object, out_path):
+        """Delegate to BaseClass.
+
+        Unlike other SubClasses, TableWriter also calls a single internal
+        function to set the self._tblsep attribute.
+
+        """
         BaseWriter.__init__(self, sp_object, out_path)
         self._set_table_sep()  # Sets self._tblsep
 
 
     def write(self):
-        """Writes values to file"""
+        """Writes table values to a file.
+
+        Depending on the type of run object provided as input, obtain
+        different information by calling internal _filter method. Then
+        create an output file and write lines to it.
+
+        """
         # Output based on object
         target_obj = self._sp_object
         # If ScrollPy/ScrollTree, want distance values
@@ -325,7 +348,19 @@ class TableWriter(BaseWriter):
 
 
     def _write(self, lines, outpath, table_type):
-        """Takes care of writing, including header columns"""
+        """Called by write to actually write table values to file.
+
+        Extra layer of abstraction to handle writing header lines to each
+        column of the table file.
+
+        Args:
+            lines (list): Pre-formatted lines to write.
+            outpath (str): Full path to the target output file.
+            table_type (str): Which form of table is required; controls
+                how headers are written. Possible options are <scrollsaw>,
+                <filtered>, <monophyletic>, and <notmonophyletic>.
+
+        """
         # Get headers first
         if table_type == 'scrollsaw':
             header_list = [
@@ -398,7 +433,21 @@ class TableWriter(BaseWriter):
 
 
     def _filter(self, mode='distance'):
-        """Fetches object values and returns a formatted list"""
+        """Fetches object values and returns a formatted list.
+
+        Depending on what values are requested, obtain them from run
+        object and then ensure that any values corresponding to the
+        table separator are sanitized prior to passing to write().
+
+        Args:
+            mode (str): Corresponds to the input run object. Possible
+                values are <distance>, <fvalue>, <monophyletic>,
+                <notmonophyletic>, and <aligniter>. Defaults to distance.
+
+        Returns:
+            list: A list of [header<sep>group<sep>distance] values.
+
+        """
         # Return a list of values regardless
         to_write = []  # Main list to return
         linevals = []  # List to accumulate intial values
@@ -459,7 +508,26 @@ class TableWriter(BaseWriter):
 
 
     def _modify_values_based_on_sep(self, sep, *args):
-        """Checks each value for presence of sep and changes accordingly"""
+        """Sanitizes values based on separator.
+
+        User defines a separator character for table output, which may be
+        present in some output values. As this would make subsequent
+        parsing of the table file difficult, replace each instance of the
+        separator with a different value.
+
+        The replacement character is chosen from a list as the first
+        character which is not the separator in the order ' ', '_', ',',
+        '|', '\t'.
+
+        Args:
+            sep (str): Separator for the table.
+            *args: Iterable of values to sanitize.
+
+        Returns:
+            list: A list of values in *args, with each instance of the
+                table separator replaced.
+
+        """
         new_values = []
         # Do we need more than two?
         ordered_chars = (' ', '_', ',', '|', '\t')
@@ -478,7 +546,12 @@ class TableWriter(BaseWriter):
 
 
     def _set_table_sep(self):
-        """Utility function called during __init__"""
+        """Obtain the table separator based on config values.
+
+        This is a utility function called during instantiation that uses
+        the <tblfmt> config value to set self._tblsep.
+
+        """
         # Separator dictated by format
         tblfmt = config['ARGS']['tblfmt']
         if tblfmt == 'csv':
@@ -501,7 +574,21 @@ class TableWriter(BaseWriter):
 
 
     def _get_filepath(self, table_type='scrollsaw'):
-        """Returns an appropriate filepath"""
+        """Obtains the full path to an output file.
+
+        Uses the name and type of the alignment to retrieve a filepath.
+
+        If the output directory does not exist, create it unless the
+        <no_create> config variable is set. If the output file exists,
+        overwrite it unless the <no_clobber> config variable is set; if
+        it is set, obtain a different filename instead.
+
+        Args:
+            align_name (str): Name to use for the output file.
+            align_type (str): Format of the output alignment. For more
+                details, see the BioPython Align.IO documentation.
+
+        """
         # Probably just use an external method once that is written?
         no_clobber = bool(config['ARGS']['no_clobber'])
         sep = config['ARGS']['filesep']
@@ -526,7 +613,22 @@ class TableWriter(BaseWriter):
 
 
     def _get_max_groups(self, lines, num_before, num_per_group):
-        """Utility function; returns max number of expected groups"""
+        """Returns the maxinum number of groups under all nodes.
+
+        This function is called when writing output for non-monophyletic
+        node classifications, where the number of groups under a parent
+        node can be variable.
+
+        Args:
+            num_before (int): The number of entries in a given list of
+                values that are common to all lists.
+            num_per_group (int): The number of entries that correspond to
+                a single entity (i.e. node).
+
+        Returns:
+            int: The maximum number of groups that will be written.
+
+        """
         max_groups = 0
         for item_list in lines:
             remaining = item_list[num_before:]

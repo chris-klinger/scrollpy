@@ -42,14 +42,15 @@ class Mapping:
     """A class to create a single seq_dict object from input files.
 
     Args:
-        infiles (iter): path(s) to one or more input files
+        infiles (iter): Path(s) to one or more input files.
+        alignfile (str): Path to an alignment file. Defaults to None.
+        treefile (str): Path to a tree file. Defaults to None.
+        mapfile (str): Path to a mapping file. Defaults to None.
+        **kwargs: Optional settings for mapping; if not passed, these
+            are looked up in the global config dictionary instead.
 
-        alignfile (str): path to an alignment file (default: None)
-
-        treefile (str): path to a tree file (default: None)
-
-        mapfile (str): path to a mapping file (default: None)
     """
+
     # Class var list
     _config_vars = (
             'infmt',
@@ -161,7 +162,16 @@ class Mapping:
 
 
     def _parse_infiles(self, _test=False):
-        """Parse files into record objects"""
+        """Parse input files into record objects.
+
+        Obtain a group name from each filename and then use BioPython to
+        parse sequences into SeqRecord objects.
+
+        Args:
+            _test (bool): If True, provide a new set to each call of the
+                _unique_group_name function to facilitate testing calls.
+
+        """
         for filepath in self._infiles:
             # Get group from filename
             group = os.path.basename(filepath).split('.',1)[0]
@@ -197,7 +207,7 @@ class Mapping:
 
 
     def _parse_alignfile(self):
-        """Parse an alignment file into record objects"""
+        """Parse an alignment file into record objects."""
         alignment = af.parse_alignment_file(
                 self._alignfile,
                 self.alignfmt,
@@ -209,7 +219,7 @@ class Mapping:
 
 
     def _parse_treefile(self):
-        """Parse tree file, if it exists"""
+        """Parse tree file, if it exists."""
         tree = tf.read_tree(
                 self._treefile,
                 self.treefmt,
@@ -220,15 +230,7 @@ class Mapping:
 
 
     def _create_mapping_from_mapfile(self):
-        """Parses a mapping file and returns a dict.
-
-        Args:
-            map_file (str): filepath to mapping file with expected format
-                <id><tab><group>
-
-        Returns:
-            a mapping dict of group:[<labels>] pairs
-        """
+        """Parses a mapping file and returns a dict."""
         for line in non_blank_lines(self._mapfile):
             line = line.strip('\n')  # Remove newlines
             map_id,group = line.split('\t')
@@ -262,7 +264,7 @@ class Mapping:
 
 
     def _create_seq_dict(self, log=False):
-        """Creates a seq_dict based on a mapping"""
+        """Creates a seq_dict based on a mapping."""
         for group,labels in self._mapping.items():
             self._seq_dict[group] = []
             for label in labels:
@@ -309,11 +311,23 @@ class Mapping:
 
 
     def _get_alignseq(self, group, label):
-        """Tries to retrieve a SeqRecord object from within a Bio.Align
+        """Obtain a sequence from a parsed alignment object.
+
+        Tries to retrieve a SeqRecord object from within a Bio.Align
         object by label; if successful, build a ScrollSeq object.
 
-        May want to strip the gap characters eventually, but for now
-        just leave it, as it is unclear if there is any reason to.
+        Args:
+            group (str): Name of the group for the sequence.
+            label (str): The sequence label to look up in the alignment.
+
+        Returns:
+            obj: A ScrollSeq instance corresponding to the matched
+                sequence from the alignment.
+
+        Raises:
+            DuplicateSeqError: Raised if the sequence found to match
+                <label> has already been matched to a different label.
+
         """
         if not self._align_records:
             raise KeyError  # Caught by handling function
@@ -328,6 +342,7 @@ class Mapping:
                 # raise ValueError  # Caught by handling function
             # Otherwise, get associated record
             index = self._align_descriptions.index(matched_seq)
+            # May eventually want to strip gap characters
             record = self._align_records[index]
             # Add to seen
             self._found_seqs.add(matched_seq)
@@ -340,8 +355,23 @@ class Mapping:
 
 
     def _get_scrollseq(self, group, label):
-        """Tries to retrieve a SeqRecord object by label; if successful,
-        build an associated ScrollSeq object and return it.
+        """Obtain a sequence from concatenated input files by label.
+
+        Tries to retrieve a SeqRecord object from internal SeqRecord
+        list by label; if successful, build a ScrollSeq object.
+
+        Args:
+            group (str): Name of the group for the sequence.
+            label (str): The sequence label to look up in internal list.
+
+        Returns:
+            obj: A ScrollSeq instance corresponding to the matched
+                sequence from the SeqRecord list.
+
+        Raises:
+            DuplicateSeqError: Raised if the sequence found to match
+                <label> has already been matched to a different label.
+
         """
         if not self._record_list:  # Empty list; no records
             raise KeyError  # Caught by handling function
@@ -365,8 +395,23 @@ class Mapping:
 
 
     def _get_leafseq(self, group, label):
-        """Tries to retrieve a TreeNode object by label; if successful,
-        build an associated LeafSeq object and return it.
+        """Obtain a sequence from a parsed tree object.
+
+        Tries to retrieve a SeqRecord object from internal ETE3 tree
+        object by label; if successful, build a LeafSeq object.
+
+        Args:
+            group (str): Name of the group for the sequence.
+            label (str): The sequence label to look up in the tree object.
+
+        Returns:
+            obj: A LeafSeq instance corresponding to the matched
+                sequence from the tree object.
+
+        Raises:
+            DuplicateSeqError: Raised if the sequence found to match
+                <label> has already been matched to a different label.
+
         """
         if not self._leaves:  # No associated tree object
             raise KeyError  # Caught by handling function
@@ -392,13 +437,20 @@ class Mapping:
 
 
 def _unique_group_name(group, seen={}):
-        """Utility function to ensure group names are unique.
+        """Ensures group names are unique.
+
+        Recursively call until a unique group name can be found. If the
+        input group name is unique, return. Otherwise, append a numeric
+        suffix and recur.
 
         Args:
-            group (str): group name; must be hashable
+            group (str): Group name; must be hashable.
+            seen (set): Optional input set to check group names against.
+                Defaults to an empty set.
 
         Returns:
-            unique group name
+            str: A unique name for the group.
+
         """
         group = str(group)  # In case it is an int
         if group not in seen.keys():
@@ -428,12 +480,12 @@ def get_best_name_match(target_name, name_set):
     Then iters through zipped name pair and calculates a sore.
 
     Args:
-        target_name (str): name to find a match for
-
-        name_set (set): all possible names to search
+        target_name (str): Name to find a match for.
+        name_set (set): All possible names to search.
 
     Returns:
-        best match in name_set for target_name
+        str: Best match in name_set for target_name.
+
     """
     # Easiest case -> membership testing
     if target_name in name_set:
@@ -455,12 +507,12 @@ def _make_aligned_seq_pairs(target_name, name_set):
     are aligned using a simple identity-based metric.
 
     Args:
-        target_name (str): name to match/align to
-
-        name_set (set): all possible names to search
+        target_name (str): Name to match/align to.
+        name_set (set): All possible names to search.
 
     Returns:
-        a list of original and matched/aligned names for comparison
+        list: All original and matched/aligned names for comparison.
+
     """
     unaligned = []
     aligned = []
@@ -481,7 +533,18 @@ def _make_aligned_seq_pairs(target_name, name_set):
 
 
 def compare_pairs(seq_pairs):
-    """Returns the highest scoring pair among pairs"""
+    """Returns the highest scoring pair among pairs.
+
+    Iterate over all provided sequence label pairs and find those that
+    have the most matching characters.
+
+    Args:
+        seq_pairs (iter): Pairwise sequence labels.
+
+    Returns:
+        tuple: The best matching sequence pair.
+
+    """
     best_pair = None
     high_score = 0
     for s1,s2 in seq_pairs:

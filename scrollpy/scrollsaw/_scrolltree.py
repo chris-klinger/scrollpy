@@ -15,8 +15,8 @@ class ScrollTree:
     """Main ScrollTree object to filter based on branch length.
 
     Args:
-        seq_dict (dict): if provided, a data structure mapping LeafSeq
-            objects to distinct groups..
+        seq_dict (dict): A dictionary of mapped group/object pairs.
+
     """
 
     def __init__(self, seq_dict, **kwargs):
@@ -49,7 +49,12 @@ class ScrollTree:
 
 
     def __call__(self):
-        """Runs tree-based ScrollSaw"""
+        """Runs ScrollSaw using patristic distances in a tree.
+
+        Similar to sequence-based scrollsaw, calculates pairwise distances
+        between all sequences in a provided tree and then sorts them.
+
+        """
         # Calculate distances for each group in mapping
         leaves = sf._cat_sequence_lists(*self._seq_dict.values())
         self._get_all_pairwise_distances(leaves)
@@ -63,8 +68,18 @@ class ScrollTree:
 
 
     def _get_all_pairwise_distances(self, leaves):
-        """Calculates all pairwise distances from each leaf to each other leaf
-        and updates the internal LeafSeq distance attribute for each
+        """Calculates all pairwise distances between tree leaves.
+
+        LeafSeq objects keep a reference to the corresponding Node object,
+        which allows finding a distance to another Node. Each corresponding
+        paired value is stored in an internal cache in order to allow
+        lookup when the reverse pair is queried.
+
+        Each distance calculated is used to update the LeafSeq.
+
+        Args:
+            leaves (list): A list of LeafSeq objects.
+
         """
         scroll_log.log_message(
                 scroll_log.BraceMessage(

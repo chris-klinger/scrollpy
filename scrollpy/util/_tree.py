@@ -55,7 +55,7 @@ def last_monophyletic_ancestor(node_to_check, leafseq_list, previous_node=None):
 
     Returns:
 	obj: ETE3 TreeNode object representing most ancestral monophyletic node.
-	If starting node is not monophyletic, returns None instead.
+            If starting node is not monophyletic, returns None instead.
 
     """
     if is_node_monophyletic(node_to_check, leafseq_list):
@@ -84,7 +84,7 @@ def get_group_outgroup(tree_obj, target_leaf, group_list):
 
     Returns:
 	obj: ETE3 TreeNode object of a node to use for rerooting. If no
-	ancestral node can be used to reroot, returns False instead.
+            ancestral node can be used to reroot, returns False instead.
 
     """
     # Find common ancestor of all leaves

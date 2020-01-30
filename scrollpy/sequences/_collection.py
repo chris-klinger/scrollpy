@@ -22,16 +22,22 @@ from scrollpy.distances import parser
 
 
 class ScrollCollection:
-    """A collection of sequences for use in ScrollPy.
+    """Main ScrolCollection object to comare sequences during scrollsaw.
+
+    Each pairwise group of sequences (or a single group if only one is
+    specified) forms the basis for a separate ScrollCollection instance.
+    Running an instance takes care of all alignment and distance
+    calculation calls.
 
     Args:
-        outdir (str): full path to target directory for files
-
-        seq_list (list): list of ScrollSeq objects
-
-        group (str): name of the group to which the seqs belong
-
-        opt_group (str): name of a second group (default: None)
+        outdir (str): The full path to target directory for files.
+        seq_list (list): A list of ScrollSeq objects.
+        group (str): The name of the group to which the seqs belong.
+        opt_group (str): Optional name of a second sequence group, for
+            use in pairwise comparisons. Defaults to None.
+        **kwargs: Optional keyword arguments specifying aligning and
+            distance parameters. If not specified, the corresponding
+            values are obtained from the global config.
 
     """
     # Class var list
@@ -88,8 +94,11 @@ class ScrollCollection:
 
 
     def __call__(self):
-        """A call implies aligning, calculating distances, and then
+        """Runs all methods for a single collection.
+
+        A call implies aligning, calculating distances, and then
         either parsing the output file or retrieving from an object.
+
         """
         # First step: create sequence file (if necessary)
         self._get_sequence_file()
@@ -104,7 +113,7 @@ class ScrollCollection:
 
 
     def _get_sequence_file(self):
-        """Convenience function"""
+        """Calls external methods to parse sequence file."""
         seq_path = self._get_outpath('seqs')
         # As in _get_outpath(), eventually provide options to control this
         #if seq_path != self._inpath: # Comparison works even if None?
@@ -119,7 +128,12 @@ class ScrollCollection:
 
 
     def _get_alignment(self):
-        """Convenience function"""
+        """Calls external method to build a sequence alignment.
+
+        Creates and runs an instance of the Aligner class in order to
+        build an alignment from the sequences.
+
+        """
         msa_path = self._get_outpath('align')
         # aligner = align.Aligner(
         aligner = Aligner(
@@ -133,7 +147,12 @@ class ScrollCollection:
 
 
     def _get_distances(self):
-        """Convenience function"""
+        """Calls external method to build a sequence alignment.
+
+        Creates and runs an instance of the Aligner class in order to
+        build an alignment from the sequences.
+
+        """
         dist_path = self._get_outpath('distance')
         # distcalc = distance.DistanceCalc(self.dist_method,
         distcalc = DistanceCalc(
@@ -154,7 +173,7 @@ class ScrollCollection:
 
 
     def _parse_distances(self):
-        """Convenience function"""
+        """Calls external methods to parse distance file."""
         distances = parser.parse_distance_file(
                 self._dist_path,
                 self.dist_method) # Tells the parser what type of file it is
@@ -162,15 +181,27 @@ class ScrollCollection:
 
 
     def _increment_seq_distances(self):
-        """Internal function to update list of SeqObjs"""
+        """Updates ScrollSeq objects based on distances.
+
+        Each pairwise distance should be added to each object instance;
+        ScrollSeq class is overloaded to handle addition operations.
+
+        """
         for seq_obj in self.seq_list:
             # Seqs written by ID, can modify if written by acc/desc later
             seq_obj += self._dist_dict[str(seq_obj.id_num)]
 
 
     def _get_outpath(self, out_type):
-        """A function to return full paths to files based on what the
-        file is to be used for; mainly for convenience.
+        """Obtains the full path to an output file.
+
+        Args:
+            out_type (str): The type of output file needed. Should be
+                one of <seqs>, <align>, or <distance>.
+
+        Returns:
+            str: Full path to the output file.
+
         """
         # Eventually want to give user option to leave sequence headers as is
         # or run using internal file generation and ScrollSeq.id_num

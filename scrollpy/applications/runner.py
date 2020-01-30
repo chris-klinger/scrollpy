@@ -120,6 +120,24 @@ class Runner:
 
 
     def __call__(self):
+        """Runs an external function call based on instance values.
+
+        Depending on the SubClass and the arguments passed during object
+        instantiation, run an external program call.
+
+        Raises:
+            FatalScrollPyError: Raised if the function called raises
+                either Application or Subprocess Error, indicating that
+                a problem occured during the program run.
+
+        """
+        try:
+            self._call()  # SubClass-specific implementation
+        except (ApplicationError, SubprocessError):  # Program could not run
+            raise FatalScrollPyError  # Signal program to terminate
+
+
+    def _call(self):
         """Override in subclass"""
         raise NotImplementedError
 
@@ -324,7 +342,8 @@ class Aligner(Runner):
 
 
 
-    def __call__(self):
+    # def __call__(self):
+    def _call(self):
         """Run the alignment program based on method attribute.
 
         Uses BioPython commandline wrapper or SubProcess module to run
@@ -469,7 +488,8 @@ class AlignEvaluator(Runner):
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
-    def __call__(self):
+    # def __call__(self):
+    def _call(self):
         """Evaluate alignment columns based on method attribute.
 
         Use BioPython commandline wrapper or SubProcess module to run
@@ -591,7 +611,8 @@ class DistanceCalc(Runner):
                 self.model = None
 
 
-    def __call__(self):
+    # def __call__(self):
+    def _call(self):
         """Calculate inter-sequence distances based on method attribute.
 
         Use BioPython commandline wrapper or SubProcess module to run
@@ -737,7 +758,8 @@ class TreeBuilder(Runner):
                 self.model = None
 
 
-    def __call__(self):
+    # def __call__(self):
+    def _call(self):
         """Calculate inter-sequence distances based on method attribute.
 
         Use BioPython commandline wrapper or SubProcess module to run

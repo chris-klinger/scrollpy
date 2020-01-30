@@ -58,7 +58,8 @@ class AlignWriter(BaseWriter):
     """
     def __init__(self, sp_object, out_path):
         """Delegate to BaseClass"""
-        BaseWriter.__init__(self, sp_object, out_path)
+        super().__init__(sp_object, out_path)
+        # BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
@@ -134,7 +135,8 @@ class SeqWriter(BaseWriter):
     """
     def __init__(self, sp_object, out_path):
         """Delegate to BaseClass."""
-        BaseWriter.__init__(self, sp_object, out_path)
+        super().__init__(sp_object, out_path)
+        # BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
@@ -290,7 +292,8 @@ class TableWriter(BaseWriter):
         function to set the self._tblsep attribute.
 
         """
-        BaseWriter.__init__(self, sp_object, out_path)
+        super().__init__(sp_object, out_path)
+        # BaseWriter.__init__(self, sp_object, out_path)
         self._set_table_sep()  # Sets self._tblsep
 
 

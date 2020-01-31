@@ -22,6 +22,7 @@ from scrollpy import config
 from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 from scrollpy import ValidationError
+from scrollpy import util
 from scrollpy.util._util import modify_model_name
 
 
@@ -291,6 +292,7 @@ class Runner:
         # Check whether it exists
         out_dir = os.path.dirname(outpath)
         if not os.path.exists(out_dir):
+            # Directory creation should have already taken place
             if no_create:
                 raise FileNotFoundError(
                         errno.ENOENT,  # File not found
@@ -298,12 +300,24 @@ class Runner:
                         out_dir,  # Directory name
                         )
             else:
-                # Create output directory
-                pass  # TO-DO!!!
+                # Dir should exist; but can try to create as well
+                try:
+                    util.ensure_dir_exists(out_dir)
+                except OSError:
+                    # Still fail to make, raise error
+                    raise FileNotFoundError(
+                            errno.ENOENT,  # File not found
+                            os.strerror(errno.ENOENT),  # Obtain error message
+                            out_dir,  # Directory name
+                            )
         # Check whether the file already exists
         elif os.path.exists(outpath):
-            if no_clobber:
-                pass  # Need to get new outpath name
+            if no_clobber:  # Get a similar filepath instead
+                dirname,filename = os.path.split(outpath)
+                self.outpath = util.get_nonredundant_filepath(
+                        dirname,
+                        filename,
+                        )
         else:  # Directory exists and file is fine; log it
             scroll_log.log_message(
                     BraceMessage("Confirmed output file {} can be created", outpath),

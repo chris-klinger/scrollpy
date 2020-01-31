@@ -735,7 +735,7 @@ def main():
                     scroll_log.BraceMessage(
                         "Did not attempt to create output directory {}; try "
                         "again with the '--no-create' flag turned off", args.out),
-                    1,
+                    2,
                     'WARNING',
                     console_logger, file_logger,
                     )

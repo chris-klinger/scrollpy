@@ -7,6 +7,8 @@ import os
 import re
 
 from scrollpy import config
+from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy.scrollsaw._aligniter import AlignIter
 from scrollpy.scrollsaw._scrollpy import ScrollPy
 from scrollpy.scrollsaw._scrolltree import ScrollTree
@@ -15,6 +17,11 @@ from scrollpy.filter._new_filter import Filter
 from scrollpy.files import sequence_file
 from scrollpy.alignments import parser
 from scrollpy.util import _util
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_loggers(__name__)
 
 
 class BaseWriter:
@@ -84,7 +91,14 @@ class AlignWriter(BaseWriter):
                     )
         # If none of these, raise error/log something
         else:
-            pass  # Do something
+            # Raise an error as well? Or just log?
+            scroll_log.log_message(
+                    BraceMessage("{} object cannot be written "
+                        "as alignment".format(type(target_obj))),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
 
 
     def _get_filepath(self, align_name, align_type):
@@ -116,14 +130,22 @@ class AlignWriter(BaseWriter):
         if aformat == 'fasta':
             basename = basename + '.mfa' # Need to make more flexible eventually
         else:
-            pass  # TO-DO!!!
+            # Raise error?
+            scroll_log.log_message(
+                    BraceMessage("Unsupported alignment format {}".format(
+                        aformat)),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
         filepath = os.path.join(self._out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
-                pass # DO SOMETHING
-            else:
-                pass # DO SOMETHING ELSE
-
+                dirname,filename = os.path.split(filepath)
+                filepath = util.get_nonredundant_filepath(
+                        dirname,
+                        filename,
+                        )
         return filepath
 
 
@@ -188,9 +210,15 @@ class SeqWriter(BaseWriter):
                         outfile,
                         config['ARGS']['seqfmt'],  # User-specified
                         )
-        # If none of these, raise error/log something
         else:
-            pass  # Do something
+            # Raise error?
+            scroll_log.log_message(
+                    BraceMessage("{} object does not support writing "
+                        "output sequences".format(type(target_obj))),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
 
 
     def _filter(self, mode='some'):
@@ -268,14 +296,21 @@ class SeqWriter(BaseWriter):
         if sformat == 'fasta':
             basename = basename + '.fa' # Need to make more flexible eventually
         else:
-            pass  # TO-DO!!!
+            scroll_log.log_message(
+                    BraceMessage("Unsupported sequence format {}".format(
+                        aformat)),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
         filepath = os.path.join(self._out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
-                pass # DO SOMETHING
-            else:
-                pass # DO SOMETHING ELSE
-
+                dirname,filename = os.path.split(filepath)
+                filepath = util.get_nonredundant_filepath(
+                        dirname,
+                        filename,
+                        )
         return filepath
 
 
@@ -345,9 +380,15 @@ class TableWriter(BaseWriter):
                     outpath,
                     table_type='aligniter',
                     )
-        # Else signal bad input
         else:
-            pass  # Raise Error/log something
+            # Raise error?
+            scroll_log.log_message(
+                    BraceMessage("{} object does not support writing "
+                        "output table(s)".format(type(target_obj))),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
 
 
     def _write(self, lines, outpath, table_type):
@@ -464,9 +505,17 @@ class TableWriter(BaseWriter):
                 except AttributeError:
                     # Backup -> try to get TreeNode name
                     try:
-                        header = obj._node.name
+                        # Should delegate for either Leaf or ScrollSeq?
+                        header = obj.name
+                        # header = obj._node.name
                     except AttributeError:
-                        pass  # Log something?
+                        scroll_log.log_message(
+                                BraceMessage("Could not identify accession "
+                                    "for {}".format(obj)),
+                                2,
+                                'WARNING',
+                                file_logger,
+                                )
                 if not header:
                     header = 'N/A'
                 # These should always be available
@@ -568,7 +617,14 @@ class TableWriter(BaseWriter):
             if tblfmt == 'sep':
                 tblsep = config['ARGS']['tblsep']
                 if not isinstance(tblsep, str):  # Invalid value for sep
-                    # Log this eventually?!
+                    scroll_log.log_message(
+                            BraceMessage("Specified table separator {} "
+                                "is invalid; defaulting to CSV format".format(
+                                    tblsep)),
+                                2,
+                                'WARNING',
+                                console_logger, file_logger,
+                                )
                     tblsep = ','
             else:
                 tblsep = ','
@@ -608,10 +664,11 @@ class TableWriter(BaseWriter):
         filepath = os.path.join(self._out_path, basename)
         if os.path.exists(filepath):
             if no_clobber:
-                pass # DO SOMETHING
-            else:
-                pass # DO SOMETHING ELSE
-
+                dirname,filename = os.path.split(filepath)
+                filepath = util.get_nonredundant_filepath(
+                        dirname,
+                        filename,
+                        )
         return filepath
 
 

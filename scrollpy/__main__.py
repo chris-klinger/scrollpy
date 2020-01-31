@@ -11,12 +11,13 @@ import datetime
 import logging
 
 
-# Utility modules
+# Logging
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
+# Config
 from scrollpy import config
 from scrollpy import load_config_file
-from scrollpy import util
-# Exception classes
+# Exceptions
 from scrollpy import FatalScrollPyError
 # Execution classes
 from scrollpy import Mapping
@@ -29,6 +30,8 @@ from scrollpy import TreePlacer
 from scrollpy import AlignWriter
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
+# Utility
+from scrollpy import util
 # Import lookups
 from scrollpy import __project__
 from scrollpy import __version__
@@ -399,22 +402,23 @@ def main():
                 "starting sequences and/or filtered sequences as specified by "
                 "other arguments without running any other methods."
                 ))
-    run_options.add_argument("-s", "--split-seqs",
-            action = "store_true",
-            help = (
-                "If a single file is used as input, and '--mapping' is not "
-                "specified, attempt to split input sequence file into an "
-                "optimal number of sub-groups based on pariwise similarity "
-                "and given that each group must have at least two sequences."
-                ))
-    run_options.add_argument("--split-method",  # TO-DO
-            nargs = '?',
-            choices = ["one", "two"],
-            default = "one",
-            metavar = "Splitting Method",
-            help = (
-                "HELP TEXT FOR SPLITTING METHOD"
-                ))
+    # Possible future feature for implementation
+    # run_options.add_argument("-s", "--split-seqs",
+    #         action = "store_true",
+    #         help = (
+    #             "If a single file is used as input, and '--mapping' is not "
+    #             "specified, attempt to split input sequence file into an "
+    #             "optimal number of sub-groups based on pariwise similarity "
+    #             "and given that each group must have at least two sequences."
+    #             ))
+    # run_options.add_argument("--split-method",  # TO-DO
+    #         nargs = '?',
+    #         choices = ["one", "two"],
+    #         default = "one",
+    #         metavar = "Splitting Method",
+    #         help = (
+    #             "HELP TEXT FOR SPLITTING METHOD"
+    #             ))
     run_options.add_argument("-n", "--number",
             nargs = '?',
             type = int,
@@ -472,12 +476,13 @@ def main():
                 "more information, whereas '3' also logs output from external "
                 "program calls (default)."
                 ))
-    log_options.add_argument("--no-summ",
-            action = "store_true",
-            help = (
-                "This option turns off the automatic summary file generated on "
-                "each run. Not recommended."
-                ))
+    # Summary files are a future TO-DO
+    # log_options.add_argument("--no-summ",
+    #         action = "store_true",
+    #         help = (
+    #             "This option turns off the automatic summary file generated on "
+    #             "each run. Not recommended."
+    #             ))
     # Options for displaying information
     info_options = parser.add_argument_group("User Information Options")
     info_options.add_argument("-v", "--verbosity",
@@ -596,7 +601,6 @@ def main():
             'INFO',  # level
             console_logger,  # loggers
             )
-        # print(_version)  # Move to logging!
         sys.exit (0)
     if args.citation:
         scroll_log.log_message(
@@ -605,7 +609,6 @@ def main():
             'INFO',  # level
             console_logger,  # loggers
             )
-        # print(_citation)  # Move to logging!
         sys.exit(0)
     if args.usage:
         scroll_log.log_message(
@@ -616,21 +619,6 @@ def main():
             )
         # print(_usage)
         sys.exit(0)
-
-    # if args.exc_test:
-    #     raise FatalScrollPyError
-    #     try:
-    #         raise ValueError("A generic error message here")
-    #     except ValueError as e:
-    #         scroll_log.log_message(
-    #                 scroll_log.BraceMessage("Application code raised a {}",
-    #                     type(e).__name__),
-    #                 1,
-    #                 'ERROR',
-    #                 console_logger, file_logger,
-    #                 exc_obj=e,
-    #                 )
-    #     sys.exit(0)
 
 
     ##############################################################################
@@ -788,15 +776,6 @@ def main():
     # Load from config file
     # Call this later so that we can configure logging first!
     load_config_file()
-#    print("Config Arguments")
-#    for key in config["ARGS"]:
-#        print("{} : {}".format(key, config["ARGS"][key]))
-#    print("Config Alignment")
-#    for key in config["ALIGNMENT"]:
-#        print("{} : {}".format(key, config["ALIGNMENT"][key]))
-#    print("Config Distance")
-#    for key in config["DISTANCE"]:
-#        print("{} : {}".format(key, config["DISTANCE"][key]))
 
     ##############################################################################
     # ACTUAL PROGRAM EXECUTION
@@ -810,7 +789,7 @@ def main():
         console_logger, file_logger  # loggers
         )
 
-    # SOMEWHERE HERE: CHECK INPUT ARGS
+    # SOMEWHERE HERE: CHECK INPUT ARGS?
 
     # Begin by creating a mapping, unless iteralign
     if not args.iteralign:
@@ -982,15 +961,42 @@ def main():
 
 
 ##############################################################################
-# DEFINE CLEANUP ACTIONS IN CASE OF EARLY TERMINATION
+# DEFINE CLEANUP ACTIONS FOR PROGRAM TERMINATION
 ##############################################################################
 
-def run_cleanup():
-    """Removes files and performs other cleanup"""
-    sys.exit(0)  # For now
+def run_cleanup(successful=True):
+    """Runs regardless of whether program run completes.
+
+    If user does not specify a directory for temporary output, files are
+    written throughout the program to one or more instances of Python's
+    tempfile.TemporaryDirectory class. Attempt to cleanup each such
+    instance prior to the program exiting.
+
+    Args:
+        successful (bool): Indicates whether the program ran to completion
+            or was stopped early by an error.
+
+    """
+    for tmp_dir in tmps_to_remove:
+        try:
+            tmp_dir.cleanup()
+        except:  # Broad except clause here
+            scroll_log.log_message(
+                    BraceMessage("Failed to cleanup temporary directory "
+                        "{}; may already have been deleted".format(tmp_dir)),
+                    2,
+                    'INFO',
+                    file_logger,
+                    )
+    # Finally, exit the program
+    if successful:
+        sys.exit(0)  # Exit code means success
+    else:
+        sys.exit(1)  # Indicate something went wrong
 
 
 if __name__ == '__main__':
+    full_run = True  # Assume program runs fully
     try:
         main()
     except KeyboardInterrupt:
@@ -1000,14 +1006,19 @@ if __name__ == '__main__':
                 'ERROR',
                 console_logger, file_logger,
                 )
-        run_cleanup()
-        # sys.exit("\n Keyboard Interrupt detected: terminating")
+        full_run = False  # Program ended before finishing
     except FatalScrollPyError:
+        # Add newlines in case status logging was occuring prior to error
+        scrollpy.log_newlines(console_logger)
         scroll_log.log_message(
                 scroll_log.BraceMessage("ScrollPy has encountered a fatal error; exiting..."),
                 1,
                 'ERROR',
                 console_logger, file_logger,
                 )
-        run_cleanup()
+        full_run = False  # Program ended before finishing
+    finally:
+        # Whether there was an error or not, need to remove any remaining
+        # temporary directories; user does not want output
+        run_cleanup(full_run)
 

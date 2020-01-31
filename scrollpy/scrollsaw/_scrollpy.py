@@ -18,6 +18,8 @@ from scrollpy import Filter
 # from scrollpy.sequences._collection import ScrollCollection
 # from scrollpy.filter._filter import Filter
 #from scrollpy.util import _util
+# Global list for removal
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -102,27 +104,25 @@ class ScrollPy:
             tmp_dir = tempfile.TemporaryDirectory()
             #print("Target directory is: {}".format(tmp_dir.name))
             self.target_dir = tmp_dir.name
-        # Try to run all steps; any uncaught errors close tmpdir
-        try:
-            # make collection objects
-            self._make_collections()
-            # actually run alignment/distance calculations
-            total = len(self._collections)
-            scroll_log.log_newlines(console_logger)
-            for i,collection in enumerate(self._collections):
-                scroll_log.log_message(
-                        scroll_log.BraceMessage(
-                            "Performing comparison {} of {}",
-                            i+1, total),
-                        3,
-                        'INFO',
-                        status_logger,
-                        )
-                collection()
-            scroll_log.log_newlines(console_logger)
-        finally:
-            if self._remove_tmp:
-                tmp_dir.cleanup()  # Remove temporary directory
+        # make collection objects
+        self._make_collections()
+        # actually run alignment/distance calculations
+        total = len(self._collections)
+        scroll_log.log_newlines(console_logger)
+        for i,collection in enumerate(self._collections):
+            scroll_log.log_message(
+                    scroll_log.BraceMessage(
+                        "Performing comparison {} of {}",
+                        i+1, total),
+                    3,
+                    'INFO',
+                    status_logger,
+                    )
+            collection()
+        scroll_log.log_newlines(console_logger)
+        # finally:  -> Moved to __main__.run_cleanup()
+        #     if self._remove_tmp:
+        #         tmp_dir.cleanup()  # Remove temporary directory
         # If all steps ran, sort internal objects
         self._sort_distances()
 

@@ -37,6 +37,10 @@ from scrollpy.files.output import TableWriter
 from scrollpy.util import _util as util
 
 
+# A list of TemporaryDirectory objects for cleanup
+tmps_to_remove = []
+
+
 ##################
 # PACKAGE METADATA
 ##################

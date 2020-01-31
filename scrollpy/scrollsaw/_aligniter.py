@@ -22,6 +22,8 @@ from scrollpy import TreeBuilder
 from scrollpy.alignments import parser
 from scrollpy.files import tree_file
 from scrollpy.util import _util,_tree
+# Global list for removal
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -123,6 +125,7 @@ class AlignIter:
             self._remove_tmp = True
             tmp_dir = tempfile.TemporaryDirectory()
             self._outdir = tmp_dir.name
+            tmps_to_remove.append(self._outdir)  # Later removal
         # Get alignment object
         self._parse_alignment()
         # Run program to evaluate columns
@@ -153,9 +156,9 @@ class AlignIter:
             print("Could not run __call__")
         # Add easy lookup value to self.iter_info
         self._evaluate_info()
-        # Clean up
-        if self._remove_tmp:
-            tmp_dir.cleanup()
+        # # Clean up  -> Moved to __main__.run_cleanup()
+        # if self._remove_tmp:
+        #     tmp_dir.cleanup()
 
 
     def get_optimal_alignment(self):

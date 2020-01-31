@@ -4,8 +4,7 @@ This module contains code for obtaining various mappings in ScrollPy.
 The end-goal of the process is to obtain a 'seq_dict' object that contains
 {group:[<objects>],} entries, where the objects are either LeafSeq or
 ScrollSeq objects. In cases where both a treefile and one or more sequence
-files are provided, each LeafSeq object can also have a single ScrollSeq
-object.
+files are provided, each LeafSeq object can have a single ScrollSeq object.
 
 Mapping should fail unless a pure 1-to-1 relationship between:
     -labels specified in a mapfile and either tree labels or sequence
@@ -144,14 +143,15 @@ class Mapping:
             for label in self._duplicates:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Found duplicate sequence {} while creating mapping", label),
+                            "Found duplicate sequence {} while creating "
+                            "sequence mapping", label),
                         1,
                         'ERROR',
                         console_logger, file_logger,
                         )
             scroll_log.log_message(
                     scroll_log.BraceMessage(
-                        "FATAL -> found duplicate sequence(s) in input"),
+                        "Found duplicate sequence(s) in input"),
                     1,
                     'ERROR',
                     console_logger, file_logger,

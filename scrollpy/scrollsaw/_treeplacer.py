@@ -20,6 +20,8 @@ from scrollpy import TreeBuilder
 # from scrollpy.alignments.align import Aligner
 # from scrollpy.trees.maketree import TreeBuilder
 from scrollpy.util._mapping import Mapping
+# List for tmpdir names, for later removal
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -128,6 +130,7 @@ class TreePlacer:
             self._remove_tmp = True
             tmp_dir = tempfile.TemporaryDirectory()
             self._outdir = tmp_dir.name
+            tmps_to_remove.append(self._outdir)  # For later removal
         # Iter over sequences
         for i,seq_obj in enumerate(self._to_place):
             scroll_log.log_message(
@@ -175,9 +178,9 @@ class TreePlacer:
                 self._add_classified_seq(group,seq_obj)
         # Clear line with status_logger information
         scroll_log.log_newlines(console_logger)
-        # Clean up
-        if self._remove_tmp:
-            tmp_dir.cleanup()
+        # # Clean up -> Moved to __main__.run_cleanup()!
+        # if self._remove_tmp:
+        #     tmp_dir.cleanup()
 
 
     def _parse_sequences(self, seq_path):

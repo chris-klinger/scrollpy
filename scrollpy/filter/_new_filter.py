@@ -25,6 +25,8 @@ from scrollpy import FatalScrollPyError
 from scrollpy.alignments import align,parser
 from scrollpy.files import sequence_file as sf
 from scrollpy.util._util import decompose_sets
+# Global list for removal
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -175,7 +177,8 @@ class Filter:
             else:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "Group length prevented filtering {} with score {} from group {}\n",
+                            "Group length prevented filtering {} with "
+                            "score {} from group {}",
                             r_obj.acession, score, group,
                             ),
                         1,
@@ -407,6 +410,7 @@ class IdentityFilter(GenericFilter):
             import tempfile
             tmp_dir = tempfile.TemporaryDirectory()
             self._target_dir = tmp_dir.name  # TO-DO: give user option to keep?
+            tmps_to_remove.append(self._target_dir)
         else:
             self._target_dir = outdir
         try:
@@ -501,12 +505,12 @@ class IdentityFilter(GenericFilter):
             except ZeroDivisionError:  # No aligned region
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
-                            "No aligned region detected between {} and {}\n",
+                            "No aligned region detected between {} and {}",
                             header1, header2,
                             ),
                         1,
                         'WARNING',
-                        console_logger, file_logger,
+                        file_logger,
                         )
                 percent_identical = 0
             if percent_identical >= self._filter_score:

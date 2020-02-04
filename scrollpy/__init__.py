@@ -7,6 +7,8 @@
 # A list of TemporaryDirectory objects for cleanup
 tmps_to_remove = []
 
+# Utility functions
+from scrollpy.util import _util as scrollutil
 # Logging functionality
 from scrollpy.util import _logging as scroll_log  # LOAD FIRST!!!
 from scrollpy.util._logging import BraceMessage
@@ -37,8 +39,6 @@ from scrollpy.scrollsaw._treeplacer import TreePlacer
 from scrollpy.files.output import AlignWriter
 from scrollpy.files.output import SeqWriter
 from scrollpy.files.output import TableWriter
-# Utility functions
-from scrollpy.util import _util as util
 
 
 ##################

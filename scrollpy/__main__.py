@@ -31,7 +31,7 @@ from scrollpy import AlignWriter
 from scrollpy import SeqWriter
 from scrollpy import TableWriter
 # Utility
-from scrollpy import util
+from scrollpy import scrollutil
 # Global list for tmp dirs
 from scrollpy import tmps_to_remove
 # Import lookups
@@ -679,7 +679,7 @@ def main():
         raise FatalScrollPyError
 
     # Check for duplicates and quit if any exist
-    duplicates = util.check_duplicate_paths(*all_paths)
+    duplicates = scrollutil.check_duplicate_paths(*all_paths)
     if len(duplicates) > 0:
         scroll_log.log_message(
                 scroll_log.BraceMessage(
@@ -699,7 +699,7 @@ def main():
             raise FatalScrollPyError
 
     # Check to make sure all paths are good!
-    non_existent = util.check_input_paths(*all_paths)
+    non_existent = scrollutil.check_input_paths(*all_paths)
     if len(non_existent) > 0:
         for path in non_existent:
             scroll_log.log_message(
@@ -717,7 +717,7 @@ def main():
     else:
         if not args.no_create:
             try:
-                util.ensure_dir_exists(args.out)
+                scrollutil.ensure_dir_exists(args.out)
             except OSError:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
@@ -743,7 +743,7 @@ def main():
     if args.tmpout:  # None otherwise
         if not args.no_create:
             try:
-                util.ensure_dir_exists(args.tmpout)
+                scrollutil.ensure_dir_exists(args.tmpout)
             except OSError:
                 scroll_log.log_message(
                         scroll_log.BraceMessage(
@@ -755,7 +755,7 @@ def main():
                         )
                 new_tmp = os.path.join(current_dir, '/tmp/')
                 try:
-                    util.ensure_dir_exists(new_tmp)
+                    scrollutil.ensure_dir_exists(new_tmp)
                 except OSError:
                     scroll_log.log_message(
                             scroll_log.BraceMessage(
@@ -957,7 +957,7 @@ def main():
     analysis_time = main_end - main_start
     # Datetime timedelta objects are weird and only store days, seconds,
     # and microseconds as attrs; convert to include hours and minutes
-    converted_total = util.time_list(analysis_time)
+    converted_total = scrollutil.time_list(analysis_time)
     scroll_log.log_message(
             scroll_log.BraceMessage(
                 "Analysis completed in {} days, {} hours, {} minutes, "

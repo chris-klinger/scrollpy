@@ -60,7 +60,7 @@ def dir_exists(dir_path):
         True if the directory exists; False otherwise.
 
     """
-    if os.path.isdir():  # Specifically a DIR
+    if os.path.isdir(dir_path):  # Specifically a DIR
         return True
     return False
 

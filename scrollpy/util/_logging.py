@@ -34,7 +34,7 @@ import tempfile
 import datetime
 
 
-from scrollpy import util
+from scrollpy import scrollutil
 from scrollpy import config
 
 
@@ -167,7 +167,7 @@ def get_module_loggers(mod_name):
 
 
 def get_logfile(not_logging=False, logpath=None, outdir=None,
-        create_dirs=True, no_clobber=False, sep='_'):
+        no_create=False, no_clobber=False, sep='_'):
     """Returns the full path to a logfile for each program run.
 
     Checks whether a logfile is needed, and, if so, whether the desired
@@ -182,9 +182,9 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
             Default to False.
         logpath (str): Specified name/path for the logfile.
         outdir (str): Full path to the directory for output files.
-        create_dirs (bool): Whether to create missing directories.
+        no_create (bool): Whether to create missing directories.
             Default to True.
-        no_clobber (bool): whether to overwrite existing files
+        no_clobber (bool): Whether to overwrite existing files
         sep (str): separator for filenames
 
     Returns:
@@ -196,18 +196,15 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
         if logpath:
             # Whether a name or a path, of.path.join() takes care of details
             _logpath = os.path.join(outdir, logpath)
-            if util.file_exists(_logpath):  # It is a file that exists; dirname also exists
+            if scrollutil.file_exists(_logpath):
+                # It is a file that exists; dirname also exists
                 dirname,basename = os.path.split(_logpath)
-            elif util.dir_exists(_logpath):  # It is a directory that exists
+            elif scrollutil.dir_exists(_logpath):
+                # It is a directory that exists
                 dirname = _logpath
                 basename = _get_generic_logname(sep)
             else:  # It might be either a file or a directory; it does not exist
                 dirname,filename = os.path.split(_logpath)
-                if not util.dir_exists(dirname):  # file does not exists; dir may
-                    if not create_dirs:  # Can't create
-                        return _get_temp_log_path()
-                    else:
-                        util.ensure_dir_exists(dirname)  # Might still specify a file
                 if filename != '':  # Only dir
                     basename = _get_generic_logname(sep)
                 else:
@@ -215,22 +212,37 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
         else:  # logfile name not specified
             dirname = outdir
             basename = _get_generic_logname()
-        # No matter what, now we need to get a path
-        target_path = os.path.join(dirname,basename)
-        if os.path.isfile(target_path):
-            if no_clobber:  # Don't overwrite, make unique
-                return util.get_nonredundant_filepath(
-                        dirname,  # dir_path
-                        basename,  # filename
-                        )  # starting suffix = 1
-            else:  # Try to replace
-                try:
-                    os.remove(target_path)
-                except OSError:
-                    sys.exit(1)  # This should not happen
-                return target_path  # Replace old file
-        # Return path if everything is ok
-        return target_path
+    # No matter what, now we need to get a path
+    target_path = os.path.join(dirname,basename)
+    # print("The target path is {}".format(target_path))
+    # print("The target dir is {}".format(dirname))
+    # print("The target file is {}".format(basename))
+    # Check to see whether the directory exists
+    # print("Got to here")
+    if not scrollutil.dir_exists(dirname):
+        # print("Directory does not exist")
+        if no_create:  # Can't create new dirs
+            return _get_temp_log_path()
+        else:
+            # print("Trying to make directory")
+            scrollutil.ensure_dir_exists(dirname)  # Might still specify a file
+    # print("Got past here")
+    # Check filename itself
+    if os.path.isfile(target_path):
+        # print("File already exists")
+        if no_clobber:  # Don't overwrite, make unique
+            return scrollutil.get_nonredundant_filepath(
+                    dirname,  # dir_path
+                    basename,  # filename
+                    )  # starting suffix = 1
+        else:  # Try to replace
+            try:
+                os.remove(target_path)
+            except OSError:
+                sys.exit(1)  # This should not happen
+            return target_path  # Replace old file
+    # Return path if everything is ok
+    return target_path
 
 
 def _get_temp_log_path():

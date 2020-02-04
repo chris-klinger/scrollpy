@@ -8,8 +8,9 @@ from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from configparser import DuplicateOptionError
 
-from scrollpy import scroll_log
-from scrollpy import FatalScrollPyError
+# Use absolute imports here due to import order
+from scrollpy.util import _logging as scroll_log
+from scrollpy.util._exceptions import FatalScrollPyError
 
 
 file_dir = os.path.dirname(os.path.realpath(__file__))

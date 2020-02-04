@@ -446,15 +446,16 @@ def main():
                 "When placing sequences in a tree, the minimum node support "
                 "value for the sequence to be considered 'classified'."
                 ))
-    run_options.add_argument("--use-config",
-            action = "store_true",
-            help = (
-                "This option allows the user finer control over external "
-                "program runs by specifying the values of additional parameters "
-                "to use in the config file. Values must be specified as they "
-                "would appear on the command line under their own header "
-                "within the config file. See docs for more information."
-                ))
+    # Using config values is a future TO-DO
+    # run_options.add_argument("--use-config",
+    #         action = "store_true",
+    #         help = (
+    #             "This option allows the user finer control over external "
+    #             "program runs by specifying the values of additional parameters "
+    #             "to use in the config file. Values must be specified as they "
+    #             "would appear on the command line under their own header "
+    #             "within the config file. See docs for more information."
+    #             ))
     # Options for Logging
     log_options = parser.add_argument_group("Log Options")
     log_options.add_argument("-l", "--logfile",
@@ -663,7 +664,8 @@ def main():
             )
     scroll_log.log_newlines(console_logger)
 
-    # Check the filepaths for appropriateness
+    # CHECK INPUT FILEPATHS; MAKE SURE THEY EXIST
+
     all_paths = []
     # Sequence infile(s)
     if args.infiles:  # Nonetype if not called at all
@@ -682,6 +684,10 @@ def main():
     if args.alignment:
         real_path = os.path.realpath(os.path.join(current_dir,args.alignment))
         all_paths.append(real_path)
+    # Seqs to place, if supplied
+    if args.to_place:
+        real_path = os.path.realpath(os.path.join(current_dir,args.to_place))
+        all_paths.append(to_place)
     # Mapping file, if supplied
     if args.mapping:  # Nonetype if not called at all
         real_path = os.path.realpath(os.path.join(current_dir,args.mapping))
@@ -729,6 +735,8 @@ def main():
                     console_logger, file_logger,
                     )
             raise FatalScrollPyError
+
+    # CHECK WHETHER OUTPUT DIRS EXIST; TRY TO MAKE IF NOT
 
     # Check whether the output directory exists; if not, try to make it
     if not args.out:
@@ -787,7 +795,64 @@ def main():
                             )
                     args.tmpout = None  # Fall back to tmp dir
 
-    # Need to check all other parameters here...
+    # MAKE SURE THAT FILE SUFFIX AND SEP ARGS ARE NOT PROBLEMATIC
+
+    # Optional file suffix
+    if args.suffix:  # Can be None
+        if not scrollutil.is_value_ok_with_path(args.suffix):
+            scroll_log.log_message(
+                    BraceMessage(
+                        "File suffix {} contains disallowed character {}. "
+                        "ScrollPy will attemp to change it".format(
+                            args.suffix, os.sep)),
+                        1,
+                        'ERROR',
+                        console_logger, output_logger,
+                        )
+            new_suffix = scroll_util.make_ok_with_path(args.suffix)
+            scroll_log.log_message(
+                    BraceMessage("New file suffix is {}".format(new_suffix)),
+                    2,
+                    'WARNING',
+                    console_logger, file_logger,
+                    )
+
+    # Optional file sep; underscore if not set
+    if not scrollutil.is_value_ok_with_path(args.filesep):
+        scroll_log.log_message(
+                BraceMessage(
+                    "Specified file separator {} is invalid, defaulting "
+                    "to a single underscore ('_') instead".format(args.filesep)),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        args.filesep = '_'
+
+    # SET TBLSEP IF NOT SET BY USER
+
+    tblfmt = args.tblfmt
+    if tblfmt == 'csv':  # Default
+        tblsep = ','
+    elif tblfmt == 'space-delim':
+        tblsep = ' '
+    elif tblfmt == 'tab-delim':
+        tblsep = '\t'
+    else:  # Otherwise, user-specified
+        if not isinstance(args.tblsep, str):  # Invalid value for sep
+            scroll_log.log_message(
+                    BraceMessage("Specified table separator {} "
+                        "is invalid; defaulting to CSV format".format(
+                            args.tblsep)),
+                        1,
+                        'ERROR',
+                        console_logger, file_logger,
+                        )
+            tblsep = ','
+        else:  # Specified sep is ok
+            tblsep = args.tblsep
+    # Finally, set the value
+    args.tblsep = tblsep
 
     ##############################################################################
     # POPULATE GLOBAL CONFIG

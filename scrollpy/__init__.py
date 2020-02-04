@@ -7,6 +7,7 @@
 # A list of TemporaryDirectory objects for cleanup
 tmps_to_remove = []
 
+
 # Utility functions
 from scrollpy.util import _util as scrollutil
 # Logging functionality

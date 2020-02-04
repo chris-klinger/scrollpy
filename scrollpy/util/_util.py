@@ -13,26 +13,8 @@ import itertools
 import math
 import datetime
 
-
-# REMOVE?
-# def file_exists_user_spec(file_path):
-#     """If a file already exists that would be created, should warn the user
-#     and give them the option to either delete the old file or keep it.
-
-#     Alternatively, if the file exists, could just quit instead?
-
-#     For now, provide all the options?
-#     """
-#     good_input = False
-#     while not good_input:
-#         spec = input("Target file {} exists; overwrite? (y/Y/n/N/q/Q) --> ".format(
-#             file_path))
-#         spec = spec.strip() # Remove all whitespace
-#         if spec in ('y','Y','n','N','q','Q'):
-#             break
-#     if spec in ('q','Q'): # Exit requested, do immediately
-#         sys.exit("Quit execution; {} exists".format(file_path))
-#     return spec # Otherwise, let caller decide what to do
+# Use absolute imports here due to load order
+from scrollpy.config import _config as config
 
 
 def file_exists(file_path):
@@ -83,6 +65,40 @@ def ensure_dir_exists(dir_path):
                 raise
         else:
             raise  # re-raise on any other kind of error
+
+
+def is_value_ok_with_path(value):
+    """Very simple check to make sure a value does not have path chars.
+
+    Idea is that any path characters in a created filename may result in
+    creation of unwanted directories and misplaced output files.
+
+    Args:
+        value (str): Value (could be a filename, path, or other type of
+            value) to check.
+
+    Returns:
+        bool: True if path separator is not in the value; False
+            otherwise.
+
+    """
+    if os.sep in value:
+        return False
+    return True
+
+
+def make_ok_with_path(value):
+    """Removes all instances of a disallowed character.
+
+    Args:
+        value (str): Values to be sanitized.
+
+    Returns:
+        str: A copy of the input value with all instance of the path
+            character replaced with nothing.
+
+    """
+    return value.replace(os.sep,"")
 
 
 def path_is_name_only(file_path):

@@ -33,9 +33,9 @@ import textwrap
 import tempfile
 import datetime
 
-
-from scrollpy import scrollutil
-from scrollpy import config
+# Use absolute imports here due to import order
+from scrollpy.util import _util as scrollutil
+from scrollpy.config import _config as config
 
 
 # Random utility funtion used in some classes
@@ -205,20 +205,19 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
                 basename = _get_generic_logname(sep)
             else:  # It might be either a file or a directory; it does not exist
                 dirname,filename = os.path.split(_logpath)
-                if filename != '':  # Only dir
+                if filename == '':  # Only dir
                     basename = _get_generic_logname(sep)
                 else:
                     basename = filename
         else:  # logfile name not specified
             dirname = outdir
             basename = _get_generic_logname()
+    # Check to make sure name is ok
+    if not scrollutil.is_value_ok_with_path(basename):
+        basename = scrollutil.make_ok_with_path(basename)
     # No matter what, now we need to get a path
     target_path = os.path.join(dirname,basename)
-    # print("The target path is {}".format(target_path))
-    # print("The target dir is {}".format(dirname))
-    # print("The target file is {}".format(basename))
     # Check to see whether the directory exists
-    # print("Got to here")
     if not scrollutil.dir_exists(dirname):
         # print("Directory does not exist")
         if no_create:  # Can't create new dirs
@@ -226,10 +225,8 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
         else:
             # print("Trying to make directory")
             scrollutil.ensure_dir_exists(dirname)  # Might still specify a file
-    # print("Got past here")
     # Check filename itself
     if os.path.isfile(target_path):
-        # print("File already exists")
         if no_clobber:  # Don't overwrite, make unique
             return scrollutil.get_nonredundant_filepath(
                     dirname,  # dir_path

@@ -32,6 +32,8 @@ from scrollpy import SeqWriter
 from scrollpy import TableWriter
 # Utility
 from scrollpy import util
+# Global list for tmp dirs
+from scrollpy import tmps_to_remove
 # Import lookups
 from scrollpy import __project__
 from scrollpy import __version__
@@ -496,6 +498,12 @@ def main():
                 "(default) displays more information about the run and '3' "
                 "displays real-time program execution updates."
                 ))
+    info_options.add_argument("--silent",
+            action = "store_true",
+            help = (
+                "This option turns off all writing to the screen during program "
+                "execution."
+                ))
     info_options.add_argument("--version",
             action = "store_true",
             help = "Display version information and quit.")
@@ -544,6 +552,7 @@ def main():
     console_handler.addFilter(
             scroll_log.ConsoleFilter(
                 args.verbosity,
+                args.silent,  # If set, no output will be logged
                 ),
             )
     # Create console logger and add handler to it
@@ -556,6 +565,7 @@ def main():
     status_handler.addFilter(
             scroll_log.ConsoleFilter(
                 args.verbosity,
+                args.silent,  # If set, no output will be logged
                 ),
             )
     # Create status logger and add handler to it
@@ -1017,6 +1027,15 @@ if __name__ == '__main__':
                 console_logger, file_logger,
                 )
         full_run = False  # Program ended before finishing
+    # Add one more case in here
+    except Exception:  # Something unexpected ends program
+        scrollpy.log_message(
+                BraceMessage("ScrollPy has encountered an unexpected error; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        full_run = False
     finally:
         # Whether there was an error or not, need to remove any remaining
         # temporary directories; user does not want output

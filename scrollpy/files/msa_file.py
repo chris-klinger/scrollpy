@@ -16,7 +16,7 @@ from scrollpy.util._util import non_blank_lines
 
 # Get module loggers
 (console_logger, status_logger, file_logger, output_logger) = \
-        scroll_log.get_module_logger(__name__)
+        scroll_log.get_module_loggers(__name__)
 
 # These functions could probably be replaced by BioPython?
 def afa_to_phylip(alignment_file, target_file):

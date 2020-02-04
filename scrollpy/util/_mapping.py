@@ -112,14 +112,14 @@ class Mapping:
         num_treefiles = 1 if self._treefile else 0
         num_mapfile = 1 if self._mapfile else 0
         # Report numbers in __str__
-        return "{} with {} input files, {} alignment file(s), "
+        return ("{} with {} input files, {} alignment file(s), "
             "{} tree file(s), and {} mapping file(s)".format(
                 self.__class__.__name__,
                 num_infiles,
                 num_alignfiles,
                 num_treefiles,
                 num_mapfiles,
-                )
+                ))
 
     def __call__(self):
         """Run internal functions to create an internal _seq_dict object"""

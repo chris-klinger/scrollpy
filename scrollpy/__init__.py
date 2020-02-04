@@ -3,16 +3,20 @@
 # Populate Package Namespace
 ############################
 
+
+# A list of TemporaryDirectory objects for cleanup
+tmps_to_remove = []
+
 # Logging functionality
 from scrollpy.util import _logging as scroll_log  # LOAD FIRST!!!
 from scrollpy.util._logging import BraceMessage
-# Configuration and argument handling
-from scrollpy.config._config import config
-from scrollpy.config._config import load_config_file
 # Custom exceptions
 from scrollpy.util._exceptions import FatalScrollPyError
 from scrollpy.util._exceptions import DuplicateSeqError
 from scrollpy.util._exceptions import ValidationError
+# Configuration and argument handling
+from scrollpy.config._config import config
+from scrollpy.config._config import load_config_file
 # Classes to run external programs
 from scrollpy.applications.runner import Aligner
 from scrollpy.applications.runner import AlignEvaluator
@@ -35,10 +39,6 @@ from scrollpy.files.output import SeqWriter
 from scrollpy.files.output import TableWriter
 # Utility functions
 from scrollpy.util import _util as util
-
-
-# A list of TemporaryDirectory objects for cleanup
-tmps_to_remove = []
 
 
 ##################

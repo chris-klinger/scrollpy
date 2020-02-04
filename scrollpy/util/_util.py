@@ -85,6 +85,43 @@ def ensure_dir_exists(dir_path):
             raise  # re-raise on any other kind of error
 
 
+def path_is_name_only(file_path):
+    """Checks whether a path represents a dir or file only.
+
+    In order for users to specify shorthand paths to subdirectories,
+    check input values for target directories to determine if they
+    represent full filepaths or just a single name, either with or
+    without a trailing path separation character.
+
+    Args:
+        file_path (str): Provided filepath.
+
+    Returns:
+        bool: True if filepath represents only a single name; False
+            if filepath is a full path.
+
+    """
+    if not file_path:  # May be passed as None
+        return False
+    file_path = file_path.lstrip(os.sep)  # Remove possible leading char
+    # Otherwise actually check
+    dirs,files = os.path.split(file_path)  # 2-length tuple
+    if dirs == '':  # Empty string
+        num_dirs = 0
+    else:
+        num_dirs = len(dirs.split(os.sep))  # os.sep is platform-specific
+    if files == '':
+        num_files = 0
+    else:
+        num_files = 1  # Only ever 0 or 1 file
+    # Now check three possibilities
+    if num_dirs == 0:  # E.g. 'outdir'
+        return True
+    elif num_dirs == 1 and num_files == 0:  # E.g. 'outdir/'
+        return True
+    return False  # Every other option is a full path
+
+
 def get_nonredundant_filepath(dir_path, filename, suffix=1):
     """Given a directory and a filename, return a unique filename.
 

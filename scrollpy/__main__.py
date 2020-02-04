@@ -184,8 +184,10 @@ def main():
             help = (
                 "Target directory for output files. If the target directory "
                 "does not exist, it is created unless the '--no-create' flag "
-                "is set. If target directory is not specified, or directory "
-                "creation fails, defaults to the current directory."
+                "is set. If a single name is specified, e.g. 'out', it is "
+                "created as a subdirectory of the current working directory. "
+                "If target directory is not specified, or directory creation "
+                "fails, defaults to the current directory."
                 ))
     file_options.add_argument("--tmpout",
             nargs = '?',
@@ -194,7 +196,9 @@ def main():
             help = (
                 "Target directory for intermediate run files. If specified "
                 "and does not exist, it is created unless the '--no-create' "
-                "flag is set. If creation fails, tries to create /tmp/ in the "
+                "flag is set. If a single name is specified, e.g. 'tmpout', "
+                "it is created as a subdirectory of the current working "
+                "directory. If creation fails, tries to create /tmp/ in the "
                 "current directory instead. If not specified, or if all creation "
                 "attempts fail, a temporary directory is used and removed "
                 "following execution."
@@ -521,6 +525,21 @@ def main():
 
     # Parse all arguments
     args = parser.parse_args()
+    # Modify output directory(ies) if they are a single name
+    # Allows user to write a shorter outpath to the current dir
+    # MAIN OUTPUT
+    if scrollutil.path_is_name_only(args.out):
+        # Sanitize any leading path chars
+        sanitized_out = args.out.lstrip(os.sep)
+        new_out = os.path.join(current_dir, sanitized_out)
+        args.out = new_out
+    # TEMP OUTPUT
+    if scrollutil.path_is_name_only(args.tmpout):
+        # Sanitize any leading path chars
+        sanitized_tmpout = args.tmpout.lstrip(os.sep)
+        new_tmpout = os.path.join(current_dir, sanitized_tmpout)
+        args.tmpout = new_tmpout
+
 
     #############################################################################
     # CONFIGURE LOGGING

@@ -27,6 +27,7 @@ from scrollpy.files import sequence_file as sf
 from scrollpy.util._util import decompose_sets
 # Global list for removal
 from scrollpy import tmps_to_remove
+from scrollpy import scrollutil
 
 
 # Get module loggers
@@ -442,14 +443,26 @@ class IdentityFilter(GenericFilter):
         through a pipe such as stdin.
 
         """
-        seq_path = self._get_filter_outpath('seqs')
+        # seq_path = self._get_filter_outpath('seqs')
+        seq_path = scrollutil.get_filepath(
+                self._target_dir,
+                'filter_seqs',
+                'sequence',
+                seqfmt='fasta',
+                )
         sf._sequence_list_to_file_by_id(self._seq_list,seq_path)
         self._seq_path = seq_path
 
 
     def _align_seqs(self):
         """Calls alignment program on temporary sequence file."""
-        msa_path = self._get_filter_outpath('align')
+        # msa_path = self._get_filter_outpath('align')
+        msa_path = scrollutil.get_filepath(
+                self._target_dir,
+                'filter_seqs',
+                'alignment',
+                alignfmt='fasta',
+                )
         aligner = align.Aligner(
                 self._align_method,
                 config['ALIGNMENT'][self._align_method],  # Cmd

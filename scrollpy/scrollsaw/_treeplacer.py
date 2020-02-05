@@ -22,6 +22,7 @@ from scrollpy import TreeBuilder
 from scrollpy.util._mapping import Mapping
 # List for tmpdir names, for later removal
 from scrollpy import tmps_to_remove
+from scrollpy import scrollutil
 
 
 # Get module loggers
@@ -224,16 +225,41 @@ class TreePlacer:
             seq_obj (obj): The target sequence object.
 
         """
+        basename = seq_obj.name
         # Create a new sequence file
-        self._current_seq_path = self._get_outpath(seq_obj,'seq')
+        # self._current_seq_path = self._get_outpath(seq_obj,'seq')
+        self._current_seq_path = scrollutil.get_filepath(
+                self._outdir,
+                basename,
+                'sequence',
+                seqfmt='fasta',
+                )
         # Add to existing alignemnt
-        self._current_align_path = self._get_outpath(seq_obj,'align')
+        # self._current_align_path = self._get_outpath(seq_obj,'align')
+        self._current_align_path = scrollutil.get_filepath(
+                self._outdir,
+                basename,
+                'alignment',
+                alignfmt='fasta',
+                )
         self._add_seq_to_alignment(seq_obj)
         # Convert to Phylip file
-        self._current_phy_path = self._get_outpath(seq_obj,'phylip')
+        # self._current_phy_path = self._get_outpath(seq_obj,'phylip')
+        self._current_phy_path = scrollutil.get_filepath(
+                self._outdir,
+                basename,
+                'alignment',
+                alignfmt='phylip',
+                )
         mf.afa_to_phylip(self._current_align_path, self._current_phy_path)
         # Run IQ-TREE
-        self._current_tree_path = self._get_outpath(seq_obj,'tree')
+        # self._current_tree_path = self._get_outpath(seq_obj,'tree')
+        self._current_tree_path = scrollutil.get_filepath(
+                self._outdir,
+                basename,
+                'tree',
+                treefmt='iqtree',
+                )
         self._make_tree()
 
 

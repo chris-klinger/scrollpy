@@ -17,6 +17,7 @@ from scrollpy.filter._new_filter import Filter
 from scrollpy.files import sequence_file
 from scrollpy.alignments import parser
 from scrollpy.util import _util
+from scrollpy import scrollutil
 
 
 # Get module loggers
@@ -80,9 +81,16 @@ class AlignWriter(BaseWriter):
         # If AlignIter, want optimal alignment
         if isinstance(target_obj,AlignIter):
             write_obj = target_obj.get_optimal_alignment()
-            outfile = self._get_filepath(
-                    'optimal',  # 'group'
-                    align_type='alignment',
+            # outfile = self._get_filepath(
+            #         'optimal',  # 'group'
+            #         align_type='alignment',
+            #         )
+            outfile = scrollutil.get_filepath(
+                    self._out_path,
+                    'optimal',
+                    'alignment',
+                    extra='alignment',
+                    # alignfmt will be obtained from config
                     )
             parser.write_alignment_file(
                     write_obj,
@@ -174,9 +182,15 @@ class SeqWriter(BaseWriter):
         if isinstance(target_obj,ScrollPy) or isinstance(target_obj,ScrollTree):
             write_list = self._filter(mode='some')
             for group,seqs in write_list:
-                outfile = self._get_filepath(
+                # outfile = self._get_filepath(
+                #         group,
+                #         seq_type='scrollsaw',
+                #         )
+                outfile = scrollutil.get_filepath(
+                        self._out_path,
                         group,
-                        seq_type='scrollsaw',
+                        'sequence',
+                        extra='scrollsaw',
                         )
                 sequence_file._sequence_list_to_file(
                         write_list,
@@ -188,9 +202,15 @@ class SeqWriter(BaseWriter):
             for value in ('remaining','removed'):
                 write_list = self._filter(mode=value)
                 for group,seqs in write_list:
-                    outfile = self._get_filepath(
+                    # outfile = self._get_filepath(
+                    #         group,
+                    #         seq_type=value,
+                    #         )
+                    outfile = scrollutil.get_filepath(
+                            self._out_path,
                             group,
-                            seq_type=value,
+                            'sequence',
+                            extra=value,
                             )
                     sequence_file._sequence_list_to_file(
                             write_list,
@@ -201,9 +221,15 @@ class SeqWriter(BaseWriter):
         elif isinstance(target_obj,TreePlacer):
             write_list = self._filter(mode='classified')
             for group,seqs in write_list:
-                outfile = self._get_filepath(
+                # outfile = self._get_filepath(
+                #         group,
+                #         seq_type='classified',
+                #         )
+                outfile = scrollutil.get_filepath(
+                        self._out_path,
                         group,
-                        seq_type='classified',
+                        'sequence',
+                        'classified',
                         )
                 sequence_file._sequence_list_to_file(
                         write_list,
@@ -342,10 +368,17 @@ class TableWriter(BaseWriter):
         """
         # Output based on object
         target_obj = self._sp_object
+        basename = 'scrollpy'
         # If ScrollPy/ScrollTree, want distance values
         if isinstance(target_obj,ScrollPy) or isinstance(target_obj,ScrollTree):
             lines = self._filter(mode='distance')
-            outpath = self._get_filepath(table_type='scrollsaw')
+            # outpath = self._get_filepath(table_type='scrollsaw')
+            outpath = scrollutil.get_filepath(
+                    self._out_path,
+                    basename,
+                    'table',
+                    extra='scrollsaw',
+                    )
             self._write(
                     lines,
                     outpath,
@@ -354,7 +387,13 @@ class TableWriter(BaseWriter):
         # If Filter, want values seqs were filtered on
         elif isinstance(target_obj,Filter):
             lines = self._filter(mode='fvalue')
-            outpath = self._get_filepath(table_type='filtered')
+            # outpath = self._get_filepath(table_type='filtered')
+            outpath = scrollutil.get_filepath(
+                    self._out_path,
+                    basename,
+                    'table',
+                    extra='filtered',
+                    )
             self._write(
                     lines,
                     outpath,
@@ -365,7 +404,13 @@ class TableWriter(BaseWriter):
             for value in ('monophyletic','notmonophyletic'):
                 lines = self._filter(mode=value)
                 if lines:  # Not every analysis will have both
-                    outpath = self._get_filepath(table_type=value)
+                    # outpath = self._get_filepath(table_type=value)
+                    outpath = scrollutil.get_filepath(
+                            self._out_path,
+                            basename,
+                            'table',
+                            extra=value,
+                            )
                     self._write(
                             lines,
                             outpath,
@@ -374,7 +419,13 @@ class TableWriter(BaseWriter):
         # If AlignIter, want information on alignments itered over
         elif isinstance(target_obj,AlignIter):
             lines = self._filter(mode='aligniter')
-            outpath = self._get_filepath(table_type='aligniter')
+            # outpath = self._get_filepath(table_type='aligniter')
+            outpath = scrollutil.get_filepath(
+                    self._out_path,
+                    basename,
+                    'table',
+                    extra='aligniter',
+                    )
             self._write(
                     lines,
                     outpath,

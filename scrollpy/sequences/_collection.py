@@ -14,6 +14,7 @@ from scrollpy import DistanceCalc
 # from scrollpy.distances import distance, parser
 from scrollpy.distances import parser
 #from scrollpy.config._config import config
+from scrollpy import scrollutil
 
 
 # Get module loggers
@@ -114,15 +115,14 @@ class ScrollCollection:
 
     def _get_sequence_file(self):
         """Calls external methods to parse sequence file."""
-        seq_path = self._get_outpath('seqs')
-        # As in _get_outpath(), eventually provide options to control this
-        #if seq_path != self._inpath: # Comparison works even if None?
-        #    if _util.file_exists(seq_path):
-        #        user_spec = _util.file_exists_user_spec(seq_path)
-        #        if user_spec in ('y','Y'):
-        #            sf._sequence_list_to_file(self.seq_list, seq_path)
-        #    else:
-        #        sf._sequence_list_to_file(self.seq_list, seq_path)
+        # seq_path = self._get_outpath('seqs')
+        seq_path = scrollutil.get_filepath(
+                self._outdir,          # Output directory
+                self._group,           # Name
+                'sequence',            # Type, for file extension
+                extra=self._opt_group, # Extra for name; can be None
+                seqfmt='fasta',        # Specify the file format
+                )
         sf._sequence_list_to_file_by_id(self.seq_list, seq_path)
         self._seq_path = seq_path # Assign to self for other functions
 
@@ -134,7 +134,14 @@ class ScrollCollection:
         build an alignment from the sequences.
 
         """
-        msa_path = self._get_outpath('align')
+        # msa_path = self._get_outpath('align')
+        msa_path = scrollutil.get_filepath(
+                self._outdir,
+                self._group,
+                'alignment',
+                extra=self._opt_group,
+                alignfmt='fasta',
+                )
         # aligner = align.Aligner(
         aligner = Aligner(
                 self.align_method,
@@ -153,7 +160,14 @@ class ScrollCollection:
         build an alignment from the sequences.
 
         """
-        dist_path = self._get_outpath('distance')
+        # dist_path = self._get_outpath('distance')
+        dist_path = scrollutil.get_filepath(
+                self._outdir,
+                self._group,
+                'distance',
+                extra=self._opt_group,
+                distfmt='raxml',
+                )
         # distcalc = distance.DistanceCalc(self.dist_method,
         distcalc = DistanceCalc(
                 self.dist_method,

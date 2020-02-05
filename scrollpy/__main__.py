@@ -685,9 +685,9 @@ def main():
         real_path = os.path.realpath(os.path.join(current_dir,args.alignment))
         all_paths.append(real_path)
     # Seqs to place, if supplied
-    if args.to_place:
-        real_path = os.path.realpath(os.path.join(current_dir,args.to_place))
-        all_paths.append(to_place)
+    if args.toplace:
+        real_path = os.path.realpath(os.path.join(current_dir,args.toplace))
+        all_paths.append(real_path)
     # Mapping file, if supplied
     if args.mapping:  # Nonetype if not called at all
         real_path = os.path.realpath(os.path.join(current_dir,args.mapping))
@@ -768,6 +768,7 @@ def main():
 
     # Check whether temporary output is specified
     if args.tmpout:  # None otherwise
+        print("User specified args.tmpout")
         if not args.no_create:
             try:
                 scrollutil.ensure_dir_exists(args.tmpout)
@@ -1090,38 +1091,52 @@ def run_cleanup(successful=True):
 
 
 if __name__ == '__main__':
-    full_run = True  # Assume program runs fully
-    try:
-        main()
-    except KeyboardInterrupt:
-        scroll_log.log_message(
-                scroll_log.BraceMessage("Keyboard interrupt detected; exiting..."),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        full_run = False  # Program ended before finishing
-    except FatalScrollPyError:
-        # Add newlines in case status logging was occuring prior to error
-        scrollpy.log_newlines(console_logger)
-        scroll_log.log_message(
-                scroll_log.BraceMessage("ScrollPy has encountered a fatal error; exiting..."),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        full_run = False  # Program ended before finishing
-    # Add one more case in here
-    except Exception:  # Something unexpected ends program
-        scrollpy.log_message(
-                BraceMessage("ScrollPy has encountered an unexpected error; exiting..."),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        full_run = False
-    finally:
-        # Whether there was an error or not, need to remove any remaining
-        # temporary directories; user does not want output
-        run_cleanup(full_run)
+    # full_run = True  # Assume program runs fully
+    # try:
+    main()
+    # except KeyboardInterrupt:
+    #     scroll_log.log_newlines(console_logger)
+    #     scroll_log.log_message(
+    #             BraceMessage(
+    #                 "Keyboard interrupt detected; exiting..."),
+    #             1,
+    #             'ERROR',
+    #             console_logger, file_logger,
+    #             )
+    #     full_run = False  # Program ended before finishing
+    # except FatalScrollPyError:
+    #     # Add newlines in case status logging was occuring prior to error
+    #     scroll_log.log_newlines(console_logger)
+    #     scroll_log.log_message(
+    #             BraceMessage(
+    #                 "ScrollPy has encountered a fatal error; exiting..."),
+    #             1,
+    #             'ERROR',
+    #             console_logger, file_logger,
+    #             )
+    #     full_run = False  # Program ended before finishing
+    # # Add one more case in here
+    # except Exception as e:  # Something unexpected ends program
+    #     scroll_log.log_newlines(console_logger)
+    #     # Log the exception itself for debugging
+    #     scroll_log.log_message(
+    #             BraceMessage(""),
+    #             1,
+    #             'ERROR',
+    #             console_logger, file_logger,
+    #             exc_obj=e,
+    #             )
+    #     # Let the user know the program is exiting
+    #     scroll_log.log_message(
+    #             BraceMessage(
+    #                 "ScrollPy has encountered an unexpected error; exiting..."),
+    #             1,
+    #             'ERROR',
+    #             console_logger, file_logger,
+    #             )
+    #     full_run = False
+    # finally:
+    #     # Whether there was an error or not, need to remove any remaining
+    #     # temporary directories; user does not want output
+    #     run_cleanup(full_run)
 

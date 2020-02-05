@@ -24,6 +24,7 @@ from scrollpy.files import tree_file
 from scrollpy.util import _util,_tree
 # Global list for removal
 from scrollpy import tmps_to_remove
+from scrollpy import scrollutil
 
 
 # Get module loggers
@@ -77,6 +78,8 @@ class AlignIter:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Call function to set self._align_name
+        self._set_alignment_name()
         # Keep kwargs for __repr__
         self.kwargs = kwargs
         # Internal default that does not change each time through __call__
@@ -129,7 +132,13 @@ class AlignIter:
         # Get alignment object
         self._parse_alignment()
         # Run program to evaluate columns
-        columns_outpath = self._get_outpath('columns')
+        # columns_outpath = self._get_outpath('columns')
+        columns_outpath = scrollutil.get_filepath(
+                self._outdir,
+                self._align_name,
+                'column',
+                extra='columns',
+                )
         self._calculate_columns(columns_outpath)
         # Parse output
         self._evaluate_columns(columns_outpath)
@@ -159,6 +168,11 @@ class AlignIter:
         # # Clean up  -> Moved to __main__.run_cleanup()
         # if self._remove_tmp:
         #     tmp_dir.cleanup()
+
+    def _set_alignment_name(self):
+        """Called on __init__ to set name for outpaths."""
+        align_name = os.path.basename(self._alignment)
+        self._align_name = align_name.rsplit('.',1)[0]
 
 
     def get_optimal_alignment(self):
@@ -617,29 +631,33 @@ class AlignIter:
                 obtained for any reason.
 
         """
+        align_name = os.path.basename(self._alignment)
+        basename = align_name.rsplit('.',1)[0]
         # Length of all sequences should be the same, use first one
         current_align_length = len(self._align_obj[0].seq)
         # Use to calculate current values
-        try:
-            self._current_phy_path   = self._get_outpath(
-                    'phylip',
-                    length=current_align_length,
-                    )
-            self._current_tree_path  = self._get_outpath(
-                    'tree',
-                    length=current_align_length,
-                    )
-        except ValueError:  # Raised when length is None
-            scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "Unexpected length {} when resolving outpaths",
-                        current_align_length,
-                        ),
-                    1,
-                    'ERROR',
-                    console_logger, file_logger,
-                    )
-            raise FatalScrollPyError  # Signal program termination
+        # self._current_phy_path   = self._get_outpath(
+        #         'phylip',
+        #         length=current_align_length,
+        #         )
+        self._current_phy_path = scrollutil.get_filepath(
+                self._outdir,
+                self._align_name,
+                'alignment',
+                extra=current_align_length,
+                alignfmt='phylip',
+                )
+        # self._current_tree_path  = self._get_outpath(
+        #         'tree',
+        #         length=current_align_length,
+        #         )
+        self._current_tree_path = scrollutil.get_filepath(
+                self._outdir,
+                self._align_name,
+                'tree',
+                extra=current_align_length,
+                treefmt='iqtree',
+                )
 
 
     def _make_tree(self):

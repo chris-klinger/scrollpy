@@ -14,7 +14,7 @@ import math
 import datetime
 
 # Use absolute imports here due to load order
-from scrollpy.config import _config as config
+from scrollpy.config._config import config
 
 
 def file_exists(file_path):
@@ -57,6 +57,7 @@ def ensure_dir_exists(dir_path):
         OSError: directory already exists or creation failed.
 
     """
+    print("Trying to make {}".format(dir_path))
     try:
         os.makedirs(dir_path)
     except OSError as e:
@@ -136,6 +137,201 @@ def path_is_name_only(file_path):
     elif num_dirs == 1 and num_files == 0:  # E.g. 'outdir/'
         return True
     return False  # Every other option is a full path
+
+
+def get_filepath(outdir, name, filetype, **kwargs):
+    """General use function to return a filepath based on input.
+
+    Called throughout ScrollPy to retrieve a name of an expected output
+    file, and ensure that the filepath is unique. Output directories
+    are assumed to exist following initial program argument checking.
+
+    Args:
+        outdir (str): The target directory to output the file to.
+        name (str): A basename for the output file.
+        filetype (str): The general type of output file expected.
+        **kwargs: Optional keyword arguments to hold additional filename
+            information.
+
+    Returns:
+        str: The full path to the desired output file.
+
+    """
+    # Whether or not to overwrite identical filenames
+    no_clobber = bool(config['ARGS']['no_clobber'])
+    # Initial filename from function
+    _filename = get_filename(name, **kwargs)
+    _extension = get_file_extension(filetype, **kwargs)
+    filename = _filename + _extension
+    # Check to make sure there are no path chars
+    if not is_value_ok_with_path(filename):
+        filename = make_ok_with_path(filename)
+    # Join to make full outpath
+    _filepath = os.path.join(outdir, filename)
+    # Check if ok -> change name/overwrite if existing file
+    if file_exists(_filepath):
+        if no_clobber:  # Do not overwrite
+            filepath = get_nonredundant_filepath(
+                    outdir,
+                    filename,
+                    )
+        else:  # Intend to overwrite, remove file first
+            try:
+                os.remove(_filepath)
+            except OSError:
+                pass  # Should not happen
+            filepath = _filepath
+    else:  # Does not exist
+        filepath = _filepath
+
+    return filepath
+
+
+def get_filename(name, **kwargs):
+    """Returns a filename based on input.
+
+    Args:
+        name (str): A basename for the output file.
+        **kwargs: Optional keyword arguments to hold additional filename
+            information.
+
+    Returns:
+        str: An output filename.
+
+    """
+    # Optional global config values
+    filesep = config['ARGS']['filesep']  # Defaults to '_'
+    suffix = config['ARGS']['suffix']    # May be None
+    try:
+        extra = str(kwargs['extra'])  # Expect str only? or list as well?
+    except KeyError:
+        extra = None
+    # Add extra, if necessary
+    if extra:
+        basename = filesep.join((name,extra))
+    else:
+        basename = name
+    # Add suffix, if necessary
+    if suffix != '':
+        filename = filesep.join((basename,suffix))
+    else:
+        filename = basename
+
+    return filename
+
+
+def get_file_extension(filetype, **kwargs):
+    """Returns a file extension based on input.
+
+    Uses the input filetype argument to call one of several functions in
+    the module to return a file extension. These modules may make use of
+    an optional format argument in input kwargs.
+
+    Args:
+        filetype (str): The general type of output file expected.
+        **kwargs: Optional keyword arguments to hold additional filename
+            information.
+
+    Returns:
+        str: An output file extension.
+
+    """
+    name_function = "get_{}_extension".format(filetype)  # Based on type
+    try:
+        to_call = globals()[name_function]  # Find in module
+    except KeyError:
+        raise AttributeError  # Could not find for type
+    # Call function to actually get extension
+    extension = to_call(**kwargs)
+
+    return extension
+
+
+def get_sequence_extension(**kwargs):
+    """Returns a file extension based on input.
+
+    Args:
+        **kwargs: Optional keyword arguments to hold additional
+            information.
+
+    Returns:
+        str: An output file extension.
+
+    """
+    try:
+        seqfmt = kwargs['seqfmt']  # Can be specified
+    except KeyError:
+        seqfmt = config['ARGS']['seqfmt'] # Use global if not
+    # Format just controls extension
+    if seqfmt == 'fasta':
+        extension = '.fa'
+    else:
+        pass  # TO-DO: Add more!
+
+    return extension
+
+
+def get_alignment_extension(**kwargs):
+    """See documentation for get_sequence_extension()"""
+    try:
+        alignfmt = kwargs['alignfmt']
+    except KeyError:
+        alignfmt = config['ARGS']['alignfmt']
+    # Format just controls extension
+    if alignfmt == 'fasta':
+        extension = '.afa'
+    elif alignfmt == 'phylip':  # Count phylip as alignment
+        extension = '.phy'
+    else:
+        pass  # TO-DO
+
+    return extension
+
+
+def get_tree_extension(**kwargs):
+    """See documentation for get_sequence_extension()"""
+    try:
+        treefmt = kwargs['treefmt']
+    except KeyError:
+        raise AttributeError
+    if treefmt == 'iqtree':
+        extension = '.phy.contree'
+    else:
+        pass  # Make more flexible eventually
+
+    return extension
+
+
+def get_distance_extension(**kwargs):
+    """See documentation for get_sequence_extension()"""
+    try:
+        distfmt = kwargs['distfmt']
+    except KeyError:
+        raise AttributeError
+    if distfmt == 'raxml':
+        extension = ''  # No added extension
+    else:
+        pass  # Make more flexible eventually
+
+    return extension
+
+
+def get_column_extension(**kwargs):
+    """See documentation for get_sequence_extension()"""
+    return '.txt'  # Needs to be more flexible?
+
+
+def get_table_extension(**kwargs):
+    """See documentation for get_sequence_extension()"""
+    # Specific global config value
+    tblsep = config['ARGS']['tblsep']
+    # Obtain file extention by tblsep
+    if tblsep == ',':
+        extension = '.csv'
+    else:
+        extension = '.txt' # Need to make more flexible eventually
+
+    return extension
 
 
 def get_nonredundant_filepath(dir_path, filename, suffix=1):

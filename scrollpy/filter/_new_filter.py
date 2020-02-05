@@ -443,7 +443,6 @@ class IdentityFilter(GenericFilter):
         through a pipe such as stdin.
 
         """
-        # seq_path = self._get_filter_outpath('seqs')
         seq_path = scrollutil.get_filepath(
                 self._target_dir,
                 'filter_seqs',
@@ -456,7 +455,6 @@ class IdentityFilter(GenericFilter):
 
     def _align_seqs(self):
         """Calls alignment program on temporary sequence file."""
-        # msa_path = self._get_filter_outpath('align')
         msa_path = scrollutil.get_filepath(
                 self._target_dir,
                 'filter_seqs',
@@ -573,28 +571,4 @@ class IdentityFilter(GenericFilter):
                     )[1:]:  # Keep first entry
                 self._to_remove.append(pair)
 
-
-    def _get_filter_outpath(self, out_type):
-        """Obtains a sensible outpath for sequences.
-
-        File extension is determined by the type of output specified
-        (align/seqs).
-
-        Args:
-            out_type (str): Specifies the output file extension.
-
-        Returns:
-            str: Full path to the output file.
-
-        """
-        basename = "filter_seqs"
-        if out_type == 'seqs':
-            outfile = basename + '.fa'
-            outpath = os.path.join(self._target_dir, outfile)
-        elif out_type == 'align':
-            outfile = basename + '.mfa'
-            outpath = os.path.join(self._target_dir, outfile)
-        else:
-            raise ValueError # Is this necessary?
-        return outpath
 

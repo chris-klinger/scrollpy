@@ -132,7 +132,6 @@ class AlignIter:
         # Get alignment object
         self._parse_alignment()
         # Run program to evaluate columns
-        # columns_outpath = self._get_outpath('columns')
         columns_outpath = scrollutil.get_filepath(
                 self._outdir,
                 self._align_name,
@@ -165,9 +164,6 @@ class AlignIter:
             print("Could not run __call__")
         # Add easy lookup value to self.iter_info
         self._evaluate_info()
-        # # Clean up  -> Moved to __main__.run_cleanup()
-        # if self._remove_tmp:
-        #     tmp_dir.cleanup()
 
     def _set_alignment_name(self):
         """Called on __init__ to set name for outpaths."""
@@ -209,39 +205,6 @@ class AlignIter:
                 self._current_phy_path,
                 'phylip-relaxed',
                 )
-
-
-    def _get_outpath(self, out_type, length=None):
-        """Obtain the full path to an output file.
-
-        Args:
-            out_type (str): The type of output file needed. Should be
-                one of <columns>, <phylip>, or <tree>.
-            length (int): Optional current length of the alignment.
-                Defaults to None.
-
-        Returns:
-            str: Full path to the output file.
-
-        """
-        align_name = os.path.basename(self._alignment)
-        basename = align_name.rsplit('.',1)[0]
-        # Outfile depends on out_type
-        if out_type == 'columns':
-            outfile = basename + '_columns.txt'
-        elif out_type in ('phylip','tree'):
-            if not length:
-                raise ValueError  # Log it
-            strlen = str(length)
-            if out_type == 'phylip':
-                outfile = basename + '_' + strlen + '.phy'
-            elif out_type == 'tree':
-                if self.tree_method == 'Iqtree':
-                    outfile = basename + '_' + strlen + '.phy.contree'
-        # Get full outpath and return
-        outpath = os.path.join(self._outdir, outfile)
-        return outpath
-
 
     def _calculate_columns(self, column_path):
         """Calls external method to evaluate alignment columns.
@@ -516,7 +479,6 @@ class AlignIter:
                 )
         # Adjust number by bin count and remaining alignment length
         num = int(hist[0] * fraction_remaining)
-        # print("Remove {} columns".format(num))
         # Always remove at least one position
         return max(num,1)
 
@@ -631,15 +593,9 @@ class AlignIter:
                 obtained for any reason.
 
         """
-        align_name = os.path.basename(self._alignment)
-        basename = align_name.rsplit('.',1)[0]
         # Length of all sequences should be the same, use first one
         current_align_length = len(self._align_obj[0].seq)
         # Use to calculate current values
-        # self._current_phy_path   = self._get_outpath(
-        #         'phylip',
-        #         length=current_align_length,
-        #         )
         self._current_phy_path = scrollutil.get_filepath(
                 self._outdir,
                 self._align_name,
@@ -647,10 +603,6 @@ class AlignIter:
                 extra=current_align_length,
                 alignfmt='phylip',
                 )
-        # self._current_tree_path  = self._get_outpath(
-        #         'tree',
-        #         length=current_align_length,
-        #         )
         self._current_tree_path = scrollutil.get_filepath(
                 self._outdir,
                 self._align_name,

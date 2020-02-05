@@ -145,7 +145,6 @@ class TreePlacer:
             # Create all neccessary files
             self._make_new_files(seq_obj)
             # Parse tree object and update internal mappings
-            # self._read_current_tree()
             self._update_tree_mappings()
             # Determine the right leaf
             added_leaf = self._get_added_leaf()
@@ -227,7 +226,6 @@ class TreePlacer:
         """
         basename = seq_obj.name
         # Create a new sequence file
-        # self._current_seq_path = self._get_outpath(seq_obj,'seq')
         self._current_seq_path = scrollutil.get_filepath(
                 self._outdir,
                 basename,
@@ -235,7 +233,6 @@ class TreePlacer:
                 seqfmt='fasta',
                 )
         # Add to existing alignemnt
-        # self._current_align_path = self._get_outpath(seq_obj,'align')
         self._current_align_path = scrollutil.get_filepath(
                 self._outdir,
                 basename,
@@ -244,7 +241,6 @@ class TreePlacer:
                 )
         self._add_seq_to_alignment(seq_obj)
         # Convert to Phylip file
-        # self._current_phy_path = self._get_outpath(seq_obj,'phylip')
         self._current_phy_path = scrollutil.get_filepath(
                 self._outdir,
                 basename,
@@ -253,7 +249,6 @@ class TreePlacer:
                 )
         mf.afa_to_phylip(self._current_align_path, self._current_phy_path)
         # Run IQ-TREE
-        # self._current_tree_path = self._get_outpath(seq_obj,'tree')
         self._current_tree_path = scrollutil.get_filepath(
                 self._outdir,
                 basename,
@@ -261,36 +256,6 @@ class TreePlacer:
                 treefmt='iqtree',
                 )
         self._make_tree()
-
-
-    # Similar to other functions - can this be extracted?
-    def _get_outpath(self, seq_obj, out_type):
-        """Obtains the full path to an output file.
-
-        Args:
-            seq_obj (obj): The target sequence object.
-            out_type (str): The type of output file needed. Should be
-                one of <seq>, <align>, <phylip>, or <tree>.
-
-        Returns:
-            str: Full path to the output file.
-
-        """
-        # Is name guaranteed to be unique?
-        basename = seq_obj.name
-        # Create a new subdir for each run?
-        if out_type == 'seq':
-            outfile = basename + '.fa'
-        elif out_type == 'align':
-            outfile = basename + '.mfa'
-        elif out_type == 'phylip':
-            outfile = basename + '.phy'
-        elif out_type == 'tree':
-            if self.tree_method == 'Iqtree':
-                outfile = basename + '.phy.contree'
-        # Get full path and return
-        outpath = os.path.join(self._outdir, outfile)
-        return outpath
 
 
     def _add_seq_to_alignment(self, seq_obj):
@@ -361,14 +326,6 @@ class TreePlacer:
                 cmd_list = build_command,  # Uses subprocess internally
                 )
         builder()  # Run command
-
-
-    # def _read_current_tree(self):
-    #     """Reads and sets attribute"""
-    #     self._current_tree_obj = tf.read_tree(
-    #             self._current_tree_path,
-    #             'newick',  # IQ-Tree output is Newick
-    #             )
 
 
     def _update_tree_mappings(self):

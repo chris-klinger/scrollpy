@@ -81,16 +81,11 @@ class AlignWriter(BaseWriter):
         # If AlignIter, want optimal alignment
         if isinstance(target_obj,AlignIter):
             write_obj = target_obj.get_optimal_alignment()
-            # outfile = self._get_filepath(
-            #         'optimal',  # 'group'
-            #         align_type='alignment',
-            #         )
             outfile = scrollutil.get_filepath(
                     self._out_path,
                     'optimal',
                     'alignment',
                     extra='alignment',
-                    # alignfmt will be obtained from config
                     )
             parser.write_alignment_file(
                     write_obj,
@@ -107,54 +102,6 @@ class AlignWriter(BaseWriter):
                     'ERROR',
                     console_logger, file_logger,
                     )
-
-
-    def _get_filepath(self, align_name, align_type):
-        """Obtains the full path to an output file.
-
-        Uses the name and type of the alignment to retrieve a filepath.
-
-        If the output directory does not exist, create it unless the
-        <no_create> config variable is set. If the output file exists,
-        overwrite it unless the <no_clobber> config variable is set; if
-        it is set, obtain a different filename instead.
-
-        Args:
-            align_name (str): Name to use for the output file.
-            align_type (str): Format of the output alignment. For more
-                details, see the BioPython Align.IO documentation.
-
-        """
-        # Probably just use an external method once that is written?
-        no_clobber = bool(config['ARGS']['no_clobber'])
-        sep = config['ARGS']['filesep']
-        suffix = config['ARGS']['suffix']
-        aformat = config['ARGS']['alignfmt']
-        #assert isinstance(group, str) # this should eventually be a string!
-        if (suffix == '') or (not isinstance(suffix, str)):
-            basename = sep.join((str(align_name),align_type))
-        else:  # It is a string
-            basename = sep.join((str(align_name),align_type,suffix))
-        if aformat == 'fasta':
-            basename = basename + '.mfa' # Need to make more flexible eventually
-        else:
-            # Raise error?
-            scroll_log.log_message(
-                    BraceMessage("Unsupported alignment format {}".format(
-                        aformat)),
-                    1,
-                    'ERROR',
-                    console_logger, file_logger,
-                    )
-        filepath = os.path.join(self._out_path, basename)
-        if os.path.exists(filepath):
-            if no_clobber:
-                dirname,filename = os.path.split(filepath)
-                filepath = util.get_nonredundant_filepath(
-                        dirname,
-                        filename,
-                        )
-        return filepath
 
 
 class SeqWriter(BaseWriter):
@@ -182,10 +129,6 @@ class SeqWriter(BaseWriter):
         if isinstance(target_obj,ScrollPy) or isinstance(target_obj,ScrollTree):
             write_list = self._filter(mode='some')
             for group,seqs in write_list:
-                # outfile = self._get_filepath(
-                #         group,
-                #         seq_type='scrollsaw',
-                #         )
                 outfile = scrollutil.get_filepath(
                         self._out_path,
                         group,
@@ -202,10 +145,6 @@ class SeqWriter(BaseWriter):
             for value in ('remaining','removed'):
                 write_list = self._filter(mode=value)
                 for group,seqs in write_list:
-                    # outfile = self._get_filepath(
-                    #         group,
-                    #         seq_type=value,
-                    #         )
                     outfile = scrollutil.get_filepath(
                             self._out_path,
                             group,
@@ -221,10 +160,6 @@ class SeqWriter(BaseWriter):
         elif isinstance(target_obj,TreePlacer):
             write_list = self._filter(mode='classified')
             for group,seqs in write_list:
-                # outfile = self._get_filepath(
-                #         group,
-                #         seq_type='classified',
-                #         )
                 outfile = scrollutil.get_filepath(
                         self._out_path,
                         group,
@@ -293,53 +228,6 @@ class SeqWriter(BaseWriter):
         return [(group,objs) for group,objs in seqs.items()]
 
 
-    def _get_filepath(self, group, seq_type='scrollsaw'):
-        """Obtains the full path to an output file.
-
-        Uses the name and type of the alignment to retrieve a filepath.
-
-        If the output directory does not exist, create it unless the
-        <no_create> config variable is set. If the output file exists,
-        overwrite it unless the <no_clobber> config variable is set; if
-        it is set, obtain a different filename instead.
-
-        Args:
-            align_name (str): Name to use for the output file.
-            align_type (str): Format of the output alignment. For more
-                details, see the BioPython Align.IO documentation.
-
-        """
-        # Probably just use an external method once that is written?
-        no_clobber = bool(config['ARGS']['no_clobber'])
-        sep = config['ARGS']['filesep']
-        suffix = config['ARGS']['suffix']
-        sformat = config['ARGS']['seqfmt']
-        #assert isinstance(group, str) # this should eventually be a string!
-        if (suffix == '') or (not isinstance(suffix, str)):
-            basename = sep.join((str(group),seq_type))
-        else:  # It is a string
-            basename = sep.join((str(group),seq_type,suffix))
-        if sformat == 'fasta':
-            basename = basename + '.fa' # Need to make more flexible eventually
-        else:
-            scroll_log.log_message(
-                    BraceMessage("Unsupported sequence format {}".format(
-                        aformat)),
-                    1,
-                    'ERROR',
-                    console_logger, file_logger,
-                    )
-        filepath = os.path.join(self._out_path, basename)
-        if os.path.exists(filepath):
-            if no_clobber:
-                dirname,filename = os.path.split(filepath)
-                filepath = util.get_nonredundant_filepath(
-                        dirname,
-                        filename,
-                        )
-        return filepath
-
-
 class TableWriter(BaseWriter):
     """SubClass of BaseWriter to handle writing alignments.
 
@@ -354,8 +242,6 @@ class TableWriter(BaseWriter):
 
         """
         super().__init__(sp_object, out_path)
-        # BaseWriter.__init__(self, sp_object, out_path)
-        self._set_table_sep()  # Sets self._tblsep
 
 
     def write(self):
@@ -372,7 +258,6 @@ class TableWriter(BaseWriter):
         # If ScrollPy/ScrollTree, want distance values
         if isinstance(target_obj,ScrollPy) or isinstance(target_obj,ScrollTree):
             lines = self._filter(mode='distance')
-            # outpath = self._get_filepath(table_type='scrollsaw')
             outpath = scrollutil.get_filepath(
                     self._out_path,
                     basename,
@@ -387,7 +272,6 @@ class TableWriter(BaseWriter):
         # If Filter, want values seqs were filtered on
         elif isinstance(target_obj,Filter):
             lines = self._filter(mode='fvalue')
-            # outpath = self._get_filepath(table_type='filtered')
             outpath = scrollutil.get_filepath(
                     self._out_path,
                     basename,
@@ -404,7 +288,6 @@ class TableWriter(BaseWriter):
             for value in ('monophyletic','notmonophyletic'):
                 lines = self._filter(mode=value)
                 if lines:  # Not every analysis will have both
-                    # outpath = self._get_filepath(table_type=value)
                     outpath = scrollutil.get_filepath(
                             self._out_path,
                             basename,
@@ -419,7 +302,6 @@ class TableWriter(BaseWriter):
         # If AlignIter, want information on alignments itered over
         elif isinstance(target_obj,AlignIter):
             lines = self._filter(mode='aligniter')
-            # outpath = self._get_filepath(table_type='aligniter')
             outpath = scrollutil.get_filepath(
                     self._out_path,
                     basename,
@@ -646,81 +528,6 @@ class TableWriter(BaseWriter):
             new_values.append(arg)
 
         return new_values
-
-
-    def _set_table_sep(self):
-        """Obtain the table separator based on config values.
-
-        This is a utility function called during instantiation that uses
-        the <tblfmt> config value to set self._tblsep.
-
-        """
-        # Separator dictated by format
-        tblfmt = config['ARGS']['tblfmt']
-        if tblfmt == 'csv':
-            tblsep = ','
-        elif tblfmt == 'space-delim':
-            tblsep = ' '
-        elif tblfmt == 'tab-delim':
-            tblsep = '\t'
-        else:
-            # User-defined sep, if possible
-            if tblfmt == 'sep':
-                tblsep = config['ARGS']['tblsep']
-                if not isinstance(tblsep, str):  # Invalid value for sep
-                    scroll_log.log_message(
-                            BraceMessage("Specified table separator {} "
-                                "is invalid; defaulting to CSV format".format(
-                                    tblsep)),
-                                2,
-                                'WARNING',
-                                console_logger, file_logger,
-                                )
-                    tblsep = ','
-            else:
-                tblsep = ','
-        # No return, just set instance value
-        self._tblsep = tblsep
-
-
-    def _get_filepath(self, table_type='scrollsaw'):
-        """Obtains the full path to an output file.
-
-        Uses the name and type of the alignment to retrieve a filepath.
-
-        If the output directory does not exist, create it unless the
-        <no_create> config variable is set. If the output file exists,
-        overwrite it unless the <no_clobber> config variable is set; if
-        it is set, obtain a different filename instead.
-
-        Args:
-            align_name (str): Name to use for the output file.
-            align_type (str): Format of the output alignment. For more
-                details, see the BioPython Align.IO documentation.
-
-        """
-        # Probably just use an external method once that is written?
-        no_clobber = bool(config['ARGS']['no_clobber'])
-        sep = config['ARGS']['filesep']
-        suffix = config['ARGS']['suffix']  # default ''
-        #assert isinstance(group, str) # this should eventually be a string!
-        if (suffix == '') or (not isinstance(suffix, str)):
-            basename = sep.join(('scrollpy',table_type,'table'))
-        else:  # It is a string
-            basename = sep.join(('scrollpy',table_type,'table',suffix))
-        if self._tblsep == ',':
-            basename = basename + '.csv'
-        else:
-            basename = basename + '.txt' # Need to make more flexible eventually
-        filepath = os.path.join(self._out_path, basename)
-        if os.path.exists(filepath):
-            if no_clobber:
-                dirname,filename = os.path.split(filepath)
-                filepath = util.get_nonredundant_filepath(
-                        dirname,
-                        filename,
-                        )
-        return filepath
 
 
     def _get_max_groups(self, lines, num_before, num_per_group):

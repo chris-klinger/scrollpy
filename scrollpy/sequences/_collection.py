@@ -134,7 +134,6 @@ class ScrollCollection:
         build an alignment from the sequences.
 
         """
-        # msa_path = self._get_outpath('align')
         msa_path = scrollutil.get_filepath(
                 self._outdir,
                 self._group,
@@ -142,7 +141,6 @@ class ScrollCollection:
                 extra=self._opt_group,
                 alignfmt='fasta',
                 )
-        # aligner = align.Aligner(
         aligner = Aligner(
                 self.align_method,
                 config['ALIGNMENT'][self.align_method], # Cmd to execute
@@ -160,7 +158,6 @@ class ScrollCollection:
         build an alignment from the sequences.
 
         """
-        # dist_path = self._get_outpath('distance')
         dist_path = scrollutil.get_filepath(
                 self._outdir,
                 self._group,
@@ -168,7 +165,6 @@ class ScrollCollection:
                 extra=self._opt_group,
                 distfmt='raxml',
                 )
-        # distcalc = distance.DistanceCalc(self.dist_method,
         distcalc = DistanceCalc(
                 self.dist_method,
                 config['DISTANCE'][self.dist_method], # Cmd to execute
@@ -205,40 +201,4 @@ class ScrollCollection:
             # Seqs written by ID, can modify if written by acc/desc later
             seq_obj += self._dist_dict[str(seq_obj.id_num)]
 
-
-    def _get_outpath(self, out_type):
-        """Obtains the full path to an output file.
-
-        Args:
-            out_type (str): The type of output file needed. Should be
-                one of <seqs>, <align>, or <distance>.
-
-        Returns:
-            str: Full path to the output file.
-
-        """
-        # Eventually want to give user option to leave sequence headers as is
-        # or run using internal file generation and ScrollSeq.id_num
-        # For now, just use ScrollSeq.id_num
-        #if (out_type == 'seqs' and self._inpath): # Brackets for emphasis
-        #    return self._inpath # Don't need to re-make input file
-        #else:
-        basename = ""
-        if self._opt_group: # Two groups
-            # TO-DO: allow user to specify separator?
-            basename = str(self._group) + '_' + str(self._opt_group)
-        else:
-            basename = str(self._group)
-        if out_type == 'seqs':
-            outfile = basename + '.fa'
-            outpath = os.path.join(self._outdir, outfile)
-        elif out_type == 'align':
-            outfile = basename + '.mfa'
-            outpath = os.path.join(self._outdir, outfile)
-        elif out_type == 'distance':
-            # TO-DO: this should work for RAxML, but what about others?
-            outpath = os.path.join(self._outdir, basename)
-        else:
-            raise ValueError # Is this necessary?
-        return outpath
 

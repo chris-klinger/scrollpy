@@ -22,7 +22,9 @@ from numpy import mean,median,std
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import FatalScrollPyError
-from scrollpy.alignments import align,parser
+# from scrollpy.alignments import align,parser
+from scrollpy import Aligner
+from scrollpy.files import align_file as af
 from scrollpy.files import sequence_file as sf
 from scrollpy.util._util import decompose_sets
 # Global list for removal
@@ -461,7 +463,7 @@ class IdentityFilter(GenericFilter):
                 'alignment',
                 alignfmt='fasta',
                 )
-        aligner = align.Aligner(
+        aligner = Aligner(
                 self._align_method,
                 config['ALIGNMENT'][self._align_method],  # Cmd
                 inpath = self._seq_path,
@@ -482,7 +484,7 @@ class IdentityFilter(GenericFilter):
                 between two sequences is more than the total number.
 
         """
-        self._align_dict = parser.parse_alignment_file(
+        self._align_dict = af.parse_alignment_file(
                 self._align_path,
                 file_type="fasta",  # Just for now -> make more modular eventualy
                 )

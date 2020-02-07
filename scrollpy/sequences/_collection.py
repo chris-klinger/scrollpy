@@ -12,7 +12,8 @@ from scrollpy.files import sequence_file as sf
 from scrollpy import Aligner
 from scrollpy import DistanceCalc
 # from scrollpy.distances import distance, parser
-from scrollpy.distances import parser
+# from scrollpy.distances import parser
+from scrollpy.files import distance_file as df
 #from scrollpy.config._config import config
 from scrollpy import scrollutil
 
@@ -184,7 +185,7 @@ class ScrollCollection:
 
     def _parse_distances(self):
         """Calls external methods to parse distance file."""
-        distances = parser.parse_distance_file(
+        distances = df.parse_distance_file(
                 self._dist_path,
                 self.dist_method) # Tells the parser what type of file it is
         self._dist_dict = distances # List of tuples

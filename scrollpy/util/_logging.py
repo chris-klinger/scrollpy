@@ -189,29 +189,16 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
 
     Returns:
         path to logfile; may be an instance of tempfile.TemporaryFile
+
     """
     if not_logging:
         return _get_temp_log_path()
     else:
-        if logpath:
-            # Whether a name or a path, of.path.join() takes care of details
-            _logpath = os.path.join(outdir, logpath)
-            if scrollutil.file_exists(_logpath):
-                # It is a file that exists; dirname also exists
-                dirname,basename = os.path.split(_logpath)
-            elif scrollutil.dir_exists(_logpath):
-                # It is a directory that exists
-                dirname = _logpath
-                basename = _get_generic_logname(sep)
-            else:  # It might be either a file or a directory; it does not exist
-                dirname,filename = os.path.split(_logpath)
-                if filename == '':  # Only dir
-                    basename = _get_generic_logname(sep)
-                else:
-                    basename = filename
-        else:  # logfile name not specified
-            dirname = outdir
-            basename = _get_generic_logname()
+        dirname,basename = _get_real_logpath(
+                logpath,
+                outdir,
+                sep,
+                )
     # Check to make sure name is ok
     if not scrollutil.is_value_ok_with_path(basename):
         basename = scrollutil.make_ok_with_path(basename)
@@ -241,6 +228,40 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
     # Return path if everything is ok
     return target_path
 
+
+def _get_real_logpath(logpath=None, outdir=None, sep='_'):
+    """Returns a directory and filename for a target logfile.
+
+    Args:
+        logpath (str): Specified name/path for the logfile.
+        outdir (str): Full path to the directory for output files.
+        sep (str): separator for filenames
+
+    Returns:
+        tuple: A 2-length tuple of (directory, filename).
+
+    """
+    if logpath:
+        # Whether a name or a path, of.path.join() takes care of details
+        _logpath = os.path.join(outdir, logpath)
+        if scrollutil.file_exists(_logpath):
+            # It is a file that exists; dirname also exists
+            dirname,basename = os.path.split(_logpath)
+        elif scrollutil.dir_exists(_logpath):
+            # It is a directory that exists
+            dirname = _logpath
+            basename = _get_generic_logname(sep)
+        else:  # It might be either a file or a directory; it does not exist
+            dirname,filename = os.path.split(_logpath)
+            if filename == '':  # Only dir
+                basename = _get_generic_logname(sep)
+            else:
+                basename = filename
+    else:  # logfile name not specified
+        dirname = outdir
+        basename = _get_generic_logname()
+
+    return dirname,basename
 
 def _get_temp_log_path():
     """Obtains the path to a temporary logfile.
@@ -644,7 +665,7 @@ class ConsoleFilter(GenericFilter):
         elif level == 'ERROR':  # But no exception info
             header = 'ScrollPy [ERROR]: '
         # Add header in front
-        formatted = ' '.join((header, string))
+        formatted = ''.join((header, string))
         return (header,formatted)
 
 

@@ -13,7 +13,8 @@ from scrollpy import scroll_log
 from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
-from scrollpy.files import msa_file as mf
+# from scrollpy.files import msa_file as mf
+from scrollpy.files import align_file as af
 from scrollpy.util import _tree,_util
 from scrollpy import Aligner
 from scrollpy import TreeBuilder
@@ -247,7 +248,7 @@ class TreePlacer:
                 'alignment',
                 alignfmt='phylip',
                 )
-        mf.afa_to_phylip(self._current_align_path, self._current_phy_path)
+        af.afa_to_phylip(self._current_align_path, self._current_phy_path)
         # Run IQ-TREE
         self._current_tree_path = scrollutil.get_filepath(
                 self._outdir,

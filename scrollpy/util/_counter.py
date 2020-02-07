@@ -39,3 +39,7 @@ class Counter:
         """Returns current value"""
         return Counter.__count
 
+
+    def _reset_count(self):
+        """Utility function for testing"""
+        Counter.__count = 1

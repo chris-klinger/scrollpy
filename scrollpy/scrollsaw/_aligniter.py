@@ -19,7 +19,8 @@ from scrollpy import AlignEvaluator
 # from scrollpy.filter._new_filter import LengthFilter  # Don't need?!
 # from scrollpy.trees.maketree import TreeBuilder
 from scrollpy import TreeBuilder
-from scrollpy.alignments import parser
+# from scrollpy.alignments import parser
+from scrollpy.files import align_file as af
 from scrollpy.files import tree_file
 from scrollpy.util import _util,_tree
 # Global list for removal
@@ -178,7 +179,7 @@ class AlignIter:
 
     def _parse_alignment(self):
         """Calls external methods to parse alignment file."""
-        align_object = parser.parse_alignment_file(
+        align_object = af.parse_alignment_file(
                 self._alignment,  # filepath
                 self.alignfmt,   # alignment type
                 to_dict=False,    # return actual object

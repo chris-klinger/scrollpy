@@ -15,7 +15,8 @@ from scrollpy.scrollsaw._scrolltree import ScrollTree
 from scrollpy.scrollsaw._treeplacer import TreePlacer
 from scrollpy.filter._new_filter import Filter
 from scrollpy.files import sequence_file
-from scrollpy.alignments import parser
+# from scrollpy.alignments import parser
+from scrollpy.files import align_file as af
 from scrollpy.util import _util
 from scrollpy import scrollutil
 
@@ -87,7 +88,7 @@ class AlignWriter(BaseWriter):
                     'alignment',
                     extra='alignment',
                     )
-            parser.write_alignment_file(
+            af.write_alignment_file(
                     write_obj,
                     outfile,
                     config['ARGS']['alignfmt'],  # User-specified
@@ -242,6 +243,7 @@ class TableWriter(BaseWriter):
 
         """
         super().__init__(sp_object, out_path)
+        self._tblsep = config['ARGS']['tblsep']
 
 
     def write(self):

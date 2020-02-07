@@ -23,7 +23,8 @@ from scrollpy import scroll_log
 from scrollpy import DuplicateSeqError
 from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
-from scrollpy.alignments import parser as af
+# from scrollpy.alignments import parser as af
+from scrollpy.files import align_file as af
 from scrollpy.files import tree_file as tf
 from scrollpy.sequences._scrollseq import ScrollSeq
 from scrollpy.sequences._leafseq import LeafSeq

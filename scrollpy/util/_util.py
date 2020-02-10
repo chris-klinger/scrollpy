@@ -57,7 +57,6 @@ def ensure_dir_exists(dir_path):
         OSError: directory already exists or creation failed.
 
     """
-    print("Trying to make {}".format(dir_path))
     try:
         os.makedirs(dir_path)
     except OSError as e:
@@ -204,7 +203,8 @@ def get_filename(name, **kwargs):
     suffix = config['ARGS']['suffix']    # May be None
     try:
         extra = str(kwargs['extra'])  # Expect str only? or list as well?
-    except KeyError:
+    # TypeError occurs, for example if suffix is None for some reason
+    except (KeyError,TypeError):
         extra = None
     # Add extra, if necessary
     if extra:
@@ -354,8 +354,8 @@ def get_nonredundant_filepath(dir_path, filename, suffix=1):
         if suffix == 1:  # First time through
             _filename = filename + '.' + str(suffix)
         else:
-            _filename = filename.split('.',1)[0]  # May be other periods
-            _filename = filename + '.' + str(suffix)
+            _tmpfile = filename.rsplit('.',1)[0]  # May be other periods
+            _filename = _tmpfile + '.' + str(suffix)
         suffix += 1
         return get_nonredundant_filepath(dir_path, _filename, suffix)  # Recur
 
@@ -592,11 +592,11 @@ def calculate_real_time(t_delta):
 
     """
     seconds = t_delta.seconds
-    if seconds <= 60:
+    if seconds <= 59:  # If 60, it would be 1 min
         return (0,0,seconds)  # No larger increments can be made
     else:
         minutes,seconds = _split_time(seconds)
-        if minutes <= 60:
+        if minutes <= 59:  # If 60, it would be 1 hour
             return (0,minutes,seconds)
         else:
             hours,minutes = _split_time(minutes)

@@ -22,7 +22,7 @@ from scrollpy import config
 from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 from scrollpy import ValidationError
-from scrollpy import util
+from scrollpy import scrollutil
 from scrollpy.util._util import modify_model_name
 
 
@@ -195,13 +195,17 @@ class Runner:
                         console_logger, file_logger,
                         )
                 is_valid=False
-            elif is_valid:
+            # Overall, did we validate?
+            if is_valid:
                 return True
             else:  # Validation method returned False or raised Exception
                 raise ValidationError(value, name)
         # Raise error if no method provided
         else:
-            raise ValidationError("No validation method provided")
+            raise ValidationError(
+                    value,
+                    name,
+                    "No validation method for {} provided".format(name))
 
 
     def _validate_method(self, method_name):
@@ -302,7 +306,7 @@ class Runner:
             else:
                 # Dir should exist; but can try to create as well
                 try:
-                    util.ensure_dir_exists(out_dir)
+                    scrollutil.ensure_dir_exists(out_dir)
                 except OSError:
                     # Still fail to make, raise error
                     raise FileNotFoundError(
@@ -314,9 +318,17 @@ class Runner:
         elif os.path.exists(outpath):
             if no_clobber:  # Get a similar filepath instead
                 dirname,filename = os.path.split(outpath)
-                self.outpath = util.get_nonredundant_filepath(
+                self.outpath = scrollutil.get_nonredundant_filepath(
                         dirname,
                         filename,
+                        )
+            else:  # Log message about overwriting
+                scroll_log.log_message(
+                        BraceMessage(
+                            "Scrollpy will attempt to overwrite {}", outpath),
+                        2,
+                        'INFO',
+                        file_logger,
                         )
         else:  # Directory exists and file is fine; log it
             scroll_log.log_message(
@@ -355,8 +367,6 @@ class Aligner(Runner):
         super().__init__(method, cmd, inpath, outpath, cmd_list, **kwargs)
 
 
-
-    # def __call__(self):
     def _call(self):
         """Run the alignment program based on method attribute.
 
@@ -406,13 +416,12 @@ class Aligner(Runner):
         """Use BioPython application wrapper to run Mafft."""
         # Log information
         scroll_log.log_message(
-                BraceMessage( "Calling Mafft to align sequences"),
+                BraceMessage("Calling Mafft to align sequences"),
                 2,
                 'INFO',
                 file_logger,
                 )
         # Set up method
-        # cmdline = Applications.MafftCommandline(
         cmdline = AA.MafftCommandline(
             self.cmd, input=self.inpath, **self.kwargs)
         # Try to run
@@ -426,6 +435,7 @@ class Aligner(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise  # Re-raise the error
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)
@@ -464,6 +474,7 @@ class Aligner(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise
         # Capture information
         with open(self.outpath, 'w') as o:
             decoded_out = cmdline.stdout.decode()
@@ -572,6 +583,7 @@ class AlignEvaluator(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise
         # Capture information
         with open(self.outpath, 'w') as o:
             decoded_out = cmdline.stdout.decode()
@@ -620,7 +632,10 @@ class DistanceCalc(Runner):
         except KeyError:
             if not cmd_list:
                 raise ValidationError(
-                        "No evolutionary model provided for tree building")
+                        'model',  # param
+                        None,     # value
+                        msg="No evolutionary model provided for tree building",
+                        )
             else:
                 self.model = None
 
@@ -662,15 +677,16 @@ class DistanceCalc(Runner):
             else:
                 cmd = command
             raxml_pattern = re.compile(r"""raxml       # raxml
-                                            HPC ?      # may not have this
+                                            (HPC)?       # may not have this
                                             [-_|]      # should be a hyphen
                                             AVX|       # one of AVX/PTHREADS/SSE3
                                             PTHREADS|
                                             SSE3""",
                                             flags = re.X|re.I) # verbose/case-insensitive
             if not raxml_pattern.search(cmd): # at least one match
-                raise AttributeError(
-                        "Could not validate RAxML command {}".format(cmd))
+                return False
+                # raise AttributeError(
+                #         "Could not validate RAxML command {}".format(cmd))
         elif method == 'Generic':
             if not command == 'None':
                 return False
@@ -719,6 +735,7 @@ class DistanceCalc(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)
@@ -819,7 +836,7 @@ class TreeBuilder(Runner):
             else:
                 cmd = command
             raxml_pattern = re.compile(r"""raxml       # raxml
-                                            HPC ?      # may not have this
+                                            (HPC)?      # may not have this
                                             [-_|]      # should be a hyphen
                                             AVX|       # one of AVX/PTHREADS/SSE3
                                             PTHREADS|
@@ -859,6 +876,7 @@ class TreeBuilder(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise
         # Capture information
         # OUTPUT FILE IS THE SUMMARY FILE!
         # with open(self.outpath, 'w') as o:
@@ -883,6 +901,7 @@ class TreeBuilder(Runner):
                 file_logger,
                 )
         # Set up method
+        dirname,outname = os.path.split(self.outpath)
         # Specify ML search + rapid bootstrap
         self.kwargs['-f'] = 'a'
         # Convert in and out file paths to RAxML arguments
@@ -914,6 +933,7 @@ class TreeBuilder(Runner):
                     console_logger, file_logger,
                     exc_obj=e,
                     )
+            raise
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)

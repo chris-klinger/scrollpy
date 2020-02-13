@@ -47,82 +47,38 @@ def load_config_file():
             'INFO',
             console_logger, file_logger,
             )
-    # Keep track of multiple possible duplicates
-    duplicate_sections = []
-    duplicate_options  = []
     try:
         with open(config_file, 'r') as cf:
             config.read_file(cf)
     except IOError as ie: # Could not find file
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not find or open config file."),
+                    "Could not find or open config file"),
                 1,
                 'ERROR',
                 console_logger, file_logger,
-                exc_info=True,
+                exc_obj=ie,
                 )
-        # sys.exit(0)
         raise FatalScrollPyError
-    # Check for duplicates
+    # Check for duplicate sections
     except DuplicateSectionError as dse:
-        dupliate_sections.append(dse.section)
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Dupliate config section {} detected.", dse.section),
+                    "Duplicate config section {} detected", dse.section),
                 1,
                 'ERROR',
                 console_logger, file_logger,
+                exc_obj=dse,
                 )
+        raise FatalScrollPyError
+    # Check for duplicate options
     except DuplicateOptionError as doe:
-        dupliate_options.append(doe.option)
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Dupliate config option {} detected.", doe.option),
+                    "Duplicate config option {} detected", doe.option),
                 1,
                 'ERROR',
                 console_logger, file_logger,
+                exc_obj=doe,
                 )
-    # If any duplicates exist, report and exit
-    num_dup_sections = len(duplicate_sections)
-    num_dup_options  = len(duplicate_options)
-    # If both exist
-    if duplicate_sections and duplicate_options:  # Empty lists are False
-        scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Identified {} duplicate config section(s) and {} dupliate options; exiting\n",
-                    num_dup_sections, num_dup_options,
-                    ),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        # sys.exit(0)
         raise FatalScrollPyError
-    # Duplicate setions only
-    elif duplicate_sections:
-        scroll_log.log_message(
-                scroll_log.BraceMessag(
-                    "Identified {} duplicate config sections; exiting\n",
-                    num_dup_sections,
-                    ),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        # sys.exit(0)
-        raise FatalScrollPyError
-    # Duplicate options only
-    elif duplicate_options:
-        scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Identified {} duplicate config options; exiting\n",
-                    num_dup_options,
-                    ),
-                1,
-                'ERROR',
-                console_logger, file_logger,
-                )
-        # sys.exit(0)
-        raise FatalScrollPyError
-

@@ -3,7 +3,9 @@ This module contains code for testing sequence filtering.
 """
 
 import os
+import shutil
 import unittest
+from unittest.mock import Mock
 import contextlib
 from copy import deepcopy
 
@@ -112,10 +114,16 @@ class TestLengthFilter(unittest.TestCase):
     def test_get_removal_indices(self):
         """Tests logic for removal function"""
         z_obj = type(self).z_obj
-        z_obj._indices = [("seq1","_"),("seq2","_"),("seq3","_")]
+        test_seq1 = Mock()
+        test_seq2 = Mock()
+        test_seq3 = Mock()
+        # z_obj._indices = [("seq1","_"),("seq2","_"),("seq3","_")]
+        z_obj._indices = [
+                (test_seq1, '_'), (test_seq2, '_'), (test_seq3, '_'),
+                ]
         values = [0.9,3,1.2]
         z_obj._get_removal_indices(values)
-        self.assertEqual(z_obj._to_remove,[("seq2",3)])
+        self.assertEqual(z_obj._to_remove,[(test_seq2, 3)])
 
 
     def test_calculate_zscores(self):
@@ -154,18 +162,24 @@ class TestIdentityFilter(unittest.TestCase):
                 seq_list=cls.seq_list,
                 method='identity',
                 filter_score=98,
-                outdir=data_dir,
+                # outdir=data_dir,
                 align_method='Mafft',
                 )
+        # Add some needed values to config
+        config.add_section("ARGS")
+        config.set("ARGS", "no_clobber", str(False))
+        config.set("ARGS", "no_create", str(False))
+        config.set("ARGS", "filesep", "_")
+        config.set("ARGS", "suffix", "")
 
 
-    def test_get_filter_output(self):
-        """Tests that function returns the right paths"""
-        z_obj = type(self).z_obj
-        self.assertEqual('/Users/cklinger/git/scrollpy/tests/fixtures/filter_seqs.fa',
-                z_obj._get_filter_outpath('seqs'))
-        self.assertEqual('/Users/cklinger/git/scrollpy/tests/fixtures/filter_seqs.mfa',
-                z_obj._get_filter_outpath('align'))
+    # def test_get_filter_output(self):
+    #     """Tests that function returns the right paths"""
+    #     z_obj = type(self).z_obj
+    #     self.assertEqual('/Users/cklinger/git/scrollpy/tests/fixtures/filter_seqs.fa',
+    #             z_obj._get_filter_outpath('seqs'))
+    #     self.assertEqual('/Users/cklinger/git/scrollpy/tests/fixtures/filter_seqs.mfa',
+    #             z_obj._get_filter_outpath('align'))
 
 
     def test_make_tmp_seqfile(self):
@@ -217,6 +231,13 @@ class TestIdentityFilter(unittest.TestCase):
                 break
             with contextlib.suppress(FileNotFoundError):
                 os.remove(pathname)
+        # Try to remove tmpdir
+        from scrollpy import tmps_to_remove
+        for tmpdir in tmps_to_remove:
+            try:
+                shutil.rmtree(tmpdir)
+            except Exception:
+                print("Could not remove {}".format(tmpdir))
 
 
 if __name__ == '__main__':
@@ -227,4 +248,4 @@ if __name__ == '__main__':
     # Add some extreme values
     #zlengths = np_append(lengths,[300, 400, 600, 700])
     #outlier_vals = [l for l in zlengths if abs(l-m)/s >= 3]
-    #print(outlier_vals)
+    print(outlier_vals)

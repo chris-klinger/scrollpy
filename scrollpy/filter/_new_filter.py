@@ -411,9 +411,10 @@ class IdentityFilter(GenericFilter):
         super().__init__(seq_list, method, **kwargs)
         if not outdir:
             import tempfile
-            tmp_dir = tempfile.TemporaryDirectory()
-            self._target_dir = tmp_dir.name  # TO-DO: give user option to keep?
-            tmps_to_remove.append(self._target_dir)
+            # tmp_dir = tempfile.TemporaryDirectory()
+            tmp_dir = tempfile.mkdtemp()
+            self._target_dir = tmp_dir  # TO-DO: give user option to keep?
+            tmps_to_remove.append(tmp_dir)
         else:
             self._target_dir = outdir
         try:
@@ -431,8 +432,8 @@ class IdentityFilter(GenericFilter):
         # Calculate identities and objects to remove
         self._remove_by_identity()
         # Remove temporary directory, if it still exists
-        with contextlib.suppress(FileNotFoundError):
-            self._target_dir.cleanup()
+        # with contextlib.suppress(FileNotFoundError):
+        #     self._target_dir.cleanup()
         # Return values to parent object
         return self._to_remove
 

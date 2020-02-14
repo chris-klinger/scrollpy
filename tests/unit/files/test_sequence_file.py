@@ -81,9 +81,8 @@ class TestSequenceWriting(unittest.TestCase):
         for seq_record, id_num in zip(self.cat_list, ids):
             seq_objs.append(ScrollSeq(
                 id_num,
-                '', # infile; not important here
                 id_num, # group; here, same as id
-                SeqRecord = seq_record))
+                seq_record = seq_record))
         sequence_file._sequence_list_to_file(seq_objs, outpath)
         new_records = [record for record in SeqIO.parse(
             outpath, # This method doesn't return filepath!
@@ -98,9 +97,8 @@ class TestSequenceWriting(unittest.TestCase):
         for seq_record, id_num in zip(self.cat_list, ids):
             seq_objs.append(ScrollSeq(
                 id_num,
-                '', # infile; not important here
                 id_num, # group; here, same as id
-                SeqRecord = seq_record))
+                seq_record = seq_record))
         sequence_file._sequence_list_to_file_by_id(seq_objs, outpath)
         new_records = [record for record in SeqIO.parse(
             outpath, # This method doesn't return filepath!

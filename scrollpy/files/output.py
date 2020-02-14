@@ -80,7 +80,7 @@ class AlignWriter(BaseWriter):
         """
         target_obj = self._sp_object
         # If AlignIter, want optimal alignment
-        if isinstance(target_obj,AlignIter):
+        if isinstance(target_obj, AlignIter):
             write_obj = target_obj.get_optimal_alignment()
             outfile = scrollutil.get_filepath(
                     self._out_path,
@@ -98,7 +98,7 @@ class AlignWriter(BaseWriter):
             # Raise an error as well? Or just log?
             scroll_log.log_message(
                     BraceMessage("{} object cannot be written "
-                        "as alignment".format(type(target_obj))),
+                        "as alignment", type(target_obj)),
                     1,
                     'ERROR',
                     console_logger, file_logger,
@@ -127,9 +127,9 @@ class SeqWriter(BaseWriter):
         # What we output depends on input object
         target_obj = self._sp_object
         # If ScrollPy/ScrollTree, want some number of sequences
-        if isinstance(target_obj,ScrollPy) or isinstance(target_obj,ScrollTree):
-            write_list = self._filter(mode='some')
-            for group,seqs in write_list:
+        if isinstance(target_obj, ScrollPy) or isinstance(target_obj,ScrollTree):
+            write_dict = self._filter(mode='some')
+            for group in write_dict.keys():
                 outfile = scrollutil.get_filepath(
                         self._out_path,
                         group,
@@ -137,15 +137,15 @@ class SeqWriter(BaseWriter):
                         extra='scrollsaw',
                         )
                 sequence_file._sequence_list_to_file(
-                        write_list,
+                        write_dict[group],
                         outfile,
                         config['ARGS']['seqfmt'],  # User-specified
                         )
         # If Filter, want all removed sequences
-        elif isinstance(target_obj,Filter):
+        elif isinstance(target_obj, Filter):
             for value in ('remaining','removed'):
-                write_list = self._filter(mode=value)
-                for group,seqs in write_list:
+                write_dict = self._filter(mode=value)
+                for group in write_dict.keys():
                     outfile = scrollutil.get_filepath(
                             self._out_path,
                             group,
@@ -153,22 +153,22 @@ class SeqWriter(BaseWriter):
                             extra=value,
                             )
                     sequence_file._sequence_list_to_file(
-                            write_list,
+                            write_dict[group],
                             outfile,
                             config['ARGS']['seqfmt'],  # User-specified
                             )
         # If TreePlacer, want all classified sequences
-        elif isinstance(target_obj,TreePlacer):
-            write_list = self._filter(mode='classified')
-            for group,seqs in write_list:
+        elif isinstance(target_obj, TreePlacer):
+            write_dict = self._filter(mode='classified')
+            for group in write_dict.keys():
                 outfile = scrollutil.get_filepath(
                         self._out_path,
                         group,
                         'sequence',
-                        'classified',
+                        extra='classified',
                         )
                 sequence_file._sequence_list_to_file(
-                        write_list,
+                        write_dict[group],
                         outfile,
                         config['ARGS']['seqfmt'],  # User-specified
                         )
@@ -176,7 +176,7 @@ class SeqWriter(BaseWriter):
             # Raise error?
             scroll_log.log_message(
                     BraceMessage("{} object does not support writing "
-                        "output sequences".format(type(target_obj))),
+                        "output sequences", type(target_obj)),
                     1,
                     'ERROR',
                     console_logger, file_logger,
@@ -226,7 +226,8 @@ class SeqWriter(BaseWriter):
         elif mode == 'classified':
             seqs = self._sp_object.return_classified_seqs()
 
-        return [(group,objs) for group,objs in seqs.items()]
+        return seqs
+        # return [(group,objs) for group,objs in seqs.items()]
 
 
 class TableWriter(BaseWriter):
@@ -319,7 +320,7 @@ class TableWriter(BaseWriter):
             # Raise error?
             scroll_log.log_message(
                     BraceMessage("{} object does not support writing "
-                        "output table(s)".format(type(target_obj))),
+                        "output table(s)", type(target_obj)),
                     1,
                     'ERROR',
                     console_logger, file_logger,
@@ -446,7 +447,7 @@ class TableWriter(BaseWriter):
                     except AttributeError:
                         scroll_log.log_message(
                                 BraceMessage("Could not identify accession "
-                                    "for {}".format(obj)),
+                                    "for {}", obj),
                                 2,
                                 'WARNING',
                                 file_logger,
@@ -551,7 +552,7 @@ class TableWriter(BaseWriter):
         """
         max_groups = 0
         for item_list in lines:
-            remaining = item_list[num_before:]
+            remaining = len(item_list[num_before:])
             num_groups = remaining/num_per_group
             if not num_groups.is_integer():  # I.e. whole number
                 raise ValueError  # Expect whole number

@@ -4,7 +4,14 @@ This module contains functions to parse distance files
 and return their values in a data type.
 """
 
+from scrollpy import scroll_log
 from scrollpy.util._util import non_blank_lines
+from scrollpy.util._exceptions import FatalScrollPyError
+
+
+# Get module loggers
+(console_logger, status_logger, file_logger, output_logger) = \
+        scroll_log.get_module_loggers(__name__)
 
 
 def parse_distance_file(file_path, file_type):
@@ -47,16 +54,19 @@ def _parse_raxml_distances(file_path):
     for line in non_blank_lines(file_path): # Generator
         n1,n2,d = line.strip('\n').split()
         for key in n1,n2:
-            #try:
-            #    # Cast as INT because using ScrollSeq.id_num for now
-            #    # UPDATE eventually if more than one usage case arises
-            #    distances[int(key)] += float(d)
-            #except KeyError: # first time seeing the key
-            #    distances[int(key)] = float(d)
             try:
                 distances[key] += float(d)
             except KeyError:
                 distances[key] = float(d)
+    if len(distances.keys()) == 0:  # No distances
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Could not read distances from {}", file_path),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        raise FatalScrollPyError
     return distances
 
 def _parse_phyml_distances(file_path):

@@ -9,6 +9,7 @@ from Bio import AlignIO
 
 from scrollpy import scroll_log
 from scrollpy.util._util import non_blank_lines
+from scrollpy.util._exceptions import FatalScrollPyError
 
 
 # Get module loggers
@@ -41,15 +42,16 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     """
     try:
         alignment =  AlignIO.read(file_path,file_type)
-    except ValueError:  # Not parsable
+    except ValueError as e:  # Not parsable
         scroll_log.log_message(
                 scroll_log.BraceMessage(
-                    "Could not read alignment from {}\n", file_path),
+                    "Could not read alignment from {}", file_path),
                 1,
                 'ERROR',
                 console_logger, file_logger,
-                exc_info=True,
+                exc_obj=e,
                 )
+        raise FatalScrollPyError
     # Eventually should get down to here
     if to_dict:
         return _bio_align_to_dict(alignment)
@@ -152,8 +154,6 @@ def afa_to_phylip(alignment_file, target_file):
                         console_logger, file_logger,
                         ))
             raise FatalScrollPyError
-            # sys.exit("Sequence for {} has length {}, expected length {}".format(
-            #     k,seq_length,target_length))
     # Finally write file
     with open(target_file,'w') as o:
         o.write("{} {}\n".format(num_seqs,target_length))

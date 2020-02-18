@@ -4,6 +4,9 @@ Tests the scrollsaw/_aligniter module.
 
 import os
 import unittest
+from unittest.mock import Mock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 import shutil
 from configparser import DuplicateSectionError
 
@@ -12,7 +15,8 @@ from Bio import AlignIO
 from scrollpy import config
 from scrollpy import load_config_file
 from scrollpy.scrollsaw._aligniter import AlignIter
-from scrollpy.alignments import parser
+# from scrollpy.alignments import parser
+from scrollpy.files import align_file as af
 
 
 cur_dir = os.path.dirname(os.path.realpath(__file__)) # /files/
@@ -29,6 +33,8 @@ class TestAlignIter(unittest.TestCase):
         load_config_file()
         try:
             config.add_section('ARGS')
+            config.add_section('ITER')
+            config.add_section('TREE')
         except DuplicateSectionError:
             pass
         # Provide defaults
@@ -37,6 +43,11 @@ class TestAlignIter(unittest.TestCase):
         config['ARGS']['iter_method'] = 'hist'
         config['ARGS']['tree_method'] = 'Iqtree'
         config['ARGS']['tree_matrix'] = 'LG'
+        config['ARGS']['no_clobber'] = False
+        config['ARGS']['no_create'] = False
+        # Filepaths
+        config['ITER']['zorro'] = 'path/to/zorro'
+        config['TREE']['Iqtree'] = 'path/to/iqtree'
 
         # Get tmpdir
         cls.tmpdir = os.path.join(data_dir,'align_tmp')
@@ -50,7 +61,6 @@ class TestAlignIter(unittest.TestCase):
                 'Hsap_AP_EGADEZ.mfa',
                 )
 
-
     def setUp(self):
         """Create identical instance for each test"""
         self.iter = AlignIter(
@@ -58,19 +68,103 @@ class TestAlignIter(unittest.TestCase):
                 self.tmpdir,
                 )
 
-
     @classmethod
     def tearDownClass(cls):
         """Remove directory"""
-        pass
+        try:
+            shutil.rmtree(cls.tmpdir)
+        except FileNotFoundError:
+            pass
 
+    def test_repr(self):
+        """Tests the AlignIter classes' __repr__ method"""
+        expected = "AlignIter({!r}, {!r}, None, **{})".format(
+                type(self).alignment,
+                type(self).tmpdir,
+                self.iter.kwargs,
+                )
+        self.assertEqual(
+                expected,
+                repr(self.iter),
+                )
+
+    def test_str(self):
+        """Tests the AlignIter classes' __str__  method"""
+        expected = "AlignIter using zorro"
+        self.assertEqual(
+                expected,
+                str(self.iter),
+                )
+
+    @patch('scrollpy.scrollsaw._aligniter.file_logger')
+    @patch('scrollpy.scrollsaw._aligniter.console_logger')
+    @patch('scrollpy.scrollsaw._aligniter.BraceMessage')
+    @patch('scrollpy.util._logging.log_message')
+    @patch('scrollpy.util._util.get_filepath')
+    @patch('scrollpy.scrollsaw._aligniter.tempfile.TemporaryDirectory')
+    @patch.object(AlignIter, '_evaluate_info')
+    @patch.object(AlignIter, '_bisect_run')
+    @patch.object(AlignIter, '_hist_run')
+    @patch.object(AlignIter, '_evaluate_columns')
+    @patch.object(AlignIter, '_calculate_columns')
+    @patch.object(AlignIter, '_parse_alignment')
+    def test_call(self, mock_parse, mock_calc, mock_eval, mock_hrun, mock_brun,
+            mock_info, mock_tmpdir, mock_path, mock_log, mock_bmsg, mock_cl, mock_fl):
+        """Tests the AlignIter classes' __call__ method"""
+        # General test log message
+        mock_bmsg.return_value = "Mock Message"
+        # Test when no outdir is specified
+        self.iter._outdir = None
+        self.iter()
+        # Test calls
+        mock_tmpdir.assert_called_once()
+        mock_parse.assert_called_once()
+        mock_path.assert_called_once_with(
+                self.iter._outdir,
+                self.iter._align_name,
+                'column',
+                extra='columns',
+                )
+        mock_calc.assert_called_once()
+        mock_eval.assert_called_once()
+        mock_info.assert_called_once()
+        # Test when the iter method is hist
+        self.iter.iter_method = 'hist'
+        self.iter()
+        mock_bmsg.assert_any_call(
+                "Running tree iteration using histogram method")
+        mock_log.assert_any_call(
+                "Mock Message",
+                2,
+                'INFO',
+                mock_cl, mock_fl,
+                )
+        mock_hrun.assert_any_call()
+        # Test when the iter method is bisection
+        self.iter.iter_method = 'bisect'
+        self.iter()
+        mock_bmsg.assert_any_call(
+                "Running tree iteration using bisection method")
+        mock_log.assert_any_call(
+                "Mock Message",
+                2,
+                'INFO',
+                mock_cl, mock_fl,
+                )
+        mock_brun.assert_any_call()
+
+    def test_set_alignment_name(self):
+        """Tests the AlignIter classes' _set_alignment_name method"""
+        expected = 'Hsap_AP_EGADEZ'
+        self.iter._set_alignment_name()
+        self.assertEqual(expected,
+                self.iter._align_name)
 
     def test_get_optimal_alignment(self):
         """Checks instance lookup"""
         self.iter._optimal_alignment = "Optimal"
         self.assertEqual("Optimal",
                 self.iter.get_optimal_alignment())
-
 
     def test_parse_alignment(self):
         """Tests parsing alignment"""
@@ -80,52 +174,48 @@ class TestAlignIter(unittest.TestCase):
         align_length = len(self.iter._align_obj[0])
         self.assertEqual(align_length,1372)  # Num columns
 
-
-    def test_get_outpath(self):
-        """Tests get_outpath method"""
-        # Expected file names
-        expected_column_name = 'Hsap_AP_EGADEZ_columns.txt'
-        expected_phy_name    = 'Hsap_AP_EGADEZ_100.phy'
-        expected_tree_name   = 'Hsap_AP_EGADEZ_100.phy.contree'
-        # Run tests
-        # Column name first; simple
-        expected_column_path = os.path.join(
-                self.tmpdir,
-                expected_column_name,
+    @patch('scrollpy.files.tree_file.read_tree')
+    def test_parse_tree(self, mock_tparse):
+        """Tests the AlignIter classes' _parse_tree method"""
+        mock_tparse.return_value = 'Test Tree'
+        self.iter._parse_tree()
+        # Check calls and assignments
+        mock_tparse.assert_called_once_with(
+                self.iter._current_tree_path,
+                'newick',
                 )
-        self.assertEqual(self.iter._get_outpath('columns'),
-                expected_column_path)
-        # For other names, assume length is 100
-        # Phylip next
-        expected_phy_path = os.path.join(
-                self.tmpdir,
-                expected_phy_name,
-                )
-        self.assertEqual(self.iter._get_outpath('phylip',100),
-                expected_phy_path)
-        # Tree last
-        expected_tree_path = os.path.join(
-                self.tmpdir,
-                expected_tree_name,
-                )
-        self.assertEqual(self.iter._get_outpath('tree',100),
-                expected_tree_path)
+        self.assertEqual('Test Tree',
+                self.iter._current_tree_obj)
 
+    @patch('scrollpy.scrollsaw._aligniter.AlignIO')
+    def test_write_current_alignment(self, mock_aio):
+        """Tests the AlignIter classes' _write_current_alignment method"""
+        self.iter._write_current_alignment()
+        mock_aio.write.assert_called_once_with(
+                self.iter._align_obj,
+                self.iter._current_phy_path,
+                'phylip-relaxed',
+                )
 
-    def test_calculate_columns(self):
+    @patch('scrollpy.scrollsaw._aligniter.AlignEvaluator')
+    def test_calculate_columns(self, mock_eval):
         """Tests calculating columns"""
-        column_path = self.iter._get_outpath('columns')
-        if not os.path.exists(column_path):
-            # Actually calculate columns
-            self.iter._calculate_columns(column_path)
-        # Easiest test, size of file > 0
-        file_size = os.stat(column_path).st_size
-        self.assertTrue(file_size > 0)
-
+        test_path = 'test_column_path'
+        self.iter._calculate_columns(test_path)
+        mock_eval.assert_called_once_with(
+                self.iter.col_method,
+                'path/to/zorro',  # Mock cmd
+                self.iter._alignment,
+                'test_column_path',
+                cmd_list=[self.iter._alignment],
+                )
 
     def test_evaluate_columns(self):
         """Tests evaluating calculated columns"""
-        column_path = self.iter._get_outpath('columns')
+        column_path = os.path.join(
+                data_dir,
+                'Hsap_AP_EGADEZ_colscores.txt',
+                )
         if not os.path.exists(column_path):
             # Actually calculate columns
             self.iter._calculate_columns(column_path)
@@ -144,13 +234,111 @@ class TestAlignIter(unittest.TestCase):
         # Test
         self.assertEqual(columns,self.iter._columns)
 
+    # def _return_new_cols(self):
+    #     """Hack to work around side_effect"""
+    #     try:
+    #         num_calls = self._return_new_cols.__dict__['num_calls']
+    #         print("Retrieved cols from dict")
+    #     except KeyError:
+    #         print("KeyError on value access")
+    #         num_calls = 0
+    #     num_calls += 1
+    #     if num_calls == 1:
+    #         self.iter._columns = [
+    #             [1, 4], [3, 6],
+    #             [4, 4], [5, 9]]
+    #     elif num_calls == 2:
+    #         self.iter._columns = [
+    #             [3, 6], [5, 9]]
+    #     self._return_new_cols.__dict__['num_calls'] = num_calls
+
+    # def _return_new_values(self):
+    #     """Hack to work around side_effect"""
+    #     try:
+    #         num_calls = self._return_new_values.__dict__['num_calls']
+    #         print("Retireved values from dict")
+    #     except KeyError:
+    #         print("KeyError on value access")
+    #         num_calls = 0
+    #     num_calls += 1
+    #     if num_calls == 1:
+    #         self.iter._current_support = 95
+    #     elif num_calls == 2:
+    #         self.iter._current_support = 90
+    #     elif num_calls == 3:
+    #         self.iter._current_support = 60
+    #     self._return_new_values.__dict__['num_calls'] = num_calls
+
+    @patch('scrollpy.scrollsaw._aligniter.console_logger')
+    @patch('scrollpy.scrollsaw._aligniter.status_logger')
+    @patch('scrollpy.scrollsaw._aligniter.BraceMessage')
+    @patch('scrollpy.util._logging.log_newlines')
+    @patch('scrollpy.util._logging.log_message')
+    @patch.object(AlignIter, '_is_optimal')
+    @patch.object(AlignIter, '_calculate_support')
+    @patch.object(AlignIter, '_parse_tree')
+    @patch.object(AlignIter, '_make_tree')
+    @patch.object(AlignIter, '_write_current_alignment')
+    @patch.object(AlignIter, '_get_current_outpaths')
+    @patch.object(AlignIter, '_remove_columns')
+    @patch.object(AlignIter, '_calculate_num_columns')
+    def test_hist_run(self, mock_calcn, mock_rmc, mock_paths, mock_wca, mock_mt, mock_pt,
+            mock_calcs, mock_opt, mock_log, mock_lnew, mock_bmsg, mock_sl, mock_cl):
+        """Tests the AlignIter classes' _hist_run method"""
+        mock_bmsg.return_value = "Mock Message"
+        # Test when not calculating columns
+        self.iter._num_columns = 2
+        self.iter._columns = [
+                [0, 1], [1, 4],
+                [2, 3], [3, 6],
+                [4, 4], [5, 9],
+                ]
+        # mock_rmc.side_effect = [
+        #         self._return_new_cols(),
+        #         self._return_new_cols(),
+        #         ]
+        # mock_calcs.side_effect = [
+        #         self._return_new_values(),
+        #         self._return_new_values(),
+        #         ]
+        mock_opt.side_effect = [False, True]
+        self.iter._hist_run()
+        # Test calls
+        mock_rmc.assert_any_call(2)
+        mock_paths.assert_any_call()
+        mock_wca.assert_any_call()
+        mock_mt.assert_any_call()
+        mock_pt.assert_any_call()
+        mock_calcs.assert_any_call()
+        mock_opt.assert_any_call()
+        # Test logging calls
+        mock_bmsg.assert_any_call(
+                "Performing tree iteration {} of many", 1)
+        mock_bmsg.assert_any_call(
+                "Performing tree iteration {} of many", 2)
+        mock_log.assert_any_call(
+                "Mock Message",
+                3,
+                'INFO',
+                mock_sl,
+                )
+        mock_lnew.assert_any_call(mock_cl)
+        # print()
+        # print(self.iter.iter_info)
+        # Check whether or not the internal list is updated or not
+        # expected = [
+        #         [0, 6, 1, 95],
+        #         [1, 4, 4, 90],
+        #         [1, 2, 5, 60],
+        #         ]
+        # self.assertEqual(expected, self.iter.iter_info)
 
     def test_calculate_num_columns(self):
         """Tests calculating works"""
-        # Populate necessary instance values
-        self.iter._parse_alignment()
-        # May have to calculate columns
-        column_path = self.iter._get_outpath('columns')
+        column_path = os.path.join(
+                data_dir,
+                'Hsap_AP_EGADEZ_colscores.txt',
+                )
         if not os.path.exists(column_path):
             self.iter._calculate_columns(column_path)
         self.iter._evaluate_columns(column_path)
@@ -158,8 +346,7 @@ class TestAlignIter(unittest.TestCase):
         num_columns = self.iter._calculate_num_columns()
         self.assertEqual(num_columns,531)
 
-
-    def test_remove_cols_from_align(self):
+    def test_remove_cols_from_align_easy(self):
         """Test removing a series of indices from alignment object"""
         # Populate necessary instance values
         self.iter._parse_alignment()
@@ -182,8 +369,7 @@ class TestAlignIter(unittest.TestCase):
                 new_col = self.iter._align_obj[:,index]
             self.assertEqual(adj_col,new_col)
 
-
-    def test_remove_cols_from_align(self):
+    def test_remove_cols_from_align_hard(self):
         """Tests when the values are grouped at beginning/end"""
         # Populate necessary instance values
         self.iter._parse_alignment()
@@ -198,7 +384,6 @@ class TestAlignIter(unittest.TestCase):
             # SeqRecords can't be directly compared
             # Compare .seq attrs instead
             self.assertEqual(s1.seq,s2.seq)
-
 
     def test_shift_cols(self):
         """Tests that column shifting works as expected"""
@@ -219,72 +404,54 @@ class TestAlignIter(unittest.TestCase):
                 ]
         self.assertEqual(self.iter._columns,expected)
 
-
-    def test_write_current_alignment(self):
-        """Tests making tree"""
-        # Populate necessary instance values
-        self.iter._parse_alignment()
-        column_path = self.iter._get_outpath('columns')
-        if not os.path.exists(column_path):
-            self.iter._calculate_columns(column_path)
-        self.iter._evaluate_columns(column_path)
+    @patch('scrollpy.util._util.get_filepath')
+    def test_get_current_outpaths(self, mock_path):
+        """Tests the AlignIter classes' _get_current_outpaths method"""
+        mock_seq = Mock(**{'seq': 'AGTC'})  # len(seq) = 4
+        self.iter._align_obj = [mock_seq]
         self.iter._get_current_outpaths()
-        # Write Alignment
-        self.iter._write_current_alignment()
-        # Now parse again
-        new_obj = parser.parse_alignment_file(
-                self.iter._current_phy_path,
-                'phylip-relaxed',
-                to_dict=False,
+        mock_path.assert_any_call(
+                self.iter._outdir,
+                self.iter._align_name,
+                'alignment',
+                extra=4,
+                alignfmt='phylip',
                 )
-        self.assertEqual(len(new_obj),5)
+        mock_path.assert_any_call(
+                self.iter._outdir,
+                self.iter._align_name,
+                'tree',
+                extra=4,
+                treefmt='iqtree',
+                )
 
-
-    @unittest.skip('For time')
-    def test_make_tree(self):
-        """Tests making tree"""
-        # Populate necessary instance values
-        self.iter._parse_alignment()
-        column_path = self.iter._get_outpath('columns')
-        if not os.path.exists(column_path):
-            self.iter._calculate_columns(column_path)
-        self.iter._evaluate_columns(column_path)
-        self.iter._get_current_outpaths()
-        # Write Alignment, if not exists
-        if not os.path.exists(self.iter._current_phy_path):
-            self.iter._write_current_alignment()
-        # Make tree
+    @patch('scrollpy.scrollsaw._aligniter.TreeBuilder')
+    def test_make_tree(self, mock_builder):
+        """Tests the AlignIter classes' _make_tree method"""
         self.iter._make_tree()
-        # Check file is not empty
-        file_size = os.stat(
-                self.iter._current_tree_path).st_size
-        self.assertTrue(file_size > 0)
-
-
-    def test_parse_tree(self):
-        """Tests parsing tree"""
-        self.iter._parse_alignment()
-        self.iter._get_current_outpaths()
-        # Write Alignment, if not exists
-        if not os.path.exists(self.iter._current_phy_path):
-            self.iter._write_current_alignment()
-        # Make tree, if not exists
-        if not os.path.exists(self.iter._current_tree_path):
-            self.iter._make_tree()
-        # Now parse it
-        self.iter._parse_tree()
-        # Check values
-        leaves = [leaf for leaf in self.iter._current_tree_obj]
-        self.assertEqual(len(leaves),5)
-
+        mock_builder.assert_called_once_with(
+                self.iter.tree_method,
+                'path/to/iqtree',
+                inpath=self.iter._current_phy_path,
+                outpath=self.iter._current_tree_path,
+                cmd_list=[
+                    '-nt',  # Number of processors
+                    'AUTO',
+                    '-s',  # Input filename
+                    self.iter._current_phy_path,
+                    '-m',
+                    self.iter.tree_matrix,  # E.g. 'LG'
+                    '-bb',  # Rapid bootstrapping
+                    '1000',
+                    ],
+                )
 
     def test_calculate_support(self):
         """Tests calculating  support"""
-        self.iter._parse_alignment()
-        self.iter._get_current_outpaths()
-        # Write Alignment, if not exists
-        if not os.path.exists(self.iter._current_phy_path):
-            self.iter._write_current_alignment()
+        self.iter._current_tree_path = os.path.join(
+                data_dir,
+                'Hsap_AP_EGADEZ.mfa.contree',
+                )
         # Make tree, if not exists
         if not os.path.exists(self.iter._current_tree_path):
             self.iter._make_tree()
@@ -292,14 +459,17 @@ class TestAlignIter(unittest.TestCase):
         self.iter._parse_tree()
         # Calc the values
         self.iter._calculate_support()
-        self.assertEqual(self.iter._current_support,136)
-
+        self.assertEqual(self.iter._current_support,141)
 
     def test_is_optimal(self):
         """Tests calculating optimal"""
+        # Simple case -> less than 3 support values
         self.iter._all_supports = [100]
         self.assertFalse(self.iter._is_optimal())
-
+        # Now check when supports are off by a lot
+        self.iter._current_support = [20]
+        self.iter._all_supports = [100, 95, 98, 90, 92]
+        self.assertTrue(self.iter._is_optimal())
 
     def test_evaluate_info(self):
         """Tests adding extra information to iter_info"""

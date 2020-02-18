@@ -13,6 +13,7 @@ from Bio import AlignIO
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 # from scrollpy.alignments.eval_align import AlignEvaluator
 from scrollpy import AlignEvaluator
@@ -145,7 +146,8 @@ class AlignIter:
         # Run analysis
         if self.iter_method == 'hist':
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Running tree iteration using histogram method"),
                     2,
                     'INFO',
@@ -154,7 +156,8 @@ class AlignIter:
             self._hist_run()
         elif self.iter_method == 'bisect':
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
+                    # scroll_log.BraceMessage(
                         "Running tree iteration using bisection method"),
                     2,
                     'INFO',
@@ -268,13 +271,15 @@ class AlignIter:
         """
         # Enter loop
         optimal = False
+        calc_columns = False
         # Determine whether calculations are needed
         if not self._num_columns:
             calc_columns = True
         iter_num = 0
         while not optimal:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Performing tree iteration {} of many", (iter_num+1)),
                     3,
                     'INFO',
@@ -316,6 +321,7 @@ class AlignIter:
                 low_val,  # Lowest value
                 self._current_support,  # Support for current tree
                 ])
+            # print(self.iter_info)
 
             # If not optimal, keep going
             iter_num += 1

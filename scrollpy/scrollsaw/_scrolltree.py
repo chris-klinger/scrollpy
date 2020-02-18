@@ -2,7 +2,10 @@
 This module contains the main ScrollTree object
 """
 
+import itertools
+
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy.files import sequence_file as sf
 
 
@@ -39,7 +42,7 @@ class ScrollTree:
         num_groups = len(self._seq_dict.keys())
         # Each group in self._seq_dict is a list of ScrollSeq objects
         # _seq.dict.values() returns a list of lists, which chain flattens
-        num_seqs = len(list(chain(*self._seq_dict.values())))
+        num_seqs = len(list(itertools.chain(*self._seq_dict.values())))
         # Return dimensions of ScrollPy
         return "{} object with {} groups and {} sequences".format(
                 self.__class__.__name__,
@@ -82,8 +85,9 @@ class ScrollTree:
 
         """
         scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Calculating pairwise distances between all tree leaves\n"),
+                # scroll_log.BraceMessage(
+                BraceMessage(
+                    "Calculating pairwise distances between all tree leaves"),
                 2,
                 'INFO',
                 console_logger, file_logger,

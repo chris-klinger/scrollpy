@@ -9,6 +9,7 @@ from itertools import chain
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy import ScrollSeq
@@ -111,9 +112,9 @@ class ScrollPy:
         scroll_log.log_newlines(console_logger)
         for i,collection in enumerate(self._collections):
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "Performing comparison {} of {}",
-                        i+1, total),
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
+                        "Performing comparison {} of {}", i+1, total),
                     3,
                     'INFO',
                     status_logger,
@@ -137,7 +138,8 @@ class ScrollPy:
         if len(self._groups) == 1: # only one group
             group = self._groups[0]
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Adding collection object for single group {}", group),
                     3,
                     'INFO',
@@ -150,27 +152,29 @@ class ScrollPy:
                 # self.align,  # Alignment method
                 # self.distance,  # Distance method
                 ))
-        for group1,group2 in combinations(self._groups,2): # pairwise
-            scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "Adding collection object for groups {} and {}",
-                        group1, group2,
-                        ),
-                    3,
-                    'INFO',
-                    console_logger, file_logger,
-                    )
-            seq_list = sf._cat_sequence_lists(
-                self._seq_dict[group1],
-                self._seq_dict[group2]) # Dict values are lists
-            self._collections.append(ScrollCollection(
-                self.target_dir,
-                seq_list,
-                group1,
-                # self.align,  # Alignment method
-                # self.distance,  # Distance method
-                opt_group = group2 # Arbitrary which group is the 'optional' one
-                ))
+        else:
+            for group1,group2 in combinations(self._groups,2): # pairwise
+                scroll_log.log_message(
+                        # scroll_log.BraceMessage(
+                        BraceMessage(
+                            "Adding collection object for groups {} and {}",
+                            group1, group2,
+                            ),
+                        3,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                seq_list = sf._cat_sequence_lists(
+                    self._seq_dict[group1],
+                    self._seq_dict[group2]) # Dict values are lists
+                self._collections.append(ScrollCollection(
+                    self.target_dir,
+                    seq_list,
+                    group1,
+                    # self.align,  # Alignment method
+                    # self.distance,  # Distance method
+                    opt_group = group2 # Arbitrary which group is the 'optional' one
+                    ))
 
 
     def _sort_distances(self):

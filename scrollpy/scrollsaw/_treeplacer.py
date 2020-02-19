@@ -10,6 +10,7 @@ from Bio import SeqIO
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
@@ -103,7 +104,7 @@ class TreePlacer:
         return "{}({!r}, {!r}, {!r}, {!r}, {!r}, **{!r})".format(
                 self.__class__.__name__,
                 self._seq_dict,
-                self._alignemnt,
+                self._alignment,
                 self._to_place,
                 self._outdir,
                 self._infiles,
@@ -136,7 +137,8 @@ class TreePlacer:
         # Iter over sequences
         for i,seq_obj in enumerate(self._to_place):
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Placing sequence number {} of {}",
                         (i+1),self._num_seqs),
                     3,
@@ -197,13 +199,15 @@ class TreePlacer:
         try:
             # Need to worry about format?!
             return sf.seqfile_to_scrollseqs(seq_path)
-        except:  # Make more specific eventually!
+        except Exception as e:  # Make more specific eventually!
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Failed to parse sequences for tree placing"),
                     1,
                     'ERROR',
                     console_logger, file_logger,
+                    exc_obj=e,
                     )
             raise FatalScrollPyError
 
@@ -414,7 +418,8 @@ class TreePlacer:
         if len(added_leaves) > 1:
             # FATAL ERROR! -> terminate execution eventually
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    # scroll_log.BraceMessage(
+                    BraceMessage(
                         "Detected more than one added sequence"),
                     1,
                     'ERROR',

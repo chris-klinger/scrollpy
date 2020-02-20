@@ -151,7 +151,7 @@ class ScrollSeq:
 
 
     @id_num.setter
-    def id_num(self):
+    def id_num(self, value):
         """Prevents changing ScrollSeq ID after instantiation.
 
         Raises:

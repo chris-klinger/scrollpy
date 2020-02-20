@@ -3,6 +3,9 @@ Tests /sequences/_collection.py
 """
 
 import os, unittest, shutil
+from unittest.mock import Mock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 from configparser import DuplicateSectionError
 
 from scrollpy import config
@@ -17,10 +20,11 @@ data_dir = os.path.realpath(os.path.join(cur_dir, '../../fixtures')) # /tests/
 
 
 class TestScrollCollection(unittest.TestCase):
-    """Tests each individual method"""
+    """Create a ScrollCollection object and test its methods"""
 
-    def setUp(self):
-        """Creates a new ScrollCollection Object"""
+    @classmethod
+    def setUpClass(cls):
+        """Set up some external values across runs"""
         # Populate ARGS values of config file
         load_config_file()
         try:
@@ -28,69 +32,151 @@ class TestScrollCollection(unittest.TestCase):
         except DuplicateSectionError:
             pass
         # Now provide sufficient arg defaults
-        config['ARGS']['filter'] = 'False'
-        config['ARGS']['filter_method'] = 'zscore'
+        config['ARGS']['align_method'] = 'Mafft'
+        config['ARGS']['align_matrix'] = 'Blosum62'
+        config['ARGS']['dist_method'] = 'RAxML'
         config['ARGS']['dist_matrix'] = 'LG'
-        config['ARGS']['no_clobber'] = 'True'
+        # Mock some sequences to test
+        mseq1 = Mock()
+        mseq2 = Mock()
+        mseq3 = Mock()
+        cls.seq_list = [mseq1, mseq2, mseq3]
 
-
-        ids = (1,2,3,4)
-        infile = os.path.join(data_dir, 'Hsap_AP1G_FourSeqs.fa')
-        records = sf._get_sequences(infile)
-        self.seq_list = []
-        for id_num, seq_record in zip(ids, records):
-            self.seq_list.append(ScrollSeq(
-                id_num, # ID
-                infile, # infile
-                id_num, # Group; not important here
-                SeqRecord = seq_record))
-        self.tmpdir = os.path.join(data_dir, 'tmp')
-        try:
-            os.makedirs(self.tmpdir)
-        except FileExistsError:
-            pass # tmpdir still present
+    def setUp(self):
+        """Create an instance for each test"""
+        # Create an instance for the class
         self.collection = ScrollCollection(
-                self.tmpdir, # outdir
-                self.seq_list, # sequence list
-                'one', # group
-                'Mafft', # align_method
-                'RAxML',# dist_method
+                'test_outdir',
+                self.seq_list,
+                'group1',
                 )
 
-    def test_file_creation(self):
-        """Tests internal file creation method"""
-        expected_file = os.path.join(self.tmpdir, 'one.fa')
-        self.collection._get_sequence_file()
-        self.assertTrue(os.path.exists(expected_file))
+    def test_repr(self):
+        """Tests the ScrollCollection classes' __repr__ method"""
+        expected = "ScrollCollection({!r}, {!r}, 'group1', None, **{})".format(
+                self.collection._outdir,
+                self.collection.seq_list,
+                self.collection.kwargs,
+                )
+        self.assertEqual(expected, repr(self.collection))
 
-    def test_file_alignment(self):
-        """Tests internal call to alignment"""
-        expected_file = os.path.join(self.tmpdir, 'one.mfa')
-        self.collection._get_sequence_file()
-        self.collection._get_alignment()
-        self.assertTrue(os.path.exists(expected_file))
+    def test_str(self):
+        """Tests the ScrollCollection classes' __str__ method"""
+        # Test first without an opt_group
+        expected = "ScrollCollection with one group: group1"
+        self.assertEqual(expected, str(self.collection))
+        # Now test with an opt_group
+        self.collection._opt_group = 'group2'
+        expected = "ScrollCollection with two groups: group1 and group2"
+        self.assertEqual(expected, str(self.collection))
 
-    def test_file_distance(self):
-        """Tests internal call to distance"""
-        expected_file = os.path.join(self.tmpdir, 'RAxML_distances.one')
-        self.collection._get_sequence_file()
-        self.collection._get_alignment()
-        self.collection._get_distances()
-        self.assertTrue(os.path.exists(expected_file))
-
-    def test_distance_parsing(self):
-        """Tests storage of parsed distance"""
-        self.collection._get_sequence_file()
-        self.collection._get_alignment()
-        self.collection._get_distances()
-        self.collection._parse_distances()
-        self.assertTrue(len(self.collection._dist_dict.keys()) > 0)
-
-    def test_collection_call(self):
-        """Tests that call properly executes all of the above"""
+    @patch.object(ScrollCollection, '_increment_seq_distances')
+    @patch.object(ScrollCollection, '_parse_distances')
+    @patch.object(ScrollCollection, '_get_distances')
+    @patch.object(ScrollCollection, '_get_alignment')
+    @patch.object(ScrollCollection, '_get_sequence_file')
+    def test_call(self, mock_getsf, mock_getaf, mock_getdf, mock_pdist, mock_incr):
+        """Tests the ScrollCollection classes' __call__ method"""
         self.collection()
-        self.assertTrue(len(self.collection._dist_dict.keys()) > 0)
+        # Test all assertions
+        mock_getsf.assert_any_call()
+        mock_getaf.assert_any_call()
+        mock_getdf.assert_any_call()
+        mock_pdist.assert_any_call()
+        mock_incr.assert_any_call()
 
-    def tearDown(self):
-        """Remove temporary directory"""
-        shutil.rmtree(self.tmpdir)
+    @patch('scrollpy.sequences._collection.sf._sequence_list_to_file_by_id')
+    @patch('scrollpy.util._util.get_filepath')
+    def test_get_sequence_file(self, mock_path, mock_sltf):
+        """Tests the _get_sequence_file method"""
+        # Run
+        self.collection._get_sequence_file()
+        # Check assertions
+        mock_path.assert_called_once_with(
+                'test_outdir',
+                'group1',
+                'sequence',
+                extra=None,
+                seqfmt='fasta',
+                )
+        mock_sltf.assert_called_once_with(
+                self.seq_list, mock_path.return_value)
+
+    @patch('scrollpy.sequences._collection.Aligner')
+    @patch('scrollpy.util._util.get_filepath')
+    def test_get_alignment(self, mock_path, mock_align):
+        """Tests the _get_alignment method"""
+        config['ALIGNMENT']['Mafft'] = 'path/to/mafft'
+        self.collection._seq_path = 'path/to/seqs'
+        # Run
+        self.collection._get_alignment()
+        # Check assertions
+        mock_path.assert_called_once_with(
+                'test_outdir',
+                'group1',
+                'alignment',
+                extra=None,
+                alignfmt='fasta',
+                )
+        mock_align.assert_called_once_with(
+                'Mafft',
+                'path/to/mafft',
+                inpath='path/to/seqs',
+                outpath=mock_path.return_value,
+                )
+        mock_align.return_value.assert_called_once()  # Instance called
+
+    @patch('scrollpy.sequences._collection.os.path')
+    @patch('scrollpy.sequences._collection.DistanceCalc')
+    @patch('scrollpy.util._util.get_filepath')
+    def test_get_distances(self, mock_path, mock_dist, mock_os):
+        """Tests the _get_distances method"""
+        config['DISTANCE']['RAxML'] = 'path/to/raxml'
+        self.collection._align_path = 'path/to/align'
+        # Run
+        self.collection._get_distances()
+        # Check assertions
+        mock_path.assert_called_once_with(
+                'test_outdir',
+                'group1',
+                'distance',
+                extra=None,
+                distfmt='raxml',
+                )
+        mock_dist.assert_called_once_with(
+                'RAxML',
+                'path/to/raxml',
+                inpath='path/to/align',
+                outpath=mock_path.return_value,
+                model='LG',
+                )
+        mock_dist.return_value.assert_called_once()  # Instance called
+
+    @patch('scrollpy.sequences._collection.df.parse_distance_file')
+    def test_parse_distances(self, mock_parse):
+        """Tests the _parse_distances method"""
+        self.collection._dist_path = 'path/to/dists'
+        self.collection._parse_distances()
+        # Check assertions
+        mock_parse.assert_called_once_with(
+                'path/to/dists',
+                'RAxML',
+                )
+
+    def test_increment_seq_distances(self):
+        """Tests the _increment_seq_distances method"""
+        # Mock some sequences first
+        mseq1 = MagicMock(**{'id_num' : 1})
+        mseq2 = MagicMock(**{'id_num' : 2})
+        mseq3 = MagicMock(**{'id_num' : 3})
+        self.collection.seq_list = [mseq1, mseq2, mseq3]
+        # Mock a dict
+        self.collection._dist_dict = {
+                '1' : 5, '2' : 6, '3': 7}
+        # Call
+        self.collection._increment_seq_distances()
+        # Check assertions
+        mseq1.__iadd__.assert_called_once_with(5)
+        mseq2.__iadd__.assert_called_once_with(6)
+        mseq3.__iadd__.assert_called_once_with(7)
+

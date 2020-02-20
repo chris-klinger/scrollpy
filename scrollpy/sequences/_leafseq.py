@@ -193,7 +193,7 @@ class LeafSeq:
 
 
     @id_num.setter
-    def id_num(self):
+    def id_num(self, value):
         """Prevents changing LeafSeq ID after instantiation.
 
         Raises:

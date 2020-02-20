@@ -27,14 +27,12 @@ class TestUniqueGroupName(unittest.TestCase):
         name = _mapping._unique_group_name('Name')
         self.assertEqual(name, 'Name')
 
-
     def test_repeat_name(self):
         """Tests that repeat names adds suffix"""
         name1 = _mapping._unique_group_name('Other')
         name2 = _mapping._unique_group_name('Other')
         self.assertEqual(name1, 'Other')
         self.assertEqual(name2, 'Other.1')
-
 
     def test_multiple_redundant_groups(self):
         """Tests that function differentiates between groups"""
@@ -47,7 +45,6 @@ class TestUniqueGroupName(unittest.TestCase):
         self.assertEqual(name2, 'Two')
         self.assertEqual(name3, 'One.1')
         self.assertEqual(name4, 'Two.1')
-
 
     def test_repeat_multiple_times(self):
         """Tests that multiple repeats adds appropriate suffix"""
@@ -80,7 +77,6 @@ class TestMakeAlignedSeqPairs(unittest.TestCase):
         self.assertEqual(unaligned,seq_pairs)
         self.assertEqual(aligned,seq_pairs)
 
-
     def test_align_numbers(self):
         """Easiest case; check whether align works with numbers"""
         # Here use a list instead of a set to keep order
@@ -95,7 +91,6 @@ class TestMakeAlignedSeqPairs(unittest.TestCase):
                 name_set,
                 )
         self.assertEqual(aligned,seq_pairs)
-
 
     def test_align_names(self):
         """Tests whether align works with letters"""
@@ -128,7 +123,6 @@ class TestComparePairs(unittest.TestCase):
                 ('Homo sapiens','Homo sapiens'),
                 )
 
-
     def test_compare_pairs_close(self):
         """Tests that a close match is returned"""
         seq_pairs = [
@@ -140,7 +134,6 @@ class TestComparePairs(unittest.TestCase):
                 _mapping.compare_pairs(seq_pairs),
                 ('Homo sapiens','Homo sap'),
                 )
-
 
     def test_compare_pairs_duplicate(self):
         """Tests that the first match is returned by default"""
@@ -170,7 +163,6 @@ class TestGetBestNameMatch(unittest.TestCase):
                 'Toxoplasma gondii',
                 ]
 
-
     def test_get_best_name_match_exact(self):
         """Tests that the function performs membership testing correctly"""
         self.assertEqual(_mapping.get_best_name_match(
@@ -180,7 +172,6 @@ class TestGetBestNameMatch(unittest.TestCase):
             'Homo sapiens',
             )
 
-
     def test_get_best_name_match_partial(self):
         """Tests that the function matches partial strings correctly"""
         self.assertEqual(_mapping.get_best_name_match(
@@ -189,7 +180,6 @@ class TestGetBestNameMatch(unittest.TestCase):
             ),
             'Homo sapiens',
             )
-
 
     def test_get_best_name_match_same(self):
         """Tests that 'Homo' returns either 'Homo sapiens' or 'Homo erectus'"""
@@ -201,9 +191,9 @@ class TestGetBestNameMatch(unittest.TestCase):
             )
 
 
-#################################
-# Test main Mapping class after #
-#################################
+##################################
+## Test main Mapping class after #
+##################################
 
 class TestMappingOneFile(unittest.TestCase):
     """Tests Mapping class with one sequence file"""
@@ -213,50 +203,46 @@ class TestMappingOneFile(unittest.TestCase):
         seq_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.fa')
         # Create necessary object
         self.mapping = _mapping.Mapping(
-                seq_file,  # *infiles
+                [seq_file],  # infiles
                 infmt='fasta',
                 alignfmt='fasta',
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_parse_infiles(self):
         """Tests parse with one infile
 
         Check that function correctly updates:
-            mapping._records
-            mapping._record_list
-            mapping._seq_descriptions
+           mapping._records
+           mapping._record_list
+           mapping._seq_descriptions
         """
         self.mapping._parse_infiles(_test=True)
         expected_record_dict = {'Hsap_AP_EGADEZ': [
-            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
-            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
-            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
-            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
-            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
-            ]}
+           'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+           'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+           'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+           'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+           'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+           ]}
         expected_descriptions = [
-            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
-            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
-            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
-            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
-            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
-            ]
+           'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+           'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+           'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+           'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+           'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+           ]
         self.assertEqual(self.mapping._records,expected_record_dict)
         self.assertEqual(self.mapping._seq_descriptions,expected_descriptions)
-
 
     def test_create_mapping_from_seq(self):
         """Tests _create_mapping_from_seqs with one file"""
         self.mapping._create_mapping_from_seqs()
         self.assertEqual(self.mapping._records,self.mapping._mapping)
-
 
     def test_get_scrollseq(self):
         """Tests _get_scrollseq function"""
@@ -264,12 +250,11 @@ class TestMappingOneFile(unittest.TestCase):
         test_group = 'Hsap_AP_EGADEZ'
         test_label = 'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]'
         seq_obj = self.mapping._get_scrollseq(
-                test_group,
-                test_label,
-                )
+               test_group,
+               test_label,
+               )
         self.assertEqual(seq_obj._group,test_group)
         self.assertEqual(seq_obj.description,test_label)
-
 
     def test_create_seq_dict(self):
         """Tests _create_seq_dict function"""
@@ -277,14 +262,13 @@ class TestMappingOneFile(unittest.TestCase):
         self.mapping._create_mapping_from_seqs()  # Create mapping
         self.mapping._create_seq_dict()
         self.assertEqual(
-                len(self.mapping._seq_dict['Hsap_AP_EGADEZ']), 5)
-
+               len(self.mapping._seq_dict['Hsap_AP_EGADEZ']), 5)
 
     def test_call(self):
         """Tests that all steps run fine with call"""
         self.mapping()
         self.assertEqual(
-                len(self.mapping._seq_dict['Hsap_AP_EGADEZ']), 5)
+               len(self.mapping._seq_dict['Hsap_AP_EGADEZ']), 5)
 
 
 class TestMappingTwoFiles(unittest.TestCase):
@@ -297,47 +281,44 @@ class TestMappingTwoFiles(unittest.TestCase):
         seq_files = (seq_file1, seq_file2)
         # Create necessary object
         self.mapping = _mapping.Mapping(
-                *seq_files,  # *infiles
+                seq_files,  # infiles
                 infmt='fasta',
                 alignfmt='fasta',
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_parse_infiles(self):
         """Tests parse with one infile
 
         Check that function correctly updates:
-            mapping._records
-            mapping._record_list
-            mapping._seq_descriptions
+           mapping._records
+           mapping._record_list
+           mapping._seq_descriptions
         """
         self.mapping._parse_infiles(_test=True)
         expected_record_dict = {
-            'Hsap_AP_GA': [
-            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
-            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
-            ],
-            'Hsap_AP_EDZ': [
-            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
-            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
-            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
-            ]
-            }
+           'Hsap_AP_GA': [
+           'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+           'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+           ],
+           'Hsap_AP_EDZ': [
+           'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+           'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+           'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+           ]
+           }
         expected_descriptions = [
-            'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
-            'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
-            'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
-            'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
-            'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
-            ]
+           'NP_001025178.1 AP-1 complex subunit gamma-1 isoform a [Homo sapiens]',
+           'NP_001229766.1 AP-2 complex subunit alpha-2 isoform 1 [Homo sapiens]',
+           'NP_003929.4 AP-3 complex subunit delta-1 isoform 2 [Homo sapiens]',
+           'NP_031373.2 AP-4 complex subunit epsilon-1 isoform 1 [Homo sapiens]',
+           'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
+           ]
         self.assertEqual(self.mapping._records,expected_record_dict)
-
 
     def test_create_mapping_from_seqs(self):
         """Tests _create_mapping_from_seqs with one file"""
@@ -358,18 +339,16 @@ class TestMappingAlignPlusFiles(unittest.TestCase):
         seq_files = (seq_file1, seq_file2)
         # Create necessary object
         self.mapping = _mapping.Mapping(
-                *seq_files,  # *infiles
+                seq_files,  # infiles
                 alignfile=align_file,
                 infmt='fasta',
                 alignfmt='fasta',
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_parse_alignment(self):
         """Tests parse with one infile
@@ -390,13 +369,10 @@ class TestMappingAlignPlusFiles(unittest.TestCase):
         self.assertEqual(len(self.mapping._align_records),5)
         self.assertEqual(self.mapping._align_descriptions,expected_descriptions)
 
-
-    @unittest.skip('For Now')
     def test_create_mapping_from_seqs(self):
         """Tests _create_mapping_from_seqs with one file"""
         self.mapping._create_mapping_from_seqs()
         self.assertEqual(self.mapping._records,self.mapping._mapping)
-
 
 
 class TestMappingTreeFile(unittest.TestCase):
@@ -407,17 +383,16 @@ class TestMappingTreeFile(unittest.TestCase):
         tree_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.mfa.contree')
         # Create necessary object
         self.mapping = _mapping.Mapping(
+                [],  # infiles
                 treefile=tree_file,
                 infmt='fasta',
                 alignfmt='fasta',
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_parse_treefile(self):
         """Tests parsing a single tree file"""
@@ -430,7 +405,6 @@ class TestMappingTreeFile(unittest.TestCase):
         # Actual tests
         self.assertEqual(len(self.mapping._leaves),5)  # Leaf objects
         self.assertEqual(self.mapping._leaf_names,expected_labels)
-
 
     def test_create_mapping_from_tree(self):
         """Tests creating a mapping from tree labels"""
@@ -446,7 +420,6 @@ class TestMappingTreeFile(unittest.TestCase):
         # Actual tests
         self.assertEqual(self.mapping._mapping,expected_dict)
 
-
     def test_get_leafseq_exact_match(self):
         """Tests that leafseq objects are attained correctly"""
         # Populate object
@@ -459,7 +432,6 @@ class TestMappingTreeFile(unittest.TestCase):
         # Test the retrieved object
         self.assertEqual(leaf_obj._group,'Hsap_AP_EGADEZ')
         self.assertEqual(leaf_obj._node.name,'NP_001025178.1')
-
 
     def test_get_leafseq_not_match(self):
         """Tests getting a leafseq when the label is not exactly the same"""
@@ -474,7 +446,6 @@ class TestMappingTreeFile(unittest.TestCase):
         # Test the retrieved object
         self.assertEqual(leaf_obj._group,'Hsap_AP_EGADEZ')
         self.assertEqual(leaf_obj._node.name,'NP_001025178.1')
-
 
     def test_create_seq_dict(self):
         """Tests creating a sequence dict with leaves only"""
@@ -508,18 +479,16 @@ class TestMappingTreePlusFiles(unittest.TestCase):
         tree_file = os.path.join(data_dir, 'Hsap_AP_EGADEZ.mfa.contree')
         # Create necessary object
         self.mapping = _mapping.Mapping(
-                *seq_files,
+                seq_files,
                 treefile=tree_file,
                 infmt='fasta',
                 alignfmt='fasta',
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_create_seq_dict(self):
         """Tests seq_dict creation when both sequences and a tree are
@@ -555,7 +524,7 @@ class TestMappingAllPlusMapping(unittest.TestCase):
         map_file = os.path.join(data_dir, 'Hsap_AP_mapping.txt')
         # Create necessary object
         self.mapping = _mapping.Mapping(
-                *seq_files,
+                seq_files,
                 treefile=tree_file,
                 mapfile=map_file,
                 infmt='fasta',
@@ -563,11 +532,9 @@ class TestMappingAllPlusMapping(unittest.TestCase):
                 treefmt='newick',
                 )
 
-
     def tearDown(self):
         """Removes Mapping object"""
         self.mapping = None
-
 
     def test_create_mapping_from_mapfile(self):
         """Tests parsing of the mapfile"""
@@ -580,7 +547,6 @@ class TestMappingAllPlusMapping(unittest.TestCase):
             'NP_055670.1 AP-5 complex subunit zeta-1 isoform 1 [Homo sapiens]',
             ]}
         self.assertEqual(self.mapping._mapping,expected_dict)
-
 
     def test_create_seq_dict(self):
         """Tests creating a seq dict when all files are present"""

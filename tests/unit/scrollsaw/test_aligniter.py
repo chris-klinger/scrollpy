@@ -234,40 +234,40 @@ class TestAlignIter(unittest.TestCase):
         # Test
         self.assertEqual(columns,self.iter._columns)
 
-    # def _return_new_cols(self):
-    #     """Hack to work around side_effect"""
-    #     try:
-    #         num_calls = self._return_new_cols.__dict__['num_calls']
-    #         print("Retrieved cols from dict")
-    #     except KeyError:
-    #         print("KeyError on value access")
-    #         num_calls = 0
-    #     num_calls += 1
-    #     if num_calls == 1:
-    #         self.iter._columns = [
-    #             [1, 4], [3, 6],
-    #             [4, 4], [5, 9]]
-    #     elif num_calls == 2:
-    #         self.iter._columns = [
-    #             [3, 6], [5, 9]]
-    #     self._return_new_cols.__dict__['num_calls'] = num_calls
+    def _return_new_cols(self):
+        """Hack to work around side_effect"""
+        try:
+            num_calls = self._return_new_cols.__dict__['num_calls']
+            print("Retrieved cols from dict")
+        except KeyError:
+            print("KeyError on value access")
+            num_calls = 0
+        num_calls += 1
+        if num_calls == 1:
+            self.iter._columns = [
+                [1, 4], [3, 6],
+                [4, 4], [5, 9]]
+        elif num_calls == 2:
+            self.iter._columns = [
+                [3, 6], [5, 9]]
+        self._return_new_cols.__dict__['num_calls'] = num_calls
 
-    # def _return_new_values(self):
-    #     """Hack to work around side_effect"""
-    #     try:
-    #         num_calls = self._return_new_values.__dict__['num_calls']
-    #         print("Retireved values from dict")
-    #     except KeyError:
-    #         print("KeyError on value access")
-    #         num_calls = 0
-    #     num_calls += 1
-    #     if num_calls == 1:
-    #         self.iter._current_support = 95
-    #     elif num_calls == 2:
-    #         self.iter._current_support = 90
-    #     elif num_calls == 3:
-    #         self.iter._current_support = 60
-    #     self._return_new_values.__dict__['num_calls'] = num_calls
+    def _return_new_values(self):
+        """Hack to work around side_effect"""
+        try:
+            num_calls = self._return_new_values.__dict__['num_calls']
+            print("Retireved values from dict")
+        except KeyError:
+            print("KeyError on value access")
+            num_calls = 0
+        num_calls += 1
+        if num_calls == 1:
+            self.iter._current_support = 95
+        elif num_calls == 2:
+            self.iter._current_support = 90
+        elif num_calls == 3:
+            self.iter._current_support = 60
+        self._return_new_values.__dict__['num_calls'] = num_calls
 
     @patch('scrollpy.scrollsaw._aligniter.console_logger')
     @patch('scrollpy.scrollsaw._aligniter.status_logger')
@@ -293,10 +293,13 @@ class TestAlignIter(unittest.TestCase):
                 [2, 3], [3, 6],
                 [4, 4], [5, 9],
                 ]
+        # mock_rmc.return_value = self._return_new_cols
+        # mock_rmc.side_effect = self._return_new_cols
         # mock_rmc.side_effect = [
         #         self._return_new_cols(),
         #         self._return_new_cols(),
         #         ]
+        # mock_calcs.return_value = self._return_new_values()
         # mock_calcs.side_effect = [
         #         self._return_new_values(),
         #         self._return_new_values(),

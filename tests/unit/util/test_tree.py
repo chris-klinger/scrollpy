@@ -4,6 +4,7 @@ Tests /util/_tree
 
 import os
 import unittest
+from unittest.mock import patch
 
 
 from scrollpy.files import tree_file as tf
@@ -20,7 +21,8 @@ class TestTreeModule(unittest.TestCase):
     """Tests utility Tree functions with LeafSeq objects"""
 
     @classmethod
-    def setUpClass(cls):
+    @patch('scrollpy.util._logging.log_message')
+    def setUpClass(cls, mock_log):
         """Creates the necessary mapping"""
         tree_file = os.path.join(
                 data_dir,'Hsap_AP_EGADEZ_symmetric.tre')
@@ -31,6 +33,7 @@ class TestTreeModule(unittest.TestCase):
         cls.tree = tf.read_tree(tree_file,'newick')
         # Get seq_dict
         mapping = Mapping(
+                [],
                 treefile=tree_file,
                 mapfile=map_file,
                 infmt='fasta',  # Not needed

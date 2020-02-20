@@ -13,11 +13,11 @@ class TestCounter(unittest.TestCase):
     """Tests singleton-like counter object"""
 
     @classmethod
-    def setUp(cls):
+    def setUpClass(cls):
         """Create a single instance for testing"""
         cls.c = Counter()
 
-    def tearDown(self):
+    def setUp(self):
         """Resets counter after each test"""
         self.c._reset_count()
 

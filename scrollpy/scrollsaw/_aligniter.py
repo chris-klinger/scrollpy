@@ -3,6 +3,7 @@ This module contains the main AlignIter object.
 """
 
 import os
+import re
 import tempfile
 import bisect
 
@@ -97,6 +98,7 @@ class AlignIter:
         self._current_tree_obj   = None
         self._current_support    = 0
         self._all_supports       = []
+        self._verbosity = int(config['ARGS']['verbosity'])
         # Optimal alignment/tree info
         self._optimal_alignment  = None  # Object
         self._optimal_support    = 0     # Total BS support
@@ -144,7 +146,7 @@ class AlignIter:
         # Parse output
         self._evaluate_columns(columns_outpath)
         # Run analysis
-        if self.iter_method == 'hist':
+        if self.iter_method == 'histogram':
             scroll_log.log_message(
                     # scroll_log.BraceMessage(
                     BraceMessage(
@@ -154,7 +156,7 @@ class AlignIter:
                     console_logger, file_logger,
                     )
             self._hist_run()
-        elif self.iter_method == 'bisect':
+        elif self.iter_method == 'bisection':
             scroll_log.log_message(
                     BraceMessage(
                     # scroll_log.BraceMessage(
@@ -276,6 +278,8 @@ class AlignIter:
         if not self._num_columns:
             calc_columns = True
         iter_num = 0
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         while not optimal:
             scroll_log.log_message(
                     # scroll_log.BraceMessage(
@@ -326,7 +330,8 @@ class AlignIter:
             # If not optimal, keep going
             iter_num += 1
         # Prevent final status_logger line being overwritten
-        scroll_log.log_newlines(console_logger)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
 
 
     def _bisect_run(self):
@@ -343,6 +348,8 @@ class AlignIter:
 
         """
         # Run first iteration
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         scroll_log.log_message(
                 scroll_log.BraceMessage(
                     "Performing tree iteration 1 of many"),
@@ -378,7 +385,8 @@ class AlignIter:
                 self._current_support,
                 )
         # Prevent final status_logger ling being overwritten
-        scroll_log.log_newlines(console_logger)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
 
 
     def _bisect_alignment(self, start, stop, prev_support, iter_num=2):
@@ -610,11 +618,16 @@ class AlignIter:
                 extra=current_align_length,
                 alignfmt='phylip',
                 )
+        # Pass phylip extension in case of redundant filepaths
+        curr_phy_name = os.path.basename(self._current_phy_path)
+        phy_pattern = re.compile('\.phy(\.\d+)?')
+        curr_phy_ext = phy_pattern.search(curr_phy_name).group(0)
         self._current_tree_path = scrollutil.get_filepath(
                 self._outdir,
                 self._align_name,
                 'tree',
                 extra=current_align_length,
+                phylip_ext=curr_phy_ext,
                 treefmt='iqtree',
                 )
 

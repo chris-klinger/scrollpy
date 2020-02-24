@@ -10,7 +10,11 @@ import argparse
 import datetime
 import logging
 
-
+# Report project usage/information
+from scrollpy import write_citation
+from scrollpy import write_description
+from scrollpy import write_usage
+from scrollpy import write_version
 # Logging
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
@@ -45,37 +49,6 @@ from scrollpy import __citation__
 current_dir = os.getcwd()
 
 ##################################################################################
-# FORMAT HEADER DESCRIPTION
-##################################################################################
-
-_name = __project__
-_version = __version__
-_author = __author__
-_license = __license__
-_citation = __citation__
-
-_formatted_desc = ""  # TO-DO
-
-##################################################################################
-# PROJECT USAGE
-##################################################################################
-
-# Might not need this after all?
-def _write_project_information():
-    """Writes out information about the project"""
-    pass
-
-##################################################################################
-# SAMPLE USAGE
-##################################################################################
-
-# def _write_sample_usage():
-#    """Writes out some sample usage examples"""
-#    pass
-
-_usage = "Usage message"
-
-##################################################################################
 # GET MODULE LOGGER NAMES
 ##################################################################################
 
@@ -98,6 +71,17 @@ def main():
     ##############################################################################
 
     main_start = datetime.datetime.now()
+
+    #############################################################################
+    # IF NO ARGUMENTS PASSED, PRINT DESCRIPTION
+    #############################################################################
+
+    # Used for all manual writing in main()
+    term_width = min(82, scroll_log._get_current_terminal_width())
+    # No arguments -> prompt user
+    if len(sys.argv[1:]) == 0:
+        write_description(term_width)
+        sys.exit(0)
 
     ##############################################################################
     # COMMAND LINE ARGUMENT
@@ -362,11 +346,16 @@ def main():
                 ))
     run_options.add_argument("--iter-method",
             nargs = '?',
-            choices = ["hist","bisect"],
-            default = "hist",
-            metavar = "Column selection method",
+            choices = ["bisection", "histogram"],
+            default = "bisection",
+            metavar = "Alignment Iteration Method",
             help = (
-                "HELP TEXT FOR ITER METHOD"
+                "Method to use to iterate over alignment columns; 'bisection' "
+                "iteratively splits the alignment over half the remaining length "
+                "and chooses high or low depending on the resulting tree score. "
+                "The 'histogram' method bins all remaining columns at each step "
+                "and removes a fraction of the first bin relative to the length "
+                "of the alignment relative to its starting length."
                 ))
     run_options.add_argument("--col-method",
             nargs = '?',
@@ -374,7 +363,7 @@ def main():
             default = "zorro",
             metavar = "Column Evaluation Method",
             help = (
-                "HELP TEXT FOR ITERATING HERE"
+                "Method to use for assigning scores to alignment columns."
                 ))
     run_options.add_argument("-f", "--filter",
             action = "store_true",
@@ -389,11 +378,35 @@ def main():
                 ))
     run_options.add_argument("--filter-method",  # TO-DO
             nargs = '?',
-            choices = ["zscore", "mad"],
+            choices = ["zscore", "mad", "identity"],
             default = "zscore",
             metavar = "Filtering Method",
             help = (
-                "HELP TEXT FOR FILTERING METHOD"
+                "Method to use for filtering input sequences. Choosing either "
+                "'zscore' or 'mad' filters based on sequence length, using "
+                "either standard z-score or median absolute deviation. Choosing "
+                "'identity' filters based on the similarity of aligned sequences "
+                "to each other. For all methods, the appropriate cutoff value "
+                "can be specified used --filter-score."
+                ))
+    run_options.add_argument("--filter-score",
+            nargs = '?',
+            default = None,
+            metavar = "Filtering Score",
+            help = (
+                "Score cutoff for determining which sequences to filter. If "
+                "not set, it defaults to a different value depending on the "
+                "'--filter-method' chosen."
+                ))
+    run_options.add_argument("--num-filter",
+            nargs = '?',
+            default = 3,
+            metavar = "Filtering Threshold",
+            help = (
+                "Control the number of sequences filtering is required to leave "
+                "while removing from one or more groups. If sequences would be "
+                "removed but cannot be due to this threshold, a warning message "
+                "is written to the logfile informing the user."
                 ))
     run_options.add_argument("--filter-out",
             action = "store_true",
@@ -407,6 +420,12 @@ def main():
                 "Filters sequences according to 'filter-method' and outputs the "
                 "starting sequences and/or filtered sequences as specified by "
                 "other arguments without running any other methods."
+                ))
+    run_options.add_argument("--filter-bygroup",
+            action = "store_true",
+            help = (
+                "Whether to apply filtering to each group of sequences or to "
+                "all sequences combined."
                 ))
     # Possible future feature for implementation
     # run_options.add_argument("-s", "--split-seqs",
@@ -543,6 +562,25 @@ def main():
 
 
     #############################################################################
+    # SIMPLE USE CASES
+    #############################################################################
+
+    # Check to see if any of 'citation'/'usage'/'version' present
+    # VERSION information
+    if args.version:
+        write_version(term_width)  # term_width calculated at beginning of main()
+        sys.exit (0)
+    # CITATION information
+    if args.citation:
+        write_citation(term_width)
+        sys.exit(0)
+    # USAGE information
+    if args.usage:
+        write_usage(term_width)
+        sys.exit(0)
+
+
+    #############################################################################
     # CONFIGURE LOGGING
     #############################################################################
 
@@ -619,38 +657,6 @@ def main():
     output_logger.addHandler(output_handler)
 
 
-    #############################################################################
-    # SIMPLE USE CASES
-    #############################################################################
-
-    # Check to see if any of 'citation'/'usage'/'version' present
-    if args.version:
-        scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}", _version),  # msg
-            1,  # verbosity level of message
-            'INFO',  # level
-            console_logger,  # loggers
-            )
-        sys.exit (0)
-    if args.citation:
-        scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}", _citation),  # msg
-            1,  # verbosity level of message
-            'INFO',  # level
-            console_logger,  # loggers
-            )
-        sys.exit(0)
-    if args.usage:
-        scroll_log.log_message(
-            scroll_log.BraceMessage("Version {}", _usage),  # msg
-            1,  # verbosity level of message
-            'INFO',  # level
-            console_logger,  # loggers
-            )
-        # print(_usage)
-        sys.exit(0)
-
-
     ##############################################################################
     # PARAMETER VALIDATION
     ##############################################################################
@@ -663,6 +669,70 @@ def main():
             console_logger, file_logger,  # loggers
             )
     scroll_log.log_newlines(console_logger)
+
+    # CHECK INPUT ARGS FOR RUN PARAMETERS -> MAKE SURE NO CLASHES
+
+    # Make sure args don't clash
+    if args.placeseqs and args.iteralign:
+        scroll_log.log_message(
+                BraceMessage(
+                    "Cannot specify '--placeseqs' and '--iteralign' in same run"),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        raise FatalScrollPyError
+    if args.toplace and args.iteralign:
+        scroll_log.log_message(
+                BraceMessage(
+                    "Cannot specify '--toplace' and '--iteralign' in same run"),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        raise FatalScrollPyError
+    # Check for placeseqs
+    if args.placeseqs:
+        if not args.alignment:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "No alignment file for placing sequences detected"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            raise FatalScrollPyError
+        if not args.toplace:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "No sequences to place detected"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            raise FatalScrollPyError
+    # Consider that user might specify -c without -p -> ambiguous!
+    if args.toplace:
+        if not args.placeseqs:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Placement sequences detected; please specify --placeseqs as well"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+            raise FatalScrollPyError
+    # Check for iteralign
+    if args.iteralign:
+        if not args.alignment:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "No alignment to iterate over detected"),
+                    1,
+                    'ERROR',
+                    console_logger, file_logger,
+                    )
+        raise FatalScrollPyError
 
     # CHECK INPUT FILEPATHS; MAKE SURE THEY EXIST
 
@@ -768,7 +838,6 @@ def main():
 
     # Check whether temporary output is specified
     if args.tmpout:  # None otherwise
-        print("User specified args.tmpout")
         if not args.no_create:
             try:
                 scrollutil.ensure_dir_exists(args.tmpout)
@@ -855,6 +924,7 @@ def main():
     # Finally, set the value
     args.tblsep = tblsep
 
+
     ##############################################################################
     # POPULATE GLOBAL CONFIG
     ##############################################################################
@@ -871,6 +941,231 @@ def main():
     # Load from config file
     # Call this later so that we can configure logging first!
     load_config_file()
+    scroll_log.log_newlines(console_logger)
+
+    ##############################################################################
+    # FUNCTIONS CALLED BY RUN CODE
+    ##############################################################################
+
+    def get_mapping_object():
+        """Populates a mapping object for all sequence objects.
+
+        Returns:
+            obj: A populated Mapping object.
+
+        """
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Creating sequence mapping"),
+                2,
+                'INFO',
+                console_logger, file_logger
+                )
+        mapping = Mapping(
+                args.infiles,              # List to unpack
+                alignfile=args.alignment,  # None if not provided
+                treefile=args.treefile,    # None if not provided
+                mapfile=args.mapping,      # None if not provided
+                )
+        return mapping
+
+
+    def get_filter_object(seq_dict):
+        """Populates a filtering object for sequence removal.
+
+        Args:
+            seq_dict (dict): A dictionary of mapped sequences.
+
+        Returns:
+            obj: A populated Filter object.
+
+        """
+        scroll_log.log_message(
+                scroll_log.BraceMessage("Filtering input sequences"),
+                2,
+                'INFO',
+                console_logger, file_logger,
+                )
+        seq_filter = Filter(  # Additional args should be in config already
+                seq_dict,
+                )
+        # Call, and bind filtered seq_dict to 'start_seq_dict' var
+        return seq_filter
+
+
+    def get_analysis_object(seq_dict):
+        """Determines which analysis object to run.
+
+        Args:
+            seq_dict (dict): A dictionary of mapped sequences.
+
+        Returns:
+            obj: A populated object for the analysis. This is one of
+                AlignIter, ScrollPy, ScrollTree, or TreePlacer.
+
+        """
+        if args.placeseqs:  # TreePlacer
+            scroll_log.log_message(
+                    scroll_log.BraceMessage("Initializing tree placing analysis"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            run_obj = TreePlacer(
+                    seq_dict,       # Filtered or not
+                    args.alignment, # Input alignment
+                    args.toplace,   # Sequence file to place
+                    args.tmpout,    # Tmp out
+                    )
+        elif args.iteralign:  # IterAlign
+            scroll_log.log_message(
+                    scroll_log.BraceMessage("Initializing alignment iteration analysis"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            run_obj = AlignIter(
+                    args.alignment,
+                    args.tmpout,
+                    )
+        else:  # Distance-based analysis!
+            if not args.treefile:  # Sequence-based analysis
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Initializing sequence-based scrollsaw analysis"),
+                        2,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                run_obj = ScrollPy(
+                        seq_dict,    # Filtered or not
+                        args.tmpout, # Actual program run uses tmp dir!
+                        )
+            else:  # Tree-based analysis
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Initializing tree-based scrollsaw analysis"),
+                        2,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                run_obj = ScrollTree(
+                        seq_dict, # Filtered or not
+                        )
+        # Perform the actual program execution
+        return run_obj
+
+    def write_output_files(run_obj=None, filter_obj=None):
+        """Creates necessary output objects and executes them.
+
+        Args:
+            run_obj (obj): An analysis object that has been called.
+                Defaults to None.
+            filter_obj (obj): A filter object that has been called.
+                Defaults to None.
+
+        """
+        # Write to outfile(s); config handles gritty details
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Writing output files"),
+                2,
+                'INFO',
+                console_logger, file_logger,
+                )
+        # Write table file no matter what
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Writing output table(s)"),
+                2,
+                'INFO',
+                console_logger, file_logger,
+                )
+        if run_obj:
+            run_tbl_writer = TableWriter(
+                    run_obj,    # object to use
+                    args.out,  # specified output location
+                    )
+            run_tbl_writer.write()
+        if filter_obj:  # Can also have a table
+            filter_tbl_writer = TableWriter(
+                    filter_obj,    # object to use
+                    args.out,  # specified output location
+                    )
+            filter_tbl_writer.write()
+        # Write optimal alignment if AlignIter was performed
+        if args.iteralign:
+            if run_obj:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Writing optimal output alignment"),
+                        2,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                align_writer = AlignWriter(
+                        run_obj,
+                        args.out,
+                        )
+                align_writer.write()
+        # Write sequences, if requested
+        if args.seqout:  # User requested sequences
+            if run_obj:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Writing output sequences"),
+                        2,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                seq_writer = SeqWriter(
+                        run_obj,   # Object to use
+                        args.out, # Specified output location
+                        )
+                seq_writer.write()
+        if args.filter_out:  # User requested filtered sequences
+            if filter_obj:
+                scroll_log.log_message(
+                        scroll_log.BraceMessage(
+                            "Writing filtered sequences"),
+                        2,
+                        'INFO',
+                        console_logger, file_logger,
+                        )
+                filter_writer = SeqWriter(
+                        filter_obj,  # Filter object
+                        args.out,    # Specified output location
+                        )
+                filter_writer.write()
+
+
+    def finish_run():
+        """Records run time information for a complete run.
+
+        """
+        # Finish timing and report back results
+        main_end = datetime.datetime.now()
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Finished analysis at {}", main_end),
+                2,  # verbosity level of message
+                'INFO',  # level
+                console_logger, file_logger,  # loggers
+                )
+
+        analysis_time = main_end - main_start
+        # Datetime timedelta objects are weird and only store days, seconds,
+        # and microseconds as attrs; convert to include hours and minutes
+        converted_total = scrollutil.time_list(analysis_time)
+        scroll_log.log_message(
+                scroll_log.BraceMessage(
+                    "Analysis completed in {} days, {} hours, {} minutes, "
+                    "{} seconds, and {} microseconds",
+                    *converted_total,  # Tuple with 5 values; unpack
+                    ),
+                1,
+                'INFO',
+                console_logger, file_logger,
+                )
 
     ##############################################################################
     # ACTUAL PROGRAM EXECUTION
@@ -884,175 +1179,43 @@ def main():
         console_logger, file_logger  # loggers
         )
 
-    # SOMEWHERE HERE: CHECK INPUT ARGS?
+    # Default starting values
+    run_obj = None
+    filter_obj = None
+    start_seq_dict = None
+    removed_seq_dict = None
 
     # Begin by creating a mapping, unless iteralign
     if not args.iteralign:
-        scroll_log.log_message(
-                scroll_log.BraceMessage("Creating sequence mapping"),
-                2,
-                'INFO',
-                console_logger, file_logger
-                )
-        mapping = Mapping(
-                args.infiles,              # List to unpack
-                alignfile=args.alignment,  # None if not provided
-                treefile=args.treefile,    # None if not provided
-                mapfile=args.mapping,      # None if not provided
-                )
-        start_seq_dict = mapping()  # Run to get mapped seq_dict
+        map_obj = get_mapping_object()
+        start_seq_dict = map_obj()
 
     # Filter if necessary
-    # Ensure that filtering only still calls filter!
     if args.filter_only:
         args.filter=True
-    # Actually filter
-    removed_seq_dict=None  # If not filtering
-    if args.filter:
-        scroll_log.log_message(
-                scroll_log.BraceMessage("Filtering input sequences"),
-                2,
-                'INFO',
-                console_logger, file_logger,
-                )
-        seq_filter = Filter(  # Additional args should be in config already
-                start_seq_dict,
-                )
-        # Call, and bind filtered seq_dict to 'start_seq_dict' var
-        start_seq_dict,removed_seq_dict = seq_filter()
+    if args.filter:  # Actually filter
+        filter_obj = get_filter_object(start_seq_dict)
+        start_seq_dict,removed_seq_dict = filter_obj()
+
+    # Separate starting functionality from later functionality
+    scroll_log.log_newlines(console_logger)
+
     # If filtering only, output directly from Filter
     if args.filter_only:
-        pass
+        # Write output only
+        scroll_log.log_newlines(console_logger)
+        write_output_files(run_obj, filter_obj)
+    else:  # Also running an analysis
+        run_obj = get_analysis_object(start_seq_dict)
+        # Run actual program execution now
+        run_obj()
+        # Write all possible output
+        scroll_log.log_newlines(console_logger)
+        write_output_files(run_obj, filter_obj)
 
-    # Run actual program execution now
-    if args.placeseqs:  # TreePlacer
-        scroll_log.log_message(
-                scroll_log.BraceMessage("Initializing tree placing analysis"),
-                2,
-                'INFO',
-                console_logger, file_logger,
-                )
-        RunObj = TreePlacer(
-                start_seq_dict, # Filtered or not
-                args.alignment, # Input alignment
-                args.toplace,   # Sequence file to place
-                args.tmpout,    # Tmp out
-                )
-    elif args.iteralign:  # IterAlign
-        scroll_log.log_message(
-                scroll_log.BraceMessage("Initializing alignment iteration analysis"),
-                2,
-                'INFO',
-                console_logger, file_logger,
-                )
-        RunObj = AlignIter(
-                args.alignment,
-                args.tmpout,
-                )
-        # alignout = True  # Signal to output an alignment
-    else:  # Distance-based analysis!
-        if not args.treefile:  # Sequence-based analysis
-            scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "Initializing sequence-based scrollsaw analysis"),
-                    2,
-                    'INFO',
-                    console_logger, file_logger,
-                    )
-            RunObj = ScrollPy(
-                    start_seq_dict, # Filtered or not
-                    args.tmpout,    # Actual program run uses tmp dir!
-                    )
-        else:  # Tree-based analysis
-            scroll_log.log_message(
-                    scroll_log.BraceMessage(
-                        "Initializing tree-based scrollsaw analysis"),
-                    2,
-                    'INFO',
-                    console_logger, file_logger,
-                    )
-            RunObj = ScrollTree(
-                    start_seq_dict, # Filtered or not
-                    )
-    # Perform the actual program execution
-    RunObj()
-
-    # Write to outfile(s); config handles gritty details
-    scroll_log.log_message(
-            scroll_log.BraceMessage(
-                "Writing output files"),
-            2,
-            'INFO',
-            console_logger, file_logger,
-            )
-    # Write table file no matter what
-    tbl_writer = TableWriter(
-            RunObj,    # object to use
-            args.out,  # specified output location
-            )
-    # try:
-    tbl_writer.write()
-    # except:  # Dangerous; Change!!!
-    # scroll_log.log_message(  # Log exception instead?!?
-    #         scroll_log.BraceMessage(
-    #             "Failed to write output table"),
-    #         1,
-    #         'ERROR',
-    #         console_logger, file_logger,
-    #         )
-
-    # Write optimal alignment, if AlignIter was performed
-    # if alignout:
-    if args.iteralign:
-        align_writer = AlignWriter(
-                RunObj,
-                args.out,
-                )
-        align_writer.write()
-
-    # Write sequences, if requested
-    if args.seqout:  # User requested sequences
-        seq_writer = SeqWriter(
-                RunObj,   # Object to use
-                args.out, # Specified output location
-                )
-        #try:
-        seq_writer.write()
-        #except:  # Dangerous; Change!!!
-        #    print("Unexpected error when writing sequence files")  # Logging!
-
-    if args.filter_out:  # User requested filtered sequences
-        filter_writer = SeqWriter(
-                seq_filter,  # Filter object
-                args.out,    # Specified output location
-                )
-        filter_writer.write()
-    # Something about a summary file? -> TO_DO
-
-    # Finish timing and report back results
-    main_end = datetime.datetime.now()
-    scroll_log.log_message(
-            scroll_log.BraceMessage(
-                "Finished analysis at {}", main_end),
-            2,  # verbosity level of message
-            'INFO',  # level
-            console_logger, file_logger,  # loggers
-            )
-
-    analysis_time = main_end - main_start
-    # Datetime timedelta objects are weird and only store days, seconds,
-    # and microseconds as attrs; convert to include hours and minutes
-    converted_total = scrollutil.time_list(analysis_time)
-    scroll_log.log_message(
-            scroll_log.BraceMessage(
-                "Analysis completed in {} days, {} hours, {} minutes, "
-                "{} seconds, and {} microseconds",
-                *converted_total,  # Tuple with 5 values; unpack
-                ),
-            1,
-            'INFO',
-            console_logger, file_logger,
-            )
+    # Finally run the finishing code
+    scroll_log.log_newlines(console_logger)
+    finish_run()
 
 
 ##############################################################################
@@ -1091,52 +1254,52 @@ def run_cleanup(successful=True):
 
 
 if __name__ == '__main__':
-    # full_run = True  # Assume program runs fully
-    # try:
-    main()
-    # except KeyboardInterrupt:
-    #     scroll_log.log_newlines(console_logger)
-    #     scroll_log.log_message(
-    #             BraceMessage(
-    #                 "Keyboard interrupt detected; exiting..."),
-    #             1,
-    #             'ERROR',
-    #             console_logger, file_logger,
-    #             )
-    #     full_run = False  # Program ended before finishing
-    # except FatalScrollPyError:
-    #     # Add newlines in case status logging was occuring prior to error
-    #     scroll_log.log_newlines(console_logger)
-    #     scroll_log.log_message(
-    #             BraceMessage(
-    #                 "ScrollPy has encountered a fatal error; exiting..."),
-    #             1,
-    #             'ERROR',
-    #             console_logger, file_logger,
-    #             )
-    #     full_run = False  # Program ended before finishing
-    # # Add one more case in here
-    # except Exception as e:  # Something unexpected ends program
-    #     scroll_log.log_newlines(console_logger)
-    #     # Log the exception itself for debugging
-    #     scroll_log.log_message(
-    #             BraceMessage(""),
-    #             1,
-    #             'ERROR',
-    #             console_logger, file_logger,
-    #             exc_obj=e,
-    #             )
-    #     # Let the user know the program is exiting
-    #     scroll_log.log_message(
-    #             BraceMessage(
-    #                 "ScrollPy has encountered an unexpected error; exiting..."),
-    #             1,
-    #             'ERROR',
-    #             console_logger, file_logger,
-    #             )
-    #     full_run = False
-    # finally:
-    #     # Whether there was an error or not, need to remove any remaining
-    #     # temporary directories; user does not want output
-    #     run_cleanup(full_run)
+    full_run = True  # Assume program runs fully
+    try:
+        main()
+    except KeyboardInterrupt:
+        scroll_log.log_newlines(console_logger)
+        scroll_log.log_message(
+                BraceMessage(
+                    "Keyboard interrupt detected; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        full_run = False  # Program ended before finishing
+    except FatalScrollPyError:
+        # Add newlines in case status logging was occuring prior to error
+        scroll_log.log_newlines(console_logger)
+        scroll_log.log_message(
+                BraceMessage(
+                    "ScrollPy has encountered a fatal error; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        full_run = False  # Program ended before finishing
+    # Add one more case in here
+    except Exception as e:  # Something unexpected ends program
+        scroll_log.log_newlines(console_logger)
+        # Log the exception itself for debugging
+        scroll_log.log_message(
+                BraceMessage(""),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                exc_obj=e,
+                )
+        # Let the user know the program is exiting
+        scroll_log.log_message(
+                BraceMessage(
+                    "ScrollPy has encountered an unexpected error; exiting..."),
+                1,
+                'ERROR',
+                console_logger, file_logger,
+                )
+        full_run = False
+    finally:
+        # Whether there was an error or not, need to remove any remaining
+        # temporary directories; user does not want output
+        run_cleanup(full_run)
 

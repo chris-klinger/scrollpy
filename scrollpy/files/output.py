@@ -464,7 +464,7 @@ class TableWriter(BaseWriter):
         elif mode == 'fvalue':
             # Object returns dict, not list -> flatten
             seqs = _util.flatten_dict_to_list(
-                    self._sp_object.return_all_seqs())
+                    self._sp_object.return_removed_seqs())
             for obj in seqs:
                 # Pick values
                 header = obj.description

@@ -63,6 +63,8 @@ class ScrollPy:
         self._group_counter = 1  # (possibly unused) counter for group IDs
         self._collections = []
         self._remove_tmp = False
+        # Check for screen output commands
+        self._verbosity = int(config['ARGS']['verbosity'])
 
 
     def __repr__(self):
@@ -109,7 +111,8 @@ class ScrollPy:
         self._make_collections()
         # actually run alignment/distance calculations
         total = len(self._collections)
-        scroll_log.log_newlines(console_logger)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         for i,collection in enumerate(self._collections):
             scroll_log.log_message(
                     # scroll_log.BraceMessage(
@@ -120,7 +123,8 @@ class ScrollPy:
                     status_logger,
                     )
             collection()
-        scroll_log.log_newlines(console_logger)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         # finally:  -> Moved to __main__.run_cleanup()
         #     if self._remove_tmp:
         #         tmp_dir.cleanup()  # Remove temporary directory

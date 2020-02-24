@@ -295,7 +295,13 @@ def get_tree_extension(**kwargs):
     except KeyError:
         raise AttributeError
     if treefmt == 'iqtree':
-        extension = '.phy.contree'
+        try:
+            phy_ext = str(kwargs['phylip_ext'])
+        except KeyError:
+            phy_ext = '.phy'
+        extension = phy_ext + '.contree'
+        # extension = '.phy.contree'
+        # extension = '.contree'
     else:
         pass  # Make more flexible eventually
 

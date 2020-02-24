@@ -3,6 +3,7 @@ This module contains the main TreePlacer object.
 """
 
 import os
+import re
 import sys  # Temporarily necessary
 import tempfile
 
@@ -83,6 +84,7 @@ class TreePlacer:
             setattr(self, var, value)
         # Save kwargs for __repr__
         self.kwargs = kwargs
+        self._verbosity = int(config['ARGS']['verbosity'])
         # Internal defaults; change each time through __call__ loop
         # Filepaths
         self._current_seq_path   = ""
@@ -134,6 +136,9 @@ class TreePlacer:
             tmp_dir = tempfile.TemporaryDirectory()
             self._outdir = tmp_dir.name
             tmps_to_remove.append(self._outdir)  # For later removal
+        # Write another output line if status logging
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         # Iter over sequences
         for i,seq_obj in enumerate(self._to_place):
             scroll_log.log_message(
@@ -180,7 +185,8 @@ class TreePlacer:
                 # Set info on seq object and add to list
                 self._add_classified_seq(group,seq_obj)
         # Clear line with status_logger information
-        scroll_log.log_newlines(console_logger)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
         # # Clean up -> Moved to __main__.run_cleanup()!
         # if self._remove_tmp:
         #     tmp_dir.cleanup()
@@ -254,10 +260,14 @@ class TreePlacer:
                 )
         af.afa_to_phylip(self._current_align_path, self._current_phy_path)
         # Run IQ-TREE
+        curr_phy_name = os.path.basename(self._current_phy_path)
+        phy_pattern = re.compile('\.phy(\.\d+)?')
+        curr_phy_ext = phy_pattern.search(curr_phy_name).group(0)
         self._current_tree_path = scrollutil.get_filepath(
                 self._outdir,
                 basename,
                 'tree',
+                phylip_ext=curr_phy_ext,
                 treefmt='iqtree',
                 )
         self._make_tree()

@@ -4,6 +4,7 @@ This module contains the main ScrollTree object
 
 import itertools
 
+from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
 from scrollpy.files import sequence_file as sf
@@ -27,6 +28,7 @@ class ScrollTree:
         # Save kwargs for __repr__
         self.kwargs = kwargs
         # Internal defaults
+        self._verbosity = int(config['ARGS']['verbosity'])
         self._ordered_seqs = []
         self._cached = {}  # For faster leaf distance lookup
 
@@ -92,7 +94,19 @@ class ScrollTree:
                 'INFO',
                 console_logger, file_logger,
                 )
-        for leaf in leaves:
+        num_leaves = len(leaves)
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
+        for i,leaf in enumerate(leaves):
+            # Log it first
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Getting distances for tree leaf {} of {}",
+                        i+1, num_leaves),
+                    3,
+                    'INFO',
+                    status_logger,
+                    )
             # Remove target leaf from list copy
             other_leaves = leaves[:]
             for oleaf in other_leaves:
@@ -111,6 +125,9 @@ class ScrollTree:
                     dist = leaf.get_distance(oleaf)  # Else, calculate and store
                     self._cached[search_string] = dist
                 leaf._distance += dist
+        # Clear status_logger output if necessary
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
 
 
     def _sort_distances(self):

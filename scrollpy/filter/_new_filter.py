@@ -53,20 +53,20 @@ class Filter:
 
     _config_vars = (
             'filter_method',
-            'filter_by_group',
-            'filter_threshold',
+            'filter_bygroup',
+            'num_filter',
             )
 
     def __init__(self, seq_dict, **kwargs):
         """Sets values by arguments or through config."""
         self._seq_dict = seq_dict
-        for var in _config_vars:
+        for var in self._config_vars:
             try:
                 value = kwargs[var]
             except KeyError:
                 value = config["ARGS"][var]
             # Now set it
-            setattr(self, ('_'+setting), value)
+            setattr(self, ('_'+var), value)
         # Internal defaults
         self._removed = {}  # Mirrors self._seq_dict
 
@@ -98,9 +98,9 @@ class Filter:
 
         """
         # First, determine appropriate subclass to call
-        if self._filter_method.upper() in length_methods:
+        if self._filter_method.upper() in self.length_methods:
             filterer = LengthFilter
-        elif self._filter_method.upper() in identity_methods:
+        elif self._filter_method.upper() in self.identity_methods:
             filterer = IdentityFilter
         else:  # Will we get here? Args should be filtered...
             # Log a warning??
@@ -109,7 +109,7 @@ class Filter:
         sequences = []
         sub_seq_list = []
         for group,seq_objs in self._seq_dict.items():
-            if self._by_group:
+            if self._filter_bygroup:
                 sequences.append(seq_objs)
             else:
                 sub_seq_list.extend(seq_objs)
@@ -119,10 +119,12 @@ class Filter:
         self._to_remove = []
         # First get all indices as a flat list
         for seq_list in sequences:  # One or more sub-lists
-            removal_indices = filterer(
+            filter_obj = filterer(
+            # removal_indices = filterer(
                     seq_list,
                     self._filter_method,
                     )
+            removal_indices = filter_obj()  # Run it
             self._to_remove.extend(removal_indices)
         # Then actually remove stuff
         self._remove_by_list()
@@ -224,7 +226,7 @@ class Filter:
             bool: True if more sequences can be removed; False otherwise.
 
         """
-        if len(self._seq_dict[group]) > self._filter_threshold:
+        if len(self._seq_dict[group]) > self._num_filter:
             return True  # > not >= because this is prior to removal!
         return False
 
@@ -287,6 +289,17 @@ class LengthFilter(GenericFilter):
     are significantly different from the average.
 
     """
+
+    def __init__(self, seq_list, method, **kwargs):
+        """Delegates to BaseClass.
+        """
+        super().__init__(seq_list, method, **kwargs)
+        # Get a default value for score if necessary
+        if self._filter_score == "None":  # Default is None
+            self._filter_score = 2
+        else:
+            self._filter_score = float(self._filter_score)
+
 
     def __call__(self):
         """Filter based on length."""
@@ -420,7 +433,12 @@ class IdentityFilter(GenericFilter):
         try:
             self._align_method = kwargs['align_method']
         except KeyError:
-            self._align_method = config['ARGS']['align']
+            self._align_method = config['ARGS']['align_method']
+        # Default value for filter_score, if necessary
+        if self._filter_score == "None":  # Default is None
+            self._filter_score = 95
+        else:
+            self._filter_score = float(self._filter_score)
 
 
     def __call__(self):

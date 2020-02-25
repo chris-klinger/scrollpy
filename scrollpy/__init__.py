@@ -1,3 +1,28 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
+"""
+Populates ScrollPy namespace and provides useful functions for outputing information
+about program usage, version, etc.
+
+"""
 
 import os
 import sys
@@ -11,8 +36,12 @@ from textwrap import TextWrapper
 # A list of TemporaryDirectory objects for cleanup
 tmps_to_remove = []
 
-# Utility functions
+# Utility functions/classes
 from scrollpy.util import _util as scrollutil
+from scrollpy.util import _tree as treeutil
+from scrollpy.util._counter import ScrollCounter
+from scrollpy.util._align import affine_align
+from scrollpy.util._align import simple_score
 # Logging functionality
 from scrollpy.util import _logging as scroll_log  # LOAD FIRST!!!
 from scrollpy.util._logging import BraceMessage
@@ -200,6 +229,14 @@ def write_description(width=82, destination=None):
             ]
     for wrapped_line in get_textbox_lines(to_write, width=width):
         destination.write(wrapped_line + "\n")
+
+
+def get_argparse_descr():
+    return ' '.join([  # Lines
+            "{} v{}: Utility Functions for Phylogenetic Analysis.".format(__project__, __version__),
+            "Developed by {}, email: {}.".format(__author__, __email__),
+            "For example usage please type 'python -m scrollpy --usage'",
+            ])
 
 
 def write_usage(width=82, destination=None):

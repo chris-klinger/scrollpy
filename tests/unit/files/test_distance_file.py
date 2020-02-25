@@ -35,7 +35,7 @@ class TestStandAloneFunctions(unittest.TestCase):
 
     @patch('scrollpy.files.distance_file.file_logger')
     @patch('scrollpy.files.distance_file.console_logger')
-    @patch('scrollpy.util._logging.BraceMessage')
+    @patch('scrollpy.files.distance_file.BraceMessage')
     @patch('scrollpy.util._logging.log_message')
     def test_parse_alignment_file(self, mock_log, mock_bmsg, mock_cl, mock_fl):
         """Tests parsing file using BioPython"""
@@ -55,7 +55,7 @@ class TestStandAloneFunctions(unittest.TestCase):
                 expected,
                 )
         # Finally, check when it raises an error
-        with patch('scrollpy.files.distance_file.non_blank_lines') as mock_nbl:
+        with patch('scrollpy.util._util.non_blank_lines') as mock_nbl:
             mock_nbl.return_value = []  # Just an empty list
             with self.assertRaises(FatalScrollPyError):
                 distance_file._parse_raxml_distances(test_inpath)

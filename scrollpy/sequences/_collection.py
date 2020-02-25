@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 Module containing a single container class for a group of sequences in
 ScrollPy.
@@ -7,14 +27,11 @@ import os
 
 from scrollpy import config
 from scrollpy import scroll_log
-from scrollpy.files import sequence_file as sf
-# from scrollpy.alignments import align
+from scrollpy import BraceMessage
 from scrollpy import Aligner
 from scrollpy import DistanceCalc
-# from scrollpy.distances import distance, parser
-# from scrollpy.distances import parser
+from scrollpy.files import sequence_file as sf
 from scrollpy.files import distance_file as df
-#from scrollpy.config._config import config
 from scrollpy import scrollutil
 
 
@@ -116,7 +133,6 @@ class ScrollCollection:
 
     def _get_sequence_file(self):
         """Calls external methods to parse sequence file."""
-        # seq_path = self._get_outpath('seqs')
         seq_path = scrollutil.get_filepath(
                 self._outdir,          # Output directory
                 self._group,           # Name

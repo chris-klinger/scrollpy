@@ -1,6 +1,27 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains a base class and two subclasses for writing output
 to files.
+
 """
 
 import os
@@ -9,15 +30,13 @@ import re
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
-from scrollpy.scrollsaw._aligniter import AlignIter
-from scrollpy.scrollsaw._scrollpy import ScrollPy
-from scrollpy.scrollsaw._scrolltree import ScrollTree
-from scrollpy.scrollsaw._treeplacer import TreePlacer
-from scrollpy.filter._new_filter import Filter
-from scrollpy.files import sequence_file
-# from scrollpy.alignments import parser
+from scrollpy import AlignIter
+from scrollpy import Filter
+from scrollpy import ScrollPy
+from scrollpy import ScrollTree
+from scrollpy import TreePlacer
 from scrollpy.files import align_file as af
-from scrollpy.util import _util
+from scrollpy.files import sequence_file as sf
 from scrollpy import scrollutil
 
 
@@ -43,7 +62,7 @@ class BaseWriter:
     """
     def __init__(self, sp_object, out_path):
         self._sp_object = sp_object
-        self._out_path = out_path
+        self._out_path  = out_path
 
 
     def write(self):
@@ -68,7 +87,6 @@ class AlignWriter(BaseWriter):
     def __init__(self, sp_object, out_path):
         """Delegate to BaseClass"""
         super().__init__(sp_object, out_path)
-        # BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
@@ -114,7 +132,6 @@ class SeqWriter(BaseWriter):
     def __init__(self, sp_object, out_path):
         """Delegate to BaseClass."""
         super().__init__(sp_object, out_path)
-        # BaseWriter.__init__(self, sp_object, out_path)
 
 
     def write(self):
@@ -136,7 +153,7 @@ class SeqWriter(BaseWriter):
                         'sequence',
                         extra='scrollsaw',
                         )
-                sequence_file._sequence_list_to_file(
+                sf._sequence_list_to_file(
                         write_dict[group],
                         outfile,
                         config['ARGS']['seqfmt'],  # User-specified
@@ -152,7 +169,7 @@ class SeqWriter(BaseWriter):
                             'sequence',
                             extra=value,
                             )
-                    sequence_file._sequence_list_to_file(
+                    sf._sequence_list_to_file(
                             write_dict[group],
                             outfile,
                             config['ARGS']['seqfmt'],  # User-specified
@@ -167,7 +184,7 @@ class SeqWriter(BaseWriter):
                         'sequence',
                         extra='classified',
                         )
-                sequence_file._sequence_list_to_file(
+                sf._sequence_list_to_file(
                         write_dict[group],
                         outfile,
                         config['ARGS']['seqfmt'],  # User-specified
@@ -463,7 +480,7 @@ class TableWriter(BaseWriter):
                 linevals.append(lineval)
         elif mode == 'fvalue':
             # Object returns dict, not list -> flatten
-            seqs = _util.flatten_dict_to_list(
+            seqs = scrollutil.flatten_dict_to_list(
                     self._sp_object.return_removed_seqs())
             for obj in seqs:
                 # Pick values

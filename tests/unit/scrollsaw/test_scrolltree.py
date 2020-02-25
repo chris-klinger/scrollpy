@@ -6,8 +6,10 @@ import os
 import unittest
 from unittest.mock import Mock
 from unittest.mock import patch
+from configparser import DuplicateSectionError
 
-
+from scrollpy import config
+from scrollpy import load_config_file
 from scrollpy.scrollsaw._scrolltree import ScrollTree
 from scrollpy.util import _mapping
 
@@ -23,6 +25,14 @@ class TestScrollTree(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Get an instance"""
+        load_config_file()
+        try:
+            config.add_section('ARGS')
+        except DuplicateSectionError:
+            pass
+        # Provide defaults
+        config['ARGS']['verbosity'] = '3'
+
         mock_seq1 = Mock(**{'_distance' : 0})
         mock_seq1._node.name = 'seq1'
         mock_seq1.get_distance.return_value = 1
@@ -75,9 +85,9 @@ class TestScrollTree(unittest.TestCase):
                 test_leaves.append(leaf)
         self.stree._get_all_pairwise_distances(test_leaves)
         # Test assertions
-        mock_bmsg.assert_called_once_with(
+        mock_bmsg.assert_any_call(
                 "Calculating pairwise distances between all tree leaves")
-        mock_log.assert_called_once_with(
+        mock_log.assert_any_call(
                 "Mock Message",
                 2,
                 'INFO',

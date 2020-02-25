@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains the main AlignIter object.
 """
@@ -8,26 +28,22 @@ import tempfile
 import bisect
 
 import numpy as np
-from numpy import mean,std
+from numpy import mean
+from numpy import std
 
 from Bio import AlignIO
 
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
-from scrollpy import FatalScrollPyError
-# from scrollpy.alignments.eval_align import AlignEvaluator
 from scrollpy import AlignEvaluator
-# from scrollpy.filter._new_filter import LengthFilter  # Don't need?!
-# from scrollpy.trees.maketree import TreeBuilder
 from scrollpy import TreeBuilder
-# from scrollpy.alignments import parser
 from scrollpy.files import align_file as af
-from scrollpy.files import tree_file
-from scrollpy.util import _util,_tree
-# Global list for removal
-from scrollpy import tmps_to_remove
+from scrollpy.files import tree_file as tf
 from scrollpy import scrollutil
+from scrollpy import treeutil
+from scrollpy import FatalScrollPyError
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -69,10 +85,15 @@ class AlignIter:
             'tree_matrix',
             )
 
-    def __init__(self, alignment, target_dir, num_columns=None, **kwargs):
+    def __init__(self, alignment, target_dir=None, num_columns=None, **kwargs):
         # Required
         self._alignment   = alignment
+        # Get a tmpdir is None is supplied
         self._outdir      = target_dir
+        if not self._outdir:
+            tmp_dir = tempfile.mkdtemp()
+            self._outdir = tmp_dir
+            tmps_to_remove.append(tmp_dir)  # Signal for later removal
         self._num_columns = num_columns
         # Optional vars or in config
         for var in self._config_vars:
@@ -128,11 +149,6 @@ class AlignIter:
         Calls other internal methods depending on instance variables.
 
         """
-        if not self._outdir:
-            self._remove_tmp = True
-            tmp_dir = tempfile.TemporaryDirectory()
-            self._outdir = tmp_dir.name
-            tmps_to_remove.append(self._outdir)  # Later removal
         # Get alignment object
         self._parse_alignment()
         # Run program to evaluate columns
@@ -148,7 +164,6 @@ class AlignIter:
         # Run analysis
         if self.iter_method == 'histogram':
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Running tree iteration using histogram method"),
                     2,
@@ -159,7 +174,6 @@ class AlignIter:
         elif self.iter_method == 'bisection':
             scroll_log.log_message(
                     BraceMessage(
-                    # scroll_log.BraceMessage(
                         "Running tree iteration using bisection method"),
                     2,
                     'INFO',
@@ -170,6 +184,7 @@ class AlignIter:
             print("Could not run __call__")
         # Add easy lookup value to self.iter_info
         self._evaluate_info()
+
 
     def _set_alignment_name(self):
         """Called on __init__ to set name for outpaths."""
@@ -196,7 +211,7 @@ class AlignIter:
 
     def _parse_tree(self):
         """Calls external methods to parse tree file."""
-        tree_obj = tree_file.read_tree(
+        tree_obj = tf.read_tree(
                 self._current_tree_path,
                 'newick',
                 )
@@ -211,6 +226,7 @@ class AlignIter:
                 self._current_phy_path,
                 'phylip-relaxed',
                 )
+
 
     def _calculate_columns(self, column_path):
         """Calls external method to evaluate alignment columns.
@@ -244,7 +260,7 @@ class AlignIter:
         columns = []
         if self.col_method == 'zorro':
             for i,line in enumerate(
-                    _util.non_blank_lines(column_path)):
+                    scrollutil.non_blank_lines(column_path)):
                 val = float(line)
                 columns.append([i,val])
         elif self.iter_method == 'Generic':
@@ -282,7 +298,6 @@ class AlignIter:
             scroll_log.log_newlines(console_logger)
         while not optimal:
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Performing tree iteration {} of many", (iter_num+1)),
                     3,
@@ -351,7 +366,7 @@ class AlignIter:
         if self._verbosity == 3:
             scroll_log.log_newlines(console_logger)
         scroll_log.log_message(
-                scroll_log.BraceMessage(
+                BraceMessage(
                     "Performing tree iteration 1 of many"),
                 3,
                 'INFO',
@@ -415,7 +430,7 @@ class AlignIter:
             return
         else:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
                         "Performing tree iteration {} of many", iter_num),
                     3,
                     'INFO',
@@ -462,8 +477,6 @@ class AlignIter:
             else:
                 new_start = start
                 new_stop = stop - num_cols
-            # print("New start is {}".format(new_start))
-            # print("New stop is {}".format(new_stop))
             # Recur
             self._bisect_alignment(
                     new_start,
@@ -659,7 +672,7 @@ class AlignIter:
 
     def _calculate_support(self):
         """Adds support over all nodes."""
-        self._current_support = _tree.get_total_support(
+        self._current_support = treeutil.get_total_support(
                 self._current_tree_obj)
         # print("Current support is: {}".format(self._current_support))
 
@@ -685,14 +698,10 @@ class AlignIter:
         else:
             # Determine the mean/std dev of all values
             smean = mean(self._all_supports)
-            # print("Mean value is {}".format(smean))
             std_dev = std(self._all_supports)
-            # print("Std dev is {}".format(std_dev))
             # calculate z-score of most recent value
             z_low = (self._current_support-smean)/std_dev
-            # print("Low Z-score is {}".format(z_low))
             z_high = (self._optimal_support-smean)/std_dev
-            # print("High Z-score is {}".format(z_high))
             # Stop if below a specific threshold
             if z_low <= -2 or z_high >= 2:  # Make user-specified?
                 return True

@@ -20,7 +20,7 @@ class TestStandAloneFunctions(unittest.TestCase):
 
     @patch('scrollpy.files.align_file.file_logger')
     @patch('scrollpy.files.align_file.console_logger')
-    @patch('scrollpy.util._logging.BraceMessage')
+    @patch('scrollpy.files.align_file.BraceMessage')
     @patch('scrollpy.util._logging.log_message')
     @patch('scrollpy.files.align_file._bio_align_to_dict')
     @patch('scrollpy.files.align_file.AlignIO')

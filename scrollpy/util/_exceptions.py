@@ -1,4 +1,27 @@
-"""Contains exception classes for use throughout ScrollPy."""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
+"""
+Contains exception classes for use throughout ScrollPy.
+
+"""
 
 
 class ScrollPyError(Exception):

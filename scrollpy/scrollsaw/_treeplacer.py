@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains the main TreePlacer object.
 """
@@ -12,20 +32,16 @@ from Bio import SeqIO
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
-from scrollpy import FatalScrollPyError
+from scrollpy import Aligner
+from scrollpy import Mapping
+from scrollpy import TreeBuilder
+from scrollpy.files import align_file as af
 from scrollpy.files import sequence_file as sf
 from scrollpy.files import tree_file as tf
-# from scrollpy.files import msa_file as mf
-from scrollpy.files import align_file as af
-from scrollpy.util import _tree,_util
-from scrollpy import Aligner
-from scrollpy import TreeBuilder
-# from scrollpy.alignments.align import Aligner
-# from scrollpy.trees.maketree import TreeBuilder
-from scrollpy.util._mapping import Mapping
-# List for tmpdir names, for later removal
-from scrollpy import tmps_to_remove
 from scrollpy import scrollutil
+from scrollpy import treeutil
+from scrollpy import FatalScrollPyError
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -63,14 +79,17 @@ class TreePlacer:
             'support',
             )
 
-    def __init__(self, seq_dict, alignment, to_place, target_dir, infiles=[], **kwargs):
+    def __init__(self, seq_dict, alignment, to_place, target_dir=None, infiles=[], **kwargs):
         # Required
         self._seq_dict   = seq_dict   # Produced by Mapping
         self._alignment  = alignment  # Should be the file handle
         self._to_place   = self._parse_sequences(to_place)
-        # self._to_place  = to_place   # Sequences to place in tree
         self._num_seqs   = len(self._to_place)
         self._outdir     = target_dir
+        if not self._outdir:
+            tmp_dir = tempfile.mkdtemp()
+            self._outdir = tmp_dir
+            tmps_to_remove.append(tmp_dir)
         self._infiles    = infiles
         self._remove_tmp = False
         # Optional vars or in config
@@ -131,11 +150,6 @@ class TreePlacer:
         groups that the sequence might be similar to.
 
         """
-        if not self._outdir:
-            self._remove_tmp = True
-            tmp_dir = tempfile.TemporaryDirectory()
-            self._outdir = tmp_dir.name
-            tmps_to_remove.append(self._outdir)  # For later removal
         # Write another output line if status logging
         if self._verbosity == 3:
             scroll_log.log_newlines(console_logger)
@@ -166,7 +180,7 @@ class TreePlacer:
             added_node = self._current_tree_obj&added_leaf
             first_ancestor = added_node.up
             # Now determine monophyly
-            if not _tree.is_node_monophyletic(
+            if not treeutil.is_node_monophyletic(
                     first_ancestor,
                     self._original_leafseqs,
                     ):
@@ -187,9 +201,6 @@ class TreePlacer:
         # Clear line with status_logger information
         if self._verbosity == 3:
             scroll_log.log_newlines(console_logger)
-        # # Clean up -> Moved to __main__.run_cleanup()!
-        # if self._remove_tmp:
-        #     tmp_dir.cleanup()
 
 
     def _parse_sequences(self, seq_path):
@@ -207,7 +218,6 @@ class TreePlacer:
             return sf.seqfile_to_scrollseqs(seq_path)
         except Exception as e:  # Make more specific eventually!
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Failed to parse sequences for tree placing"),
                     1,
@@ -285,7 +295,6 @@ class TreePlacer:
 
         """
         with open(self._current_seq_path,'w') as seq_file:
-            # seq_obj.write(seq_file)  # Temporary input file
             seq_obj._write(  # ScrollSeq _write method now
                     seq_file,
                     'fasta',  # Change to be flexible?
@@ -360,7 +369,6 @@ class TreePlacer:
         # Create a new Mapping
         mapping = Mapping(
                 self._infiles,  # Infiles -> might be empty list
-                # alignfile=self._alignment,
                 alignfile=self._current_align_path,
                 treefile=self._current_tree_path,
                 infmt='fasta',
@@ -371,8 +379,8 @@ class TreePlacer:
         # Reach into Mapping object and get tree
         self._current_tree_obj = mapping._tree_obj
         # Flatten both dicts
-        seq_list = _util.flatten_dict_to_list(self._seq_dict)
-        tree_list = _util.flatten_dict_to_list(tree_dict)
+        seq_list = scrollutil.flatten_dict_to_list(self._seq_dict)
+        tree_list = scrollutil.flatten_dict_to_list(tree_dict)
         # Get a list of just descriptions
         seq_descr = [record.description for record in seq_list]
         # Now match -> create new mapping each time!
@@ -407,7 +415,6 @@ class TreePlacer:
                     console_logger, file_logger,
                     )
             raise FatalScrollPyError
-            # print("Could not map all original tree labels")
         # Made it to this point, should be fine
         self._original_leaves = [leaf.name for leaf in
                 self._original_leafseqs]
@@ -428,7 +435,6 @@ class TreePlacer:
         if len(added_leaves) > 1:
             # FATAL ERROR! -> terminate execution eventually
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Detected more than one added sequence"),
                     1,
@@ -436,7 +442,6 @@ class TreePlacer:
                     console_logger, file_logger,
                     )
             raise FatalScrollPyError
-            # print("More than one added leaf!")
         # Return only value in list
         return added_leaves[0]
 
@@ -453,7 +458,7 @@ class TreePlacer:
         for group,leaves in self._leafseq_dict.items():
             # get_group_outgroup function needs TreeNode objects
             group_list = [leafseq._node for leafseq in leaves]
-            outgroup = _tree.get_group_outgroup(
+            outgroup = treeutil.get_group_outgroup(
                     self._current_tree_obj,
                     added_leaf,
                     group_list,  # TreeNode objects!
@@ -491,7 +496,7 @@ class TreePlacer:
         # Support value first
         output_info.append(start_node.support)
         # Get information for all groups under the node
-        node_groups = _tree.get_node_groups(
+        node_groups = treeutil.get_node_groups(
                 start_node,
                 self._original_leafseqs,
                 )
@@ -500,12 +505,12 @@ class TreePlacer:
         output_info.append(group_count)
         current_groups = set()
         for node in start_node.traverse():
-            if _tree.is_node_monophyletic(
+            if treeutil.is_node_monophyletic(
                     node,
                     self._original_leafseqs,
                     ):
                 # Only care about monophyletic nodes
-                associated_groups = _tree.get_node_groups(
+                associated_groups = treeutil.get_node_groups(
                         node,
                         self._original_leafseqs,
                         )
@@ -516,7 +521,7 @@ class TreePlacer:
                     target_leafseqs = self._leafseq_dict[group]
                     target_leaves = [leafseq._node for leafseq in target_leafseqs]
                     add_on = 'Group is incomplete'
-                    if _tree.is_complete_group(
+                    if treeutil.is_complete_group(
                             node,
                             target_leaves,
                             ):
@@ -558,7 +563,7 @@ class TreePlacer:
         """
         output_info = []
         # Get detailed information about first node
-        node_groups = _tree.get_node_groups(
+        node_groups = treeutil.get_node_groups(
                 start_node,
                 self._original_leafseqs,
                 )
@@ -566,7 +571,7 @@ class TreePlacer:
         output_info.append(group)  # Name of group
         output_info.append(start_node.support)  # Bootstrap support
         # Now walk up
-        last_ancestor = _tree.last_monophyletic_ancestor(
+        last_ancestor = treeutil.last_monophyletic_ancestor(
                 start_node,
                 self._original_leafseqs,
                 )
@@ -585,7 +590,7 @@ class TreePlacer:
         # Check whether the monophyletic ancestor is complete
         target_leafseqs = self._leafseq_dict[group]
         target_leaves = [leafseq._node for leafseq in target_leafseqs]
-        if _tree.is_complete_group(
+        if treeutil.is_complete_group(
                 last_ancestor,
                 target_leaves,
                 ):

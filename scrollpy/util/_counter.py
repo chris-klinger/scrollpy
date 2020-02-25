@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains code for implementing a single global object for
 counting ScrollSeq/LeafSeq ID numbers. In order to ensure each ID number
@@ -6,8 +26,7 @@ multiple instances of a class.
 """
 
 # TO-DO
-# RENAME CLASS NOT TO OVERRIDE collections.Counter
-class Counter:
+class ScrollCounter:
     """Presents a Singleton-like interface for global counting.
 
     As many instances as want can spawn and be tied to a single global
@@ -32,14 +51,14 @@ class Counter:
 
     def __call__(self):
         """Increments Class counter and returns current value"""
-        Counter.__count += 1
+        ScrollCounter.__count += 1
 
 
     def current_count(self):
         """Returns current value"""
-        return Counter.__count
+        return ScrollCounter.__count
 
 
     def _reset_count(self):
         """Utility function for testing"""
-        Counter.__count = 1
+        ScrollCounter.__count = 1

@@ -40,11 +40,12 @@ class TestAlignIter(unittest.TestCase):
         # Provide defaults
         config['ARGS']['alignfmt'] = 'fasta'
         config['ARGS']['col_method'] = 'zorro'
-        config['ARGS']['iter_method'] = 'hist'
+        config['ARGS']['iter_method'] = 'histogram'
         config['ARGS']['tree_method'] = 'Iqtree'
         config['ARGS']['tree_matrix'] = 'LG'
         config['ARGS']['no_clobber'] = False
         config['ARGS']['no_create'] = False
+        config['ARGS']['verbosity'] = '3'
         # Filepaths
         config['ITER']['zorro'] = 'path/to/zorro'
         config['TREE']['Iqtree'] = 'path/to/iqtree'
@@ -65,7 +66,7 @@ class TestAlignIter(unittest.TestCase):
         """Create identical instance for each test"""
         self.iter = AlignIter(
                 self.alignment,
-                self.tmpdir,
+                target_dir=self.tmpdir,
                 )
 
     @classmethod
@@ -101,7 +102,6 @@ class TestAlignIter(unittest.TestCase):
     @patch('scrollpy.scrollsaw._aligniter.BraceMessage')
     @patch('scrollpy.util._logging.log_message')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.scrollsaw._aligniter.tempfile.TemporaryDirectory')
     @patch.object(AlignIter, '_evaluate_info')
     @patch.object(AlignIter, '_bisect_run')
     @patch.object(AlignIter, '_hist_run')
@@ -109,7 +109,7 @@ class TestAlignIter(unittest.TestCase):
     @patch.object(AlignIter, '_calculate_columns')
     @patch.object(AlignIter, '_parse_alignment')
     def test_call(self, mock_parse, mock_calc, mock_eval, mock_hrun, mock_brun,
-            mock_info, mock_tmpdir, mock_path, mock_log, mock_bmsg, mock_cl, mock_fl):
+            mock_info, mock_path, mock_log, mock_bmsg, mock_cl, mock_fl):
         """Tests the AlignIter classes' __call__ method"""
         # General test log message
         mock_bmsg.return_value = "Mock Message"
@@ -117,7 +117,6 @@ class TestAlignIter(unittest.TestCase):
         self.iter._outdir = None
         self.iter()
         # Test calls
-        mock_tmpdir.assert_called_once()
         mock_parse.assert_called_once()
         mock_path.assert_called_once_with(
                 self.iter._outdir,
@@ -129,7 +128,7 @@ class TestAlignIter(unittest.TestCase):
         mock_eval.assert_called_once()
         mock_info.assert_called_once()
         # Test when the iter method is hist
-        self.iter.iter_method = 'hist'
+        self.iter.iter_method = 'histogram'
         self.iter()
         mock_bmsg.assert_any_call(
                 "Running tree iteration using histogram method")
@@ -141,7 +140,7 @@ class TestAlignIter(unittest.TestCase):
                 )
         mock_hrun.assert_any_call()
         # Test when the iter method is bisection
-        self.iter.iter_method = 'bisect'
+        self.iter.iter_method = 'bisection'
         self.iter()
         mock_bmsg.assert_any_call(
                 "Running tree iteration using bisection method")
@@ -325,7 +324,6 @@ class TestAlignIter(unittest.TestCase):
                 'INFO',
                 mock_sl,
                 )
-        mock_lnew.assert_any_call(mock_cl)
         # print()
         # print(self.iter.iter_info)
         # Check whether or not the internal list is updated or not
@@ -407,9 +405,11 @@ class TestAlignIter(unittest.TestCase):
                 ]
         self.assertEqual(self.iter._columns,expected)
 
+    @patch('scrollpy.scrollsaw._aligniter.os.path.basename')
     @patch('scrollpy.util._util.get_filepath')
-    def test_get_current_outpaths(self, mock_path):
+    def test_get_current_outpaths(self, mock_path, mock_bname):
         """Tests the AlignIter classes' _get_current_outpaths method"""
+        mock_bname.return_value = '.phy'
         mock_seq = Mock(**{'seq': 'AGTC'})  # len(seq) = 4
         self.iter._align_obj = [mock_seq]
         self.iter._get_current_outpaths()
@@ -425,6 +425,7 @@ class TestAlignIter(unittest.TestCase):
                 self.iter._align_name,
                 'tree',
                 extra=4,
+                phylip_ext='.phy',
                 treefmt='iqtree',
                 )
 

@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains a class for holding sequence information (as parsed
 by BioPython) along with some sequence metadata.
@@ -12,7 +32,8 @@ from functools import total_ordering
 
 from Bio import SeqIO
 
-from scrollpy.util._util import split_input
+from scrollpy import scrollutil
+
 
 @total_ordering
 class ScrollSeq:
@@ -124,7 +145,7 @@ class ScrollSeq:
             header = '>' + str(self.id_num)
             seq = str(self.seq)
             file_obj.write(header + '\n')
-            for chunk in split_input(seq):
+            for chunk in scrollutil.split_input(seq):
                 file_obj.write(chunk + '\n')
         else:
             raise AttributeError("No Associated SeqRecord for ScrollSeq "

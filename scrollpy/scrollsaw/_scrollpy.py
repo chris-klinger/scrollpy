@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains the main ScrollPy object.
 """
@@ -10,17 +30,12 @@ from itertools import chain
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
-from scrollpy import FatalScrollPyError
-from scrollpy.files import sequence_file as sf
-from scrollpy import ScrollSeq
 from scrollpy import ScrollCollection
+from scrollpy import ScrollSeq
 from scrollpy import Filter
-# from scrollpy.sequences._scrollseq import ScrollSeq
-# from scrollpy.sequences._collection import ScrollCollection
-# from scrollpy.filter._filter import Filter
-#from scrollpy.util import _util
-# Global list for removal
+from scrollpy.files import sequence_file as sf
 from scrollpy import tmps_to_remove
+from scrollpy import FatalScrollPyError
 
 
 # Get module loggers
@@ -44,10 +59,15 @@ class ScrollPy:
             'dist_method',
             )
 
-    def __init__(self, seq_dict, target_dir, **kwargs):
+    def __init__(self, seq_dict, target_dir=None, **kwargs):
         # Required
         self._seq_dict = seq_dict
+        # self.target_dir = target_dir
         self.target_dir = target_dir
+        if not self.target_dir:
+            tmp_dir = tempfile.mkdtemp()
+            self.target_dir = tmp_dir  # TO-DO: give user option to keep?
+            tmps_to_remove.append(tmp_dir)
         # Optional vars or in config
         for var in self._config_vars:
             try:
@@ -75,6 +95,7 @@ class ScrollPy:
                 self.kwargs,
                 )
 
+
     def __str__(self):
         num_groups = len(self._seq_dict.keys())
         # Each group in self._seq_dict is a list of ScrollSeq objects
@@ -100,13 +121,6 @@ class ScrollPy:
         sequences with the minimum mutual pairwise distance.
 
         """
-        # If no tmpdir is None, make a temporary directory
-        if not self.target_dir:
-            self._remove_tmp = True  # Signal for removal
-            # Var creation stalls garbage collection?
-            tmp_dir = tempfile.TemporaryDirectory()
-            #print("Target directory is: {}".format(tmp_dir.name))
-            self.target_dir = tmp_dir.name
         # make collection objects
         self._make_collections()
         # actually run alignment/distance calculations
@@ -115,7 +129,6 @@ class ScrollPy:
             scroll_log.log_newlines(console_logger)
         for i,collection in enumerate(self._collections):
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Performing comparison {} of {}", i+1, total),
                     3,
@@ -125,9 +138,6 @@ class ScrollPy:
             collection()
         if self._verbosity == 3:
             scroll_log.log_newlines(console_logger)
-        # finally:  -> Moved to __main__.run_cleanup()
-        #     if self._remove_tmp:
-        #         tmp_dir.cleanup()  # Remove temporary directory
         # If all steps ran, sort internal objects
         self._sort_distances()
 
@@ -142,7 +152,6 @@ class ScrollPy:
         if len(self._groups) == 1: # only one group
             group = self._groups[0]
             scroll_log.log_message(
-                    # scroll_log.BraceMessage(
                     BraceMessage(
                         "Adding collection object for single group {}", group),
                     3,
@@ -153,13 +162,10 @@ class ScrollPy:
                 self.target_dir,
                 self._seq_dict[group], # seq_list
                 group,
-                # self.align,  # Alignment method
-                # self.distance,  # Distance method
                 ))
         else:
             for group1,group2 in combinations(self._groups,2): # pairwise
                 scroll_log.log_message(
-                        # scroll_log.BraceMessage(
                         BraceMessage(
                             "Adding collection object for groups {} and {}",
                             group1, group2,
@@ -175,8 +181,6 @@ class ScrollPy:
                     self.target_dir,
                     seq_list,
                     group1,
-                    # self.align,  # Alignment method
-                    # self.distance,  # Distance method
                     opt_group = group2 # Arbitrary which group is the 'optional' one
                     ))
 

@@ -6,7 +6,7 @@ Tests /util/_counter
 import os
 import unittest
 
-from scrollpy.util._counter import Counter
+from scrollpy.util._counter import ScrollCounter
 
 
 class TestCounter(unittest.TestCase):
@@ -15,7 +15,7 @@ class TestCounter(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Create a single instance for testing"""
-        cls.c = Counter()
+        cls.c = ScrollCounter()
 
     def setUp(self):
         """Resets counter after each test"""
@@ -25,14 +25,14 @@ class TestCounter(unittest.TestCase):
         """Tests representation"""
         self.assertEqual(
                 repr(self.c),
-                "Counter",
+                "ScrollCounter",
                 )
 
     def test_string(self):
         """Tests string representation"""
         self.assertEqual(
                 str(self.c),
-                "Counter: 1",
+                "ScrollCounter: 1",
                 )
 
     def test_counter_count(self):
@@ -52,7 +52,7 @@ class TestCounter(unittest.TestCase):
 
     def test_shared_state(self):
         """Tests shared count value across instances"""
-        c2 = Counter()
+        c2 = ScrollCounter()
         self.c()  # Increase count
         self.assertEqual(
                 c2.current_count(),

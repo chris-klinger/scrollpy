@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 New Module containing code for filtering sequences in ScrollPy.
 
@@ -21,15 +41,14 @@ from numpy import mean,median,std
 
 from scrollpy import config
 from scrollpy import scroll_log
-from scrollpy import FatalScrollPyError
-# from scrollpy.alignments import align,parser
+from scrollpy import BraceMessage
+from scrollpy import tmps_to_remove
 from scrollpy import Aligner
 from scrollpy.files import align_file as af
 from scrollpy.files import sequence_file as sf
-from scrollpy.util._util import decompose_sets
-# Global list for removal
-from scrollpy import tmps_to_remove
 from scrollpy import scrollutil
+from scrollpy import FatalScrollPyError
+from scrollpy import tmps_to_remove
 
 
 # Get module loggers
@@ -120,7 +139,6 @@ class Filter:
         # First get all indices as a flat list
         for seq_list in sequences:  # One or more sub-lists
             filter_obj = filterer(
-            # removal_indices = filterer(
                     seq_list,
                     self._filter_method,
                     )
@@ -181,7 +199,7 @@ class Filter:
                 self._seq_dict[group] = seq_list  # Replace old list
             else:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Group length prevented filtering {} with "
                             "score {} from group {}",
                             r_obj.acession, score, group,
@@ -424,7 +442,6 @@ class IdentityFilter(GenericFilter):
         super().__init__(seq_list, method, **kwargs)
         if not outdir:
             import tempfile
-            # tmp_dir = tempfile.TemporaryDirectory()
             tmp_dir = tempfile.mkdtemp()
             self._target_dir = tmp_dir  # TO-DO: give user option to keep?
             tmps_to_remove.append(tmp_dir)
@@ -449,9 +466,6 @@ class IdentityFilter(GenericFilter):
         self._align_seqs()
         # Calculate identities and objects to remove
         self._remove_by_identity()
-        # Remove temporary directory, if it still exists
-        # with contextlib.suppress(FileNotFoundError):
-        #     self._target_dir.cleanup()
         # Return values to parent object
         return self._to_remove
 
@@ -523,7 +537,7 @@ class IdentityFilter(GenericFilter):
             total = sum(totals)
             if identical > total:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Fatal error when totalling identical positions for {} and {}",
                             header1, header2,
                             ),
@@ -536,7 +550,7 @@ class IdentityFilter(GenericFilter):
                 percent_identical = identical/total * 100
             except ZeroDivisionError:  # No aligned region
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "No aligned region detected between {} and {}",
                             header1, header2,
                             ),
@@ -580,7 +594,7 @@ class IdentityFilter(GenericFilter):
 
         """
         initial_set = self._build_identity_set()
-        tuples_to_remove = decompose_sets(initial_set)
+        tuples_to_remove = scrollutil.decompose_sets(initial_set)
         for_removal = []
         for tup in tuples_to_remove:
             pairs = [(seq_obj,len(seq_obj)) for seq_obj in
@@ -591,5 +605,4 @@ class IdentityFilter(GenericFilter):
                     reverse=True,  # Longest first
                     )[1:]:  # Keep first entry
                 self._to_remove.append(pair)
-
 

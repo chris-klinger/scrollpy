@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """Contains classes for configuring console output and logging in ScrollPy.
 
 Using the logging module, filters are applied to all input based on
@@ -60,11 +80,6 @@ rich_format = logging.Formatter(
         style = '{',
         )
 
-# Simple formatting -> necessary?
-#basic_format = logging.Formatter(
-#        fmt = "{levelname:8s} | {message}",
-#        style = '{',
-#        )
 
 # Use to output without formatting, e.g. program stderr messages
 raw_format = logging.Formatter(
@@ -206,11 +221,9 @@ def get_logfile(not_logging=False, logpath=None, outdir=None,
     target_path = os.path.join(dirname,basename)
     # Check to see whether the directory exists
     if not scrollutil.dir_exists(dirname):
-        # print("Directory does not exist")
         if no_create:  # Can't create new dirs
             return _get_temp_log_path()
         else:
-            # print("Trying to make directory")
             scrollutil.ensure_dir_exists(dirname)  # Might still specify a file
     # Check filename itself
     if os.path.isfile(target_path):
@@ -309,7 +322,6 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
         for logger in loggers:
             # Capture traceback information
             tb_obj = exc_obj.__traceback__
-            # tb_str = traceback.format_tb(tb_obj)[0]
             tb_stack = traceback.extract_tb(tb_obj,1)[0]
             msg_obj.lines = [
                     "ScrollPy threw a {}".format(exc_obj.__class__.__name__),
@@ -319,7 +331,6 @@ def log_message(msg_obj, verbosity, level, *loggers, exc_obj=None):
                     "{}".format(exc_obj.__str__()),
                     ]
             # Add necessary info to msg_obj
-            # msg_obj.lines = tb_str.split(',')
             msg_obj.exception = True
             # Log as error with traceback info
             logger.error(msg_obj,

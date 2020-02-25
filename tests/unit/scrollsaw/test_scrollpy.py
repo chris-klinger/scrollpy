@@ -28,6 +28,14 @@ class TestScrollPy(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Create a single scrollpy object for use"""
+        load_config_file()
+        try:
+            config.add_section('ARGS')
+        except DuplicateSectionError:
+            pass
+        # Provide defaults
+        config['ARGS']['verbosity'] = '3'
+
         test_sdict = {
                 'group1' : ['seq1-1', 'seq1-2', 'seq1-3'],
                 'group2' : ['seq2-1', 'seq2-2'],

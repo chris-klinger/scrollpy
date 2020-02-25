@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 Module dealing with sequence files.
 
@@ -12,8 +32,8 @@ from datetime import datetime
 
 from Bio import SeqIO
 
-from scrollpy.sequences._scrollseq import ScrollSeq
-from scrollpy.util._counter import Counter
+from scrollpy import ScrollSeq
+from scrollpy import ScrollCounter
 
 
 def _get_sequences(file_handle, file_format="fasta"):
@@ -57,7 +77,7 @@ def seqfile_to_scrollseqs(file_handle, file_format="fasta"):
     """
     scroll_seqs = []
     # Get reference to global counter object
-    counter = Counter()
+    counter = ScrollCounter()
     # Make ScrollSeqs
     for record in _get_sequences(file_handle, file_format):
         scroll_seq = ScrollSeq(

@@ -1,9 +1,30 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains a generic class that will farm out program calls
 to third-party programs using either Bio.Applications or Subprocess.
 
 Consolidating into a single class for the purposes of reducing arg
 validation and logging code.
+
 """
 
 import os
@@ -17,14 +38,12 @@ from Bio.Align import Applications as AA
 from Bio.Phylo import Applications as PA
 from Bio.Application import ApplicationError
 
-from scrollpy import scroll_log
 from scrollpy import config
+from scrollpy import scroll_log
 from scrollpy import BraceMessage
-from scrollpy import FatalScrollPyError
-from scrollpy import ValidationError
 from scrollpy import scrollutil
-from scrollpy.util._util import modify_model_name
-
+from scrollpy import ValidationError
+from scrollpy import FatalScrollPyError
 
 
 # Get module loggers
@@ -439,12 +458,12 @@ class Aligner(Runner):
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)
-        scroll_log.log_message(
-                BraceMessage(stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # scroll_log.log_message(
+        #         BraceMessage(stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )
 
 
     def _run_mafftadd(self):
@@ -480,12 +499,12 @@ class Aligner(Runner):
             decoded_out = cmdline.stdout.decode()
             o.write(decoded_out)
         decoded_stderr = cmdline.stderr.decode()
-        scroll_log.log_message(
-                BraceMessage(decoded_stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # scroll_log.log_message(
+        #         BraceMessage(decoded_stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )
 
 
 class AlignEvaluator(Runner):
@@ -588,13 +607,13 @@ class AlignEvaluator(Runner):
         with open(self.outpath, 'w') as o:
             decoded_out = cmdline.stdout.decode()
             o.write(decoded_out)
-        decoded_stderr = cmdline.stderr.decode()
-        scroll_log.log_message(
-                BraceMessage(decoded_stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # decoded_stderr = cmdline.stderr.decode()
+        # scroll_log.log_message(
+        #         BraceMessage(decoded_stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )
 
 
 class DistanceCalc(Runner):
@@ -713,7 +732,7 @@ class DistanceCalc(Runner):
         self.kwargs['-w'] = dirname
         self.kwargs['-n'] = outname
         # Change model input to a usable command
-        self.kwargs['-m'] = modify_model_name(self.model,'RAxML')
+        self.kwargs['-m'] = scrollutil.modify_model_name(self.model,'RAxML')
         # If a nuc model is specified other than GTR, need to add to kwargs
         if self.model in ['JC','K80','HKY85']:
             arg_string = '--' + self.model
@@ -739,12 +758,12 @@ class DistanceCalc(Runner):
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)
-        scroll_log.log_message(
-                BraceMessage(stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # scroll_log.log_message(
+        #         BraceMessage(stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )
 
 
 class TreeBuilder(Runner):
@@ -882,13 +901,13 @@ class TreeBuilder(Runner):
         # with open(self.outpath, 'w') as o:
         #     decoded_out = cmdline.stdout.decode()
         #     o.write(decoded_out)
-        decoded_stderr = cmdline.stderr.decode()
-        scroll_log.log_message(
-                BraceMessage(decoded_stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # decoded_stderr = cmdline.stderr.decode()
+        # scroll_log.log_message(
+        #         BraceMessage(decoded_stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )
 
 
     def _run_raxml(self):  # TO-DO: Fix this!!!
@@ -911,7 +930,7 @@ class TreeBuilder(Runner):
         self.kwargs['-w'] = dirname
         self.kwargs['-n'] = outname
         # Change model input to a usable command
-        self.kwargs['-m'] = modify_model_name(self.model,'RAxML')
+        self.kwargs['-m'] = scrollutil.modify_model_name(self.model,'RAxML')
         # If a nuc model is specified other than GTR, need to add to kwargs
         if self.model in ['JC','K80','HKY85']:
             arg_string = '--' + self.model
@@ -937,9 +956,9 @@ class TreeBuilder(Runner):
         # Capture information from program
         with open(self.outpath, 'w') as o:
             o.write(stdout)
-        scroll_log.log_message(
-                BraceMessage(stderr),
-                3,
-                'INFO',
-                output_logger,
-                )
+        # scroll_log.log_message(
+        #         BraceMessage(stderr),
+        #         3,
+        #         'INFO',
+        #         output_logger,
+        #         )

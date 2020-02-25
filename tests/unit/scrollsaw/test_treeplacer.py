@@ -53,6 +53,7 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
         config['ARGS']['no_create'] = False
         config['ARGS']['filesep'] = '_'
         config['ARGS']['suffix'] = ''
+        config['ARGS']['verbosity'] = '3'
 
         # Create seq_dict
         cls.align_file = os.path.join(data_dir,'Hsap_AP_EGADEZ.mfa')
@@ -124,7 +125,6 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
     @patch('scrollpy.util._logging.log_newlines')
     @patch('scrollpy.util._logging.log_message')
     @patch('scrollpy.util._tree.is_node_monophyletic')
-    @patch('scrollpy.scrollsaw._treeplacer.tempfile.TemporaryDirectory')
     @patch.object(TreePlacer, '_add_classified_seq')
     @patch.object(TreePlacer, '_classify_monophyletic_node')
     @patch.object(TreePlacer, '_classify_node')
@@ -133,8 +133,8 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
     @patch.object(TreePlacer, '_update_tree_mappings')
     @patch.object(TreePlacer, '_make_new_files')
     def test_call(self, mock_nf, mock_tmap, mock_gaddl, mock_rt, mock_cnode,
-            mock_cmnode, mock_addcs, mock_tmp, mock_ismono, mock_log,
-            mock_lnew, mock_bmsg, mock_sl, mock_cl):
+            mock_cmnode, mock_addcs, mock_ismono, mock_log, mock_lnew,
+            mock_bmsg, mock_sl, mock_cl):
         """Tests the TreePlacer classes' __call__ method"""
         mock_bmsg.return_value = "Mock Message"
         # Test first under normal circumstances
@@ -161,7 +161,7 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
         mock_cnode.assert_called()
         mock_cmnode.assert_not_called()
         mock_addcs.assert_not_called()
-        mock_lnew.assert_called_once_with(mock_cl)
+        mock_lnew.assert_any_call(mock_cl)
         # Change to non-mono nodes
         mock_ismono.return_value = True
         mock_cmnode.return_value = ('_','_')
@@ -172,7 +172,6 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
         # Finally, check quick for tmpdir
         self.placer._outdir = None
         self.placer()
-        mock_tmp.assert_called_once()
 
     @patch('scrollpy.scrollsaw._treeplacer.file_logger')
     @patch('scrollpy.scrollsaw._treeplacer.console_logger')
@@ -359,7 +358,7 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
                 mock_cl, mock_fl,
                 )
 
-    @patch('scrollpy.scrollsaw._treeplacer._tree.get_group_outgroup')
+    @patch('scrollpy.scrollsaw._treeplacer.treeutil.get_group_outgroup')
     def test_root_tree(self, mock_group):
         """Tests the _root_tree method"""
         lseq1 = Mock(**{'_node' : 'node1'})
@@ -390,9 +389,9 @@ class TestTreePlacerAlignOnly(unittest.TestCase):
                 )
         mock_tobj.set_outgroup.assert_called_once_with(True)
 
-    @patch('scrollpy.scrollsaw._treeplacer._tree.is_complete_group')
-    @patch('scrollpy.scrollsaw._treeplacer._tree.is_node_monophyletic')
-    @patch('scrollpy.scrollsaw._treeplacer._tree.get_node_groups')
+    @patch('scrollpy.scrollsaw._treeplacer.treeutil.is_complete_group')
+    @patch('scrollpy.scrollsaw._treeplacer.treeutil.is_node_monophyletic')
+    @patch('scrollpy.scrollsaw._treeplacer.treeutil.get_node_groups')
     def test_classify_node(self, mock_ggroups, mock_ismono, mock_iscom):
         """Tests the _classify_node method"""
         mock_node = Mock(**{'support' : 90})

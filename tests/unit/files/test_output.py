@@ -115,7 +115,7 @@ class TestSeqWriterScrollPy(unittest.TestCase):
     @patch('scrollpy.util._logging.log_message')
     @patch('scrollpy.files.output.config')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.files.output.sequence_file')
+    @patch('scrollpy.files.output.sf')
     def test_write(self, mock_sf, mock_path, mock_config,
             mock_log, mock_bmsg, mock_cl, mock_fl):
         """Tests the SeqWriter classes' write method"""
@@ -178,7 +178,7 @@ class TestSeqWriterScrollTree(unittest.TestCase):
 
     @patch('scrollpy.files.output.config')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.files.output.sequence_file')
+    @patch('scrollpy.files.output.sf')
     def test_write(self, mock_sf, mock_path, mock_config):
         """Tests the SeqWriter classes' write method"""
         # Temporarily suppress the _filter method
@@ -227,7 +227,7 @@ class TestSeqWriterFilter(unittest.TestCase):
 
     @patch('scrollpy.files.output.config')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.files.output.sequence_file')
+    @patch('scrollpy.files.output.sf')
     def test_write(self, mock_sf, mock_path, mock_config):
         """Tests the SeqWriter classes' write method"""
         # Temporarily suppress the _filter method
@@ -292,7 +292,7 @@ class TestSeqWriterTreePlacer(unittest.TestCase):
 
     @patch('scrollpy.files.output.config')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.files.output.sequence_file')
+    @patch('scrollpy.files.output.sf')
     def test_write(self, mock_sf, mock_path, mock_config):
         """Tests the SeqWriter classes' write method"""
         # Temporarily suppress the _filter method
@@ -341,7 +341,7 @@ class TestSeqWriterFilter(unittest.TestCase):
 
     @patch('scrollpy.files.output.config')
     @patch('scrollpy.util._util.get_filepath')
-    @patch('scrollpy.files.output.sequence_file')
+    @patch('scrollpy.files.output.sf')
     def test_filter(self, mock_sf, mock_path, mock_config):
         """Tests the SeqWriter classes' _filter method"""
         # First test, mode = 'some'

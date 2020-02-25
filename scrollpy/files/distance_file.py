@@ -1,12 +1,33 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
 
 """
 This module contains functions to parse distance files
 and return their values in a data type.
+
 """
 
 from scrollpy import scroll_log
-from scrollpy.util._util import non_blank_lines
-from scrollpy.util._exceptions import FatalScrollPyError
+from scrollpy import BraceMessage
+from scrollpy import scrollutil
+from scrollpy import FatalScrollPyError
 
 
 # Get module loggers
@@ -51,7 +72,7 @@ def _parse_raxml_distances(file_path):
 
     """
     distances = {}
-    for line in non_blank_lines(file_path): # Generator
+    for line in scrollutil.non_blank_lines(file_path): # Generator
         n1,n2,d = line.strip('\n').split()
         for key in n1,n2:
             try:
@@ -60,7 +81,7 @@ def _parse_raxml_distances(file_path):
                 distances[key] = float(d)
     if len(distances.keys()) == 0:  # No distances
         scroll_log.log_message(
-                scroll_log.BraceMessage(
+                BraceMessage(
                     "Could not read distances from {}", file_path),
                 1,
                 'ERROR',

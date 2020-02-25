@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains the main ScrollTree object
 """
@@ -43,7 +63,6 @@ class ScrollTree:
     def __str__(self):
         num_groups = len(self._seq_dict.keys())
         # Each group in self._seq_dict is a list of ScrollSeq objects
-        # _seq.dict.values() returns a list of lists, which chain flattens
         num_seqs = len(list(itertools.chain(*self._seq_dict.values())))
         # Return dimensions of ScrollPy
         return "{} object with {} groups and {} sequences".format(
@@ -87,7 +106,6 @@ class ScrollTree:
 
         """
         scroll_log.log_message(
-                # scroll_log.BraceMessage(
                 BraceMessage(
                     "Calculating pairwise distances between all tree leaves"),
                 2,
@@ -136,5 +154,4 @@ class ScrollTree:
         for k,v in self._seq_dict.items():
             all_seqs.extend(v)
         self._ordered_seqs = sorted(all_seqs)
-
 

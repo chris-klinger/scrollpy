@@ -1,15 +1,36 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 A new module for dealing with both alignment file parsing and converting
 between different alignment types.
-"""
 
+"""
 
 from Bio import AlignIO
 
 
 from scrollpy import scroll_log
-from scrollpy.util._util import non_blank_lines
-from scrollpy.util._exceptions import FatalScrollPyError
+from scrollpy import BraceMessage
+from scrollpy import scrollutil
+from scrollpy import FatalScrollPyError
 
 
 # Get module loggers
@@ -44,7 +65,7 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
         alignment =  AlignIO.read(file_path,file_type)
     except ValueError as e:  # Not parsable
         scroll_log.log_message(
-                scroll_log.BraceMessage(
+                BraceMessage(
                     "Could not read alignment from {}", file_path),
                 1,
                 'ERROR',
@@ -116,7 +137,7 @@ def afa_to_phylip(alignment_file, target_file):
     num_seqs = 0
     headers = []
     seq_dict = {}
-    for line in non_blank_lines(alignment_file):
+    for line in scrollutil.non_blank_lines(alignment_file):
         if line.startswith('>'):
             header = line.strip('>').strip('\n')
             if header in headers:

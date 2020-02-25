@@ -1,3 +1,23 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 This module contains code for obtaining various mappings in ScrollPy.
 
@@ -15,22 +35,22 @@ can be established; i.e. no partial data structures should exist.
 """
 
 import os
-import sys  # Temporarily
 from contextlib import suppress
 
 from scrollpy import config
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
+from scrollpy import ScrollSeq
+from scrollpy import LeafSeq
+from scrollpy.files import align_file as af
+from scrollpy.files import sequence_file as sf
+from scrollpy.files import tree_file as tf
+from scrollpy import scrollutil
+from scrollpy import affine_align
+from scrollpy import simple_score
+from scrollpy import ScrollCounter
 from scrollpy import DuplicateSeqError
 from scrollpy import FatalScrollPyError
-from scrollpy.files import sequence_file as sf
-# from scrollpy.alignments import parser as af
-from scrollpy.files import align_file as af
-from scrollpy.files import tree_file as tf
-from scrollpy.sequences._scrollseq import ScrollSeq
-from scrollpy.sequences._leafseq import LeafSeq
-from scrollpy.util._util import non_blank_lines
-from scrollpy.util._align import affine_align,simple_score
-from scrollpy.util._counter import Counter
 
 
 # Get module loggers
@@ -73,7 +93,7 @@ class Mapping:
         # Keep kwargs for __repr__
         self.kwargs = kwargs
         # Internal counter
-        self._counter = Counter()
+        self._counter = ScrollCounter()
         # Internal defaults
         self._records = {}
         self._record_list = []
@@ -143,7 +163,7 @@ class Mapping:
         if self._duplicates:
             for label in self._duplicates:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Found duplicate sequence {} while creating "
                             "sequence mapping", label),
                         1,
@@ -151,7 +171,7 @@ class Mapping:
                         console_logger, file_logger,
                         )
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
                         "Found duplicate sequence(s) in input"),
                     1,
                     'ERROR',
@@ -178,7 +198,7 @@ class Mapping:
             group = os.path.basename(filepath).split('.',1)[0]
             if not len(group) > 0:  # This should never happen in reality
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "FATAL -> could not identify group for mapping"),
                         1,
                         'ERROR',
@@ -232,11 +252,11 @@ class Mapping:
 
     def _create_mapping_from_mapfile(self):
         """Parses a mapping file and returns a dict."""
-        for line in non_blank_lines(self._mapfile):
-            line = line.strip('\n')  # Remove newlines
+        for line in scrollutil.non_blank_lines(self._mapfile):
+            line = line.strip('\n')         # Remove newlines
             map_id,group = line.split('\t')
-            map_id = map_id.rstrip()  # Trailing whitespace
-            group = group.rstrip()  # Trailing whitespace
+            map_id = map_id.rstrip()        # Trailing whitespace
+            group = group.rstrip()          # Trailing whitespace
             try:
                 self._mapping[group].append(map_id)
             except KeyError:
@@ -254,7 +274,7 @@ class Mapping:
         group = os.path.basename(self._treefile).split('.',1)[0]
         if not len(group) > 0:  # This should never happen in reality
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "FATAL -> could not identify group for mapping"),
                         1,
                         'ERROR',
@@ -270,7 +290,7 @@ class Mapping:
             self._seq_dict[group] = []
             for label in labels:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Matching label {} to mapping",label),
                         2,
                         'INFO',
@@ -306,7 +326,6 @@ class Mapping:
                         self._seq_dict[group].append(leafseq_obj)
                     else:
                         self._seq_dict[group].append(scrollseq_obj)
-                # except ValueError:  # Indicates a duplicate sequence
                 except DuplicateSeqError:
                     self._duplicates.add(label)
 
@@ -340,7 +359,6 @@ class Mapping:
             if matched_seq in self._found_seqs:  # Uses same as seqfiles
                 # Duplicate mapping; not allowed
                 raise DuplicateSeqError(label)  # Caught by handling function
-                # raise ValueError  # Caught by handling function
             # Otherwise, get associated record
             index = self._align_descriptions.index(matched_seq)
             # May eventually want to strip gap characters
@@ -381,7 +399,6 @@ class Mapping:
             if matched_seq in self._found_seqs:
                 # Duplicate mapping
                 raise DuplicateSeqError(label)  # Caught by handling function
-                # raise ValueError  # Caught by handling function
             # Otherwise, get associated record by index
             index = self._seq_descriptions.index(matched_seq)
             record = self._record_list[index]
@@ -417,13 +434,10 @@ class Mapping:
         if not self._leaves:  # No associated tree object
             raise KeyError  # Caught by handling function
         else:
-            # print("Looking for {}".format(label))
             matched_leaf = get_best_name_match(label, self._leaf_names)
-            # print("Matched leaf is {}".format(matched_leaf))
             if matched_leaf in self._found_leaves:
                 # Duplicate mapping
                 raise DuplicateSeqError(label)  # Caught by handling function
-                # raise ValueError # Caught by handling function
             # Otherwise, get associated node by index
             index = self._leaf_names.index(matched_leaf)
             node = self._leaves[index]

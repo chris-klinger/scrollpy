@@ -1,4 +1,25 @@
-"""Contains general utility functions for use throughout Scrollpy.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
+"""
+Contains general utility functions for use throughout Scrollpy.
 
 There is no pattern to the functions included in this module, in terms of
 their function. Rather, they are used throughout other program modules and
@@ -7,7 +28,6 @@ therefore are defined once rather than in multiple places.
 """
 
 import os
-import sys
 import errno
 import itertools
 import math
@@ -300,8 +320,6 @@ def get_tree_extension(**kwargs):
         except KeyError:
             phy_ext = '.phy'
         extension = phy_ext + '.contree'
-        # extension = '.phy.contree'
-        # extension = '.contree'
     else:
         pass  # Make more flexible eventually
 

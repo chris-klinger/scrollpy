@@ -1,9 +1,30 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
+
 """
 Loads the configuration file into a config variable.
+
 """
 
-import os,sys
-
+import os
+import sys
 from configparser import ConfigParser
 from configparser import DuplicateSectionError
 from configparser import DuplicateOptionError
@@ -14,6 +35,7 @@ from scrollpy.util._exceptions import FatalScrollPyError
 
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
+
 config_file = os.path.realpath(os.path.join(file_dir, '../../_scrollpy.conf'))
 
 config = ConfigParser(

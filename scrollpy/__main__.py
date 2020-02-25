@@ -1,16 +1,37 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+###################################################################################
+##
+##  ScrollPy: Utility Functions for Phylogenetic Analysis
+##
+##  Developed by Christen M. Klinger (cklinger@ualberta.ca)
+##
+##  Please see LICENSE file for terms and conditions of usage.
+##
+##  Please cite as:
+##
+##  Klinger, C.M. (2020). ScrollPy: Utility Functions for Phylogenetic Analysis.
+##  https://github.com/chris-klinger/scrollpy.
+##
+##  For full citation guidelines, please call ScrollPy using '--citation'
+##
+###################################################################################
 
 """
 Runs the main scrollpy program.
+
 """
 
 import os
+import shutil
 import sys
 import argparse
 import datetime
 import logging
 
 # Report project usage/information
+from scrollpy import get_argparse_descr
 from scrollpy import write_citation
 from scrollpy import write_description
 from scrollpy import write_usage
@@ -55,11 +76,9 @@ current_dir = os.getcwd()
 # In order to log messages outside of main(), logger names need to be
 # defined as globals; actual loggers themselves are still configured
 # in main() based on user input
-
 name = 'scrollpy'  # can't use __name__ since it becomes __main__
 (console_logger, status_logger, file_logger, output_logger) = \
         scroll_log.get_module_loggers(name)
-
 
 ##################################################################################
 # MAIN FUNCTION FOR PROGRAM EXECUTION
@@ -88,7 +107,8 @@ def main():
     ##############################################################################
 
     parser = argparse.ArgumentParser(
-            description = _formatted_desc,
+            # description = _formatted_desc,
+            description = get_argparse_descr(),
             formatter_class = argparse.HelpFormatter,  # TO-DO
             #add_help = False, # is this what we want?
         )
@@ -530,18 +550,16 @@ def main():
                 ))
     info_options.add_argument("--version",
             action = "store_true",
-            help = "Display version information and quit.")
+            help = "Display version information and quit.",
+            )
     info_options.add_argument("--usage",
             action = "store_true",
-            help = "Display some common usage examples and quit.")
+            help = "Display some common usage examples and quit.",
+            )
     info_options.add_argument("--citation",
             action = "store_true",
-            help = "Display citation and quit.")
-
-    # info_options.add_argument("--spinner",
-    #         action = "store_true")
-    info_options.add_argument("--exc-test",
-            action = "store_true")
+            help = "Display citation and quit.",
+            )
 
     # Parse all arguments
     args = parser.parse_args()
@@ -560,12 +578,10 @@ def main():
         new_tmpout = os.path.join(current_dir, sanitized_tmpout)
         args.tmpout = new_tmpout
 
-
     #############################################################################
     # SIMPLE USE CASES
     #############################################################################
 
-    # Check to see if any of 'citation'/'usage'/'version' present
     # VERSION information
     if args.version:
         write_version(term_width)  # term_width calculated at beginning of main()
@@ -579,7 +595,6 @@ def main():
         write_usage(term_width)
         sys.exit(0)
 
-
     #############################################################################
     # CONFIGURE LOGGING
     #############################################################################
@@ -590,7 +605,6 @@ def main():
     config.set("ARGS", 'verbosity', str(args.verbosity))
 
     # Set up loggers
-    # name = 'scrollpy'  # can't use __name__ since it becomes __main__
     out = args.out if args.out else current_dir
     logfile_path = scroll_log.get_logfile(
             args.no_log,      # Whether to log to file
@@ -602,8 +616,7 @@ def main():
             args.filesep,     # Separator for files
             )
 
-    # Get loggers and configure each; default level is 'INFO'
-
+    # Configure each logger; default level is 'INFO'
     # Configure console handler
     console_handler = logging.StreamHandler(stream = sys.stderr)
     console_handler.setFormatter(scroll_log.raw_format)
@@ -613,8 +626,6 @@ def main():
                 args.silent,  # If set, no output will be logged
                 ),
             )
-    # Create console logger and add handler to it
-    # console_logger = scroll_log.get_console_logger(name)
     console_logger.addHandler(console_handler)
 
     # Configure status handler
@@ -626,8 +637,6 @@ def main():
                 args.silent,  # If set, no output will be logged
                 ),
             )
-    # Create status logger and add handler to it
-    # status_logger = scroll_log.get_status_logger(name)
     status_logger.addHandler(status_handler)
 
     # Configure file handler
@@ -639,8 +648,6 @@ def main():
                 args.no_log,  # If set, no output will be logged
                 ),
             )
-    # Create file logger and add handler to it
-    # file_logger = scroll_log.get_file_logger(name)
     file_logger.addHandler(file_handler)
 
     # Configure output handler
@@ -652,10 +659,7 @@ def main():
                 args.no_log,  # If set, no output will be logged
                 ),
             )
-    # Create output logger and add handler to it
-    # output_logger = scroll_log.get_output_logger(name)
     output_logger.addHandler(output_handler)
-
 
     ##############################################################################
     # PARAMETER VALIDATION
@@ -732,7 +736,7 @@ def main():
                     'ERROR',
                     console_logger, file_logger,
                     )
-        raise FatalScrollPyError
+            raise FatalScrollPyError
 
     # CHECK INPUT FILEPATHS; MAKE SURE THEY EXIST
 
@@ -765,7 +769,7 @@ def main():
     # Quit if no paths specified
     if len(all_paths) == 0: # No input files!
         scroll_log.log_message(
-                scroll_log.BraceMessage(
+                BraceMessage(
                     "No input files detected; please try again"),  # msg
                 1,  # verbosity level of message
                 'ERROR',  # level
@@ -777,7 +781,7 @@ def main():
     duplicates = scrollutil.check_duplicate_paths(*all_paths)
     if len(duplicates) > 0:
         scroll_log.log_message(
-                scroll_log.BraceMessage(
+                BraceMessage(
                     "Duplicate filepaths detected in input:"),  # msg
                 1,  # verbosity level of message
                 'ERROR',  # level
@@ -785,7 +789,7 @@ def main():
                 )
         for path in duplicates:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
                         "Duplicate path {} detected", path),  # msg
                     1,  # verbosity level of message
                     'ERROR',  # level
@@ -798,7 +802,7 @@ def main():
     if len(non_existent) > 0:
         for path in non_existent:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
                         "Non-existent filepath {} detected", path),
                     1,
                     'ERROR',
@@ -817,7 +821,7 @@ def main():
                 scrollutil.ensure_dir_exists(args.out)
             except OSError:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Failed to create output directory {}; using current "
                             "directory instead", args.out),
                         1,
@@ -827,7 +831,7 @@ def main():
                 args.out = current_dir
         else:
             scroll_log.log_message(
-                    scroll_log.BraceMessage(
+                    BraceMessage(
                         "Did not attempt to create output directory {}; try "
                         "again with the '--no-create' flag turned off", args.out),
                     2,
@@ -843,7 +847,7 @@ def main():
                 scrollutil.ensure_dir_exists(args.tmpout)
             except OSError:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Failed to create temporary directory {}; falling "
                             "back to 'tmp' in current directory", args.tmpout),
                         1,
@@ -855,7 +859,7 @@ def main():
                     scrollutil.ensure_dir_exists(new_tmp)
                 except OSError:
                     scroll_log.log_message(
-                            scroll_log.BraceMessage(
+                            BraceMessage(
                                 "Failed to create temporary directory {}; falling "
                                 "back to system temp. Files may or may not be recoverable",
                                 new_tmp),
@@ -924,13 +928,11 @@ def main():
     # Finally, set the value
     args.tblsep = tblsep
 
-
     ##############################################################################
     # POPULATE GLOBAL CONFIG
     ##############################################################################
 
     # ADD PARAMS TO CONFIGS IF NECESSARY!!!
-    #config.add_section("ARGS")
     vargs = vars(args)  # make dict-like for iter
     for arg,val in vargs.items():
         if arg not in ('infiles','treefile'):
@@ -955,7 +957,7 @@ def main():
 
         """
         scroll_log.log_message(
-                scroll_log.BraceMessage("Creating sequence mapping"),
+                BraceMessage("Creating sequence mapping"),
                 2,
                 'INFO',
                 console_logger, file_logger
@@ -980,7 +982,7 @@ def main():
 
         """
         scroll_log.log_message(
-                scroll_log.BraceMessage("Filtering input sequences"),
+                BraceMessage("Filtering input sequences"),
                 2,
                 'INFO',
                 console_logger, file_logger,
@@ -1005,7 +1007,7 @@ def main():
         """
         if args.placeseqs:  # TreePlacer
             scroll_log.log_message(
-                    scroll_log.BraceMessage("Initializing tree placing analysis"),
+                    BraceMessage("Initializing tree placing analysis"),
                     2,
                     'INFO',
                     console_logger, file_logger,
@@ -1018,7 +1020,7 @@ def main():
                     )
         elif args.iteralign:  # IterAlign
             scroll_log.log_message(
-                    scroll_log.BraceMessage("Initializing alignment iteration analysis"),
+                    BraceMessage("Initializing alignment iteration analysis"),
                     2,
                     'INFO',
                     console_logger, file_logger,
@@ -1030,7 +1032,7 @@ def main():
         else:  # Distance-based analysis!
             if not args.treefile:  # Sequence-based analysis
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Initializing sequence-based scrollsaw analysis"),
                         2,
                         'INFO',
@@ -1042,7 +1044,7 @@ def main():
                         )
             else:  # Tree-based analysis
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
+                        BraceMessage(
                             "Initializing tree-based scrollsaw analysis"),
                         2,
                         'INFO',
@@ -1051,8 +1053,9 @@ def main():
                 run_obj = ScrollTree(
                         seq_dict, # Filtered or not
                         )
-        # Perform the actual program execution
+        # Return the object to be run
         return run_obj
+
 
     def write_output_files(run_obj=None, filter_obj=None):
         """Creates necessary output objects and executes them.
@@ -1066,16 +1069,14 @@ def main():
         """
         # Write to outfile(s); config handles gritty details
         scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Writing output files"),
+                BraceMessage("Writing output files"),
                 2,
                 'INFO',
                 console_logger, file_logger,
                 )
         # Write table file no matter what
         scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Writing output table(s)"),
+                BraceMessage("Writing output table(s)"),
                 2,
                 'INFO',
                 console_logger, file_logger,
@@ -1096,8 +1097,7 @@ def main():
         if args.iteralign:
             if run_obj:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
-                            "Writing optimal output alignment"),
+                        BraceMessage("Writing optimal output alignment"),
                         2,
                         'INFO',
                         console_logger, file_logger,
@@ -1111,8 +1111,7 @@ def main():
         if args.seqout:  # User requested sequences
             if run_obj:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
-                            "Writing output sequences"),
+                        BraceMessage("Writing output sequences"),
                         2,
                         'INFO',
                         console_logger, file_logger,
@@ -1125,8 +1124,7 @@ def main():
         if args.filter_out:  # User requested filtered sequences
             if filter_obj:
                 scroll_log.log_message(
-                        scroll_log.BraceMessage(
-                            "Writing filtered sequences"),
+                        BraceMessage("Writing filtered sequences"),
                         2,
                         'INFO',
                         console_logger, file_logger,
@@ -1145,13 +1143,12 @@ def main():
         # Finish timing and report back results
         main_end = datetime.datetime.now()
         scroll_log.log_message(
-                scroll_log.BraceMessage(
-                    "Finished analysis at {}", main_end),
+                BraceMessage("Finished analysis at {}", main_end),
                 2,  # verbosity level of message
                 'INFO',  # level
                 console_logger, file_logger,  # loggers
                 )
-
+        # Subtraction creates a datetime.timedelta object
         analysis_time = main_end - main_start
         # Datetime timedelta objects are weird and only store days, seconds,
         # and microseconds as attrs; convert to include hours and minutes
@@ -1173,19 +1170,19 @@ def main():
 
     # Actual program execution
     scroll_log.log_message(
-        scroll_log.BraceMessage("Starting main program analysis"),  # msg
-        2,  # verbosity level of message
-        'INFO',  # level
-        console_logger, file_logger  # loggers
+        scroll_log.BraceMessage("Starting main program analysis"),
+        2,
+        'INFO',
+        console_logger, file_logger
         )
 
     # Default starting values
-    run_obj = None
-    filter_obj = None
-    start_seq_dict = None
+    run_obj          = None
+    filter_obj       = None
+    start_seq_dict   = None
     removed_seq_dict = None
 
-    # Begin by creating a mapping, unless iteralign
+    # Begin by creating a mapping, unless run method is iteralign
     if not args.iteralign:
         map_obj = get_mapping_object()
         start_seq_dict = map_obj()
@@ -1201,22 +1198,18 @@ def main():
     scroll_log.log_newlines(console_logger)
 
     # If filtering only, output directly from Filter
-    if args.filter_only:
-        # Write output only
-        scroll_log.log_newlines(console_logger)
-        write_output_files(run_obj, filter_obj)
-    else:  # Also running an analysis
+    if not args.filter_only:  # Actually run the analysis
         run_obj = get_analysis_object(start_seq_dict)
         # Run actual program execution now
         run_obj()
-        # Write all possible output
-        scroll_log.log_newlines(console_logger)
-        write_output_files(run_obj, filter_obj)
+
+    # Write all possible output
+    scroll_log.log_newlines(console_logger)
+    write_output_files(run_obj, filter_obj)
 
     # Finally run the finishing code
     scroll_log.log_newlines(console_logger)
     finish_run()
-
 
 ##############################################################################
 # DEFINE CLEANUP ACTIONS FOR PROGRAM TERMINATION
@@ -1237,8 +1230,9 @@ def run_cleanup(successful=True):
     """
     for tmp_dir in tmps_to_remove:
         try:
-            tmp_dir.cleanup()
-        except:  # Broad except clause here
+            # tmp_dir.cleanup()
+            shutil.rmtree(tmp_dir)
+        except OSError:
             scroll_log.log_message(
                     BraceMessage("Failed to cleanup temporary directory "
                         "{}; may already have been deleted".format(tmp_dir)),

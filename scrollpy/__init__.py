@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -35,6 +34,8 @@ from textwrap import TextWrapper
 
 # A list of TemporaryDirectory objects for cleanup
 tmps_to_remove = []
+# Useful global
+current_dir = os.getcwd()
 
 # Utility functions/classes
 from scrollpy.util import _util as scrollutil

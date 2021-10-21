@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -26,6 +25,7 @@ import os
 import re
 import tempfile
 import bisect
+import math
 
 import numpy as np
 from numpy import mean
@@ -33,6 +33,7 @@ from numpy import std
 
 from Bio import AlignIO
 
+from scrollpy import current_dir
 from scrollpy import config
 from scrollpy import scroll_log
 from scrollpy import BraceMessage
@@ -80,6 +81,7 @@ class AlignIter:
     _config_vars = (
             'alignfmt',
             'col_method',
+            'column_file',
             'iter_method',
             'tree_method',
             'tree_matrix',
@@ -102,6 +104,11 @@ class AlignIter:
             except KeyError:
                 value = config['ARGS'][var]
             setattr(self, var, value)
+        # Column file
+        if self.column_file == 'None':
+            self.column_file = None
+        else:
+            self.column_file = self.column_file
         # Call function to set self._align_name
         self._set_alignment_name()
         # Keep kwargs for __repr__
@@ -152,13 +159,23 @@ class AlignIter:
         # Get alignment object
         self._parse_alignment()
         # Run program to evaluate columns
-        columns_outpath = scrollutil.get_filepath(
-                self._outdir,
-                self._align_name,
-                'column',
-                extra='columns',
-                )
-        self._calculate_columns(columns_outpath)
+        if self.column_file:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Using provided column file {}", self.column_file),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            columns_outpath = self.column_file
+        else:
+            columns_outpath = scrollutil.get_filepath(
+                    self._outdir,
+                    self._align_name,
+                    'column',
+                    extra='columns',
+                    )
+            self._calculate_columns(columns_outpath)
         # Parse output
         self._evaluate_columns(columns_outpath)
         # Run analysis
@@ -180,6 +197,15 @@ class AlignIter:
                     console_logger, file_logger,
                     )
             self._bisect_run()
+        elif self.iter_method == 'exhaustive':
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Running tree iteration using exhaustive bisection"),
+                    2,
+                    'INFO',
+                    console_logger, file_logger,
+                    )
+            self._exhaustive_bisect_run()
         else:
             print("Could not run __call__")
         # Add easy lookup value to self.iter_info
@@ -211,12 +237,23 @@ class AlignIter:
 
     def _parse_tree(self):
         """Calls external methods to parse tree file."""
-        tree_obj = tf.read_tree(
-                self._current_tree_path,
-                'newick',
-                )
-        # Set to instance variable
-        self._current_tree_obj = tree_obj
+        try:
+            tree_obj = tf.read_tree(
+                    self._current_tree_path,
+                    'newick',
+                    )
+            # Set to instance variable
+            self._current_tree_obj = tree_obj
+        except OSError:
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Current tree could not be constructed. It is likely "
+                        "that one or more sequences are too short due to trimming."),
+                    1,
+                    'WARNING',
+                    file_logger,
+                    )
+            self._current_tree_obj = None
 
 
     def _write_current_alignment(self):
@@ -234,14 +271,35 @@ class AlignIter:
         Creates and runs an instance of the AlignEvaluator class in
         order to evaluate alignment columns.
 
+        Note: Zorro does not accept output from outside the cwd, so the
+        renamed file has to be written to this dir and then removed
+        following program execution.
+
         Args:
             column_path (str): Full path to the expected output file.
 
         """
         if self.col_method == 'zorro':
+            # Need to get a renamed alignment file
+            renamed_align_path = scrollutil.get_filepath(
+                    # self._outdir,
+                    current_dir,
+                    self._align_name,
+                    'alignment',
+                    extra='renamed',
+                    )
+            af.write_align_obj_by_int(
+                    self._start_obj,
+                    renamed_align_path,
+                    )
+            # target_align = renamed_align_path
+            tmps_to_remove.append(renamed_align_path)  # Clean up when prog run ends
+            base_target = os.path.basename(renamed_align_path)
             # Very short command
             column_command = [
-                    self._alignment,
+                    # self._alignment,
+                    base_target,
+                    # target_align,
                     ]
         elif self.col_method == 'Generic':
             pass  # Keep options open?
@@ -249,6 +307,7 @@ class AlignIter:
                 self.col_method,
                 config['ITER'][self.col_method],  # Actual cmd
                 self._alignment,  # Alignment is infile
+                # target_align,
                 column_path,  # Outpath
                 cmd_list = column_command,
                 )
@@ -386,6 +445,10 @@ class AlignIter:
         self._calculate_support()
         # Keep track of all support values
         self._all_supports.append(self._current_support)
+        # Set optimal values if needed
+        if self._current_support > self._optimal_support:
+            self._optimal_alignment = self._align_obj
+            self._optimal_support = self._current_support
         # Write information to an internal list
         self.iter_info.append([
             1,  # Iter num
@@ -398,6 +461,109 @@ class AlignIter:
                 0,  # Start at first value
                 self._start_length,  # Alignment length
                 self._current_support,
+                )
+        # Prevent final status_logger ling being overwritten
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
+
+
+    def _exhaustive_bisect_run(self):
+        """Bisect an alignment using an exhaustive approach to find local max.
+
+        Unlike _bisect_run, split an alignment into evenly-spaced chunks first,
+        and then find the highest point to use as a start for subsequent bisect
+        runs to further iterate over columns in a smaller alignment region.
+
+        """
+        # Determine the right number of splits to check
+        num_splits = max(math.ceil(self._start_length/100),10)
+        split_size = math.ceil(self._start_length/num_splits)
+        scroll_log.log_message(
+                BraceMessage(
+                    "Splitting alignment into {} segments of {} columns each",
+                    num_splits, split_size),
+                2,
+                'INFO',
+                console_logger, file_logger,
+                )
+        # Split along alignment length
+        # Run first iteration
+        if self._verbosity == 3:
+            scroll_log.log_newlines(console_logger)
+        for i in range(num_splits):
+            scroll_log.log_message(
+                    BraceMessage(
+                        "Performing tree iteration {} of many", i+1),
+                    3,
+                    'INFO',
+                    status_logger,
+                    )
+            # print("Removing {} columns".format(rem_cols))
+            self._align_obj = self._start_obj   # Start fresh
+            self._columns = self._start_cols[:] # Start fresh
+            # Remove from alignemnt
+            if i >= 1:
+                rem_cols = i * split_size
+                self._remove_columns(rem_cols)
+            # print(len(self._columns))
+            # Calculate lowest column score
+            low_val = self._columns[0][1]
+            # Determine outpath names
+            self._get_current_outpaths()
+            # Write new alignment to file
+            self._write_current_alignment()
+            # Build IQ-Tree
+            self._make_tree()
+            # Parse and add to internal object
+            self._parse_tree()
+            # Add up total BS support
+            self._calculate_support()
+            # Keep track of all support values
+            self._all_supports.append(self._current_support)
+            # Set optimal values if needed
+            if self._current_support > self._optimal_support:
+                self._optimal_alignment = self._align_obj
+                self._optimal_support = self._current_support
+            # Write information to an internal list
+            self.iter_info.append([
+                i+1,
+                len(self._columns),  # Alignment length
+                low_val,  # Lowest value
+                self._current_support,  # Support for current tree
+                ])
+        # Find the max of the iterations thus far
+        local_max = max(self._all_supports)
+        max_index = self._all_supports.index(local_max)
+        # Edge cases, very beginning or end of the list
+        if max_index == 0:  # Very beginning
+            start = 0
+            stop = 1*split_size
+        elif max_index == len(self._all_supports)-1:  # Very end
+            start = self._start_length-split_size
+            stop = self._start_length
+        else:
+            lower = self._all_supports[max_index-1]
+            higher = self._all_supports[max_index+1]
+            if lower > higher:  # Iter over left-hand block
+                start = (max_index-1) * split_size
+                stop = max_index * split_size
+            else:  # Iter over right-hand block
+                start = max_index * split_size
+                stop = (max_index+1) * split_size
+        scroll_log.log_message(
+                BraceMessage(
+                    "Bisecting a smaller segment from position {} to {}",
+                    start, stop),
+                2,
+                'INFO',
+                file_logger,
+                )
+        # Recur until a final value is reached
+        self._bisect_alignment(
+                start,
+                stop,
+                local_max,  # Using the max value to start
+                iter_num = (num_splits+1),
                 )
         # Prevent final status_logger ling being overwritten
         if self._verbosity == 3:
@@ -672,8 +838,11 @@ class AlignIter:
 
     def _calculate_support(self):
         """Adds support over all nodes."""
-        self._current_support = treeutil.get_total_support(
-                self._current_tree_obj)
+        if not self._current_tree_obj:
+            self._current_support = 0
+        else:
+            self._current_support = treeutil.get_total_support(
+                    self._current_tree_obj)
         # print("Current support is: {}".format(self._current_support))
 
 

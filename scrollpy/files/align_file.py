@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -66,7 +65,7 @@ def parse_alignment_file(file_path, file_type, to_dict=True):
     except ValueError as e:  # Not parsable
         scroll_log.log_message(
                 BraceMessage(
-                    "Could not read alignment from {}", file_path),
+                    "Could not read alignment from {} ", file_path),
                 1,
                 'ERROR',
                 console_logger, file_logger,
@@ -109,6 +108,26 @@ def write_alignment_file(align_obj, file_path, file_type):
             file_path,
             file_type,  # E.g. 'fasta'
             )
+
+
+def write_align_obj_by_int(align_obj, file_path):
+    """Writes a FASTA-formatted representation with integer headers.
+
+    Zorro has an issue handling some input sequence names throughout its
+    run, but all that is required in the end is the column scores. To
+    mitigate this issue, write a temporary file where all the header names
+    are replaced with an increasing count of ints.
+
+    Args:
+        align_obj (obj): Biopython alignment object.
+        file_path (str): Full path to the target file.
+
+    """
+    with open(file_path,'w') as o:
+        for i,record in enumerate(align_obj):
+            o.write(">" + str(i+1) + "\n")
+            for chunk in scrollutil.split_input(str(record.seq)):
+                o.write(chunk + "\n")
 
 
 ########################

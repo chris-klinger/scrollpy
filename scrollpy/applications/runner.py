@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -102,9 +101,9 @@ class Runner:
                     method=method): # Should work; if not set, an Exception was raised
                 self.cmd = cmd
             if self._validate('inpath', inpath, self._validate_inpath):
-                self.inpath = inpath
+                self.inpath = os.path.realpath(inpath)  # Expand abbreviated paths
             if self._validate('outpath', outpath, self._validate_outpath):
-                self.outpath = outpath
+                self.outpath = os.path.realpath(outpath)  # Expand abbreviated paths
         # except ValueError as e:
         except ValidationError as e:
             scroll_log.log_message(
@@ -604,6 +603,7 @@ class AlignEvaluator(Runner):
                     )
             raise
         # Capture information
+        # print(cmdline)
         with open(self.outpath, 'w') as o:
             decoded_out = cmdline.stdout.decode()
             o.write(decoded_out)

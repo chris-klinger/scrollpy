@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -86,6 +85,12 @@ class Filter:
                 value = config["ARGS"][var]
             # Now set it
             setattr(self, ('_'+var), value)
+        # Set bool value
+        if self._filter_bygroup == 'False':
+            self._filter_bygroup = False
+        else:
+            self._filter_bygroup = True
+        self._num_filter = int(self._num_filter)  # Make sure this is an int
         # Internal defaults
         self._removed = {}  # Mirrors self._seq_dict
 
@@ -187,10 +192,10 @@ class Filter:
             if self._group_lengths_ok(group):  # Still enough objects in group
                 # Add to removal dict
                 try:
-                    self._removed[group].append(obj)
+                    self._removed[group].append(r_obj)
                 except KeyError:
                     self._removed[group] = []
-                    self._removed[group].append(obj)
+                    self._removed[group].append(r_obj)
                 # Remove from seq dict
                 seq_list = self._seq_dict[group]  # Iterate in place not safe; copy
                 for i,s_obj in enumerate(seq_list):
@@ -202,7 +207,7 @@ class Filter:
                         BraceMessage(
                             "Group length prevented filtering {} with "
                             "score {} from group {}",
-                            r_obj.acession, score, group,
+                            r_obj.accession, score, group,
                             ),
                         1,
                         'WARNING',
@@ -224,10 +229,11 @@ class Filter:
 
         """
         group=None
-        for group,objs in self._seq_dict.items():
-            if seq_obj in objs:
-                group=group
-                break
+        for tgroup,tobjs in self._seq_dict.items():
+            for tobj in tobjs:
+                if seq_obj.id_num == tobj.id_num:  # ID is unique
+                    group=tgroup
+                    break
         return group
 
 
@@ -312,11 +318,26 @@ class LengthFilter(GenericFilter):
         """Delegates to BaseClass.
         """
         super().__init__(seq_list, method, **kwargs)
+        # Check whether short/long is found in **kwargs
+        try:
+            self._filter_len = kwargs['filter_length']
+        except KeyError:
+            self._filter_len = config['ARGS']['filter_length']
+        # Get bool if passed as bool
+        if self._filter_len == "None":
+            self._filter_len = None
         # Get a default value for score if necessary
         if self._filter_score == "None":  # Default is None
-            self._filter_score = 2
+            if not self._filter_len:
+                self._filter_score = 1.5
+            elif self._filter_len == 'long':
+                self._filter_score = 1.5
+            else:
+                self._filter_score = -1.5  # Signed value matters; short
         else:
             self._filter_score = float(self._filter_score)
+        # print("filter_len: {} {}".format(self._filter_len, type(self._filter_len)))
+        # print("filter_score: {} {}".format(self._filter_score, type(self._filter_score)))
 
 
     def __call__(self):
@@ -364,7 +385,10 @@ class LengthFilter(GenericFilter):
             values (list): List of calculated values for filtering.
 
         """
-        above = [(i,v) for i,v in enumerate(values) if v>=self._filter_score]
+        if self._filter_len == 'short':
+            above = [(i,v) for i,v in enumerate(values) if v<=self._filter_score]
+        else:
+            above = [(i,v) for i,v in enumerate(values) if v>=self._filter_score]
         for i,zscore in above:  # Index matches the original length and indices lists
             seq_obj,length = self._indices[i]
             # Note the actual filter value on seq_obj
@@ -382,7 +406,7 @@ class LengthFilter(GenericFilter):
 
 
     @staticmethod
-    def calculate_zscore(values, absval=True):
+    def calculate_zscore(values, signed_vals=False):
         """Calculates Z-scores for sequence lengths.
 
         Args:
@@ -394,17 +418,25 @@ class LengthFilter(GenericFilter):
             list: A list of calculated Z-scores.
 
         """
+        # print("Signed vals was passed as: {}".format(signed_vals))
         smean = mean(values)
+        # print("Mean value is: {}".format(smean))
         s = std(values)
-        if absval:
-            return [((abs(x-smean))/s) for x in values]
-        else:
+        if signed_vals:
+            # print("Not using abs value")
             return [((x-smean)/s) for x in values]
+        else:
+            # print("Using abs value")
+            return [((abs(x-smean))/s) for x in values]
 
 
     def _remove_by_zscore(self):
         """Calculates z-scores and removes all above a given threshold."""
-        zscores = calculate_zscores(self._lengths)
+        zscores = type(self).calculate_zscore(
+                self._lengths,
+                self._filter_len,  # Short/Long filtering, if desired
+                )
+        # print(zscores)
         self._get_removal_indices(zscores)
 
 
@@ -485,6 +517,7 @@ class IdentityFilter(GenericFilter):
                 seqfmt='fasta',
                 )
         sf._sequence_list_to_file_by_id(self._seq_list,seq_path)
+
         self._seq_path = seq_path
 
 
@@ -563,6 +596,8 @@ class IdentityFilter(GenericFilter):
                 identity_set.add((header1,header2))  # Add as a tuple
                 # Also add exact value to object
                 for header in (header1,header2):
+                    # print(header)
+                    # print(type(header))
                     self._add_filter_score_to_obj(
                             header,
                             percent_identical,
@@ -582,7 +617,9 @@ class IdentityFilter(GenericFilter):
 
         """
         for seq_obj in self._seq_list:
-            if seq_obj._id in header:
+            # print(seq_obj._id)
+            # print(type(seq_obj._id))
+            if str(seq_obj._id) in header:
                 seq_obj._fvalue = score
 
 
@@ -594,11 +631,13 @@ class IdentityFilter(GenericFilter):
 
         """
         initial_set = self._build_identity_set()
-        tuples_to_remove = scrollutil.decompose_sets(initial_set)
+        final_set = scrollutil.final_match_set(initial_set)
+        # tuples_to_remove = scrollutil.decompose_sets(initial_set)
+        tuples_to_remove = scrollutil.decompose_sets(final_set)
         for_removal = []
         for tup in tuples_to_remove:
             pairs = [(seq_obj,len(seq_obj)) for seq_obj in
-                    self._seq_list if seq_obj._id in tup]
+                    self._seq_list if str(seq_obj._id) in tup]
             for pair in sorted(
                     pairs,
                     key=lambda x:x[1],  # Sort by length

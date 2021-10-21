@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -26,6 +25,7 @@ Loading trees is supported through the ETE3 package.
 
 """
 
+import os
 import sys
 import warnings
 
@@ -33,6 +33,7 @@ from ete3 import Tree
 from ete3.parser.newick import NewickError
 
 from scrollpy import scroll_log
+from scrollpy import BraceMessage
 from scrollpy import FatalScrollPyError
 
 
@@ -52,6 +53,15 @@ def read_tree(inpath, tree_format):
         obj: An ETE3 tree object representing the tree.
 
     """
+    if not os.path.exists(inpath):
+        scroll_log.log_message(
+                BraceMessage(
+                    "No tree file {}; tree construction likely failed", inpath),
+                1,
+                'WARNING',
+                file_logger,
+                )
+        raise OSError
     if tree_format == 'newick':
         # ETE3 still opens in 'U' mode; suppress warning about deprecation
         with warnings.catch_warnings():

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -492,6 +491,26 @@ def split_input(string, chunk_size=80):
     return output
 
 
+def flat_elem_list(set_of_tuples):
+    return set(itertools.chain(*set_of_tuples))
+
+
+def matching_for_elem(elem, set_of_tuples):
+    elem_set = set()
+    for tup in set_of_tuples:
+        if elem in tup:
+            for e in tup:
+                elem_set.add(e)
+    return tuple(sorted(elem_set))
+
+
+def final_match_set(initial_set):
+    final_set = set()
+    for e in flat_elem_list(initial_set):
+        final_set.add(matching_for_elem(e, initial_set))
+    return final_set
+
+
 def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
     """Merges sets of tuples based on comparing tuple members.
 
@@ -522,20 +541,34 @@ def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
     # Recurred versions or initialize new set
     old_set_of_tuples = old_set_of_tuples if old_set_of_tuples else set()
     merged = merged if merged else set()
-    # Basecase 1
+    # print("Set of tuples for iteration")
+    # print(set_of_tuples)
+    # print("Old set of tuples")
+    # print(old_set_of_tuples)
+    # print("Merged tuples")
+    # print(merged)
+    # print()
+    # Basecase 1 -> all tuples merged into one
     if len(set_of_tuples) == 1:
         return set_of_tuples
+    # Basecase 2 -> no change with old set
     elif set_of_tuples == old_set_of_tuples:
         return set_of_tuples
-    else:  # Do some work
+    # Basecase 3 -> multiple tuples, but no remaining overlap
+    elif no_common_elems(set_of_tuples):
+        return set_of_tuples
+    # Haven't hit basecase yet, do some work
+    else:
         new_set_of_tuples = set()
         for tup1,tup2 in itertools.combinations(
                 set_of_tuples,
                 2,  # Pairwise combinations
                 ):
+            # print("Checking tuples {} and {}".format(tup1,tup2))
             merge = False
             for header1,header2 in itertools.product(tup1,tup2):
                 if header1 == header2:
+                    # print("Merging tuples")
                     merge = True
                     break
             if merge:
@@ -548,12 +581,42 @@ def decompose_sets(set_of_tuples, old_set_of_tuples=None, merged=None):
                         pass  # Not already in new set
                     for item in tup:
                         new_tup.add(item)
+                # print("Adding new tuple {}".format(new_tup))
                 new_set_of_tuples.add(tuple(sorted(new_tup)))
             else:
                 for tup in (tup1,tup2):
-                    if not tup in merged:
+                    # print("Could not merge {}".format(tup))
+                    # if not tup in merged:
+                    if tup in merged:
+                        if check_common_tup_elems(tup, set_of_tuples):
+                            # print("{} in merged, but add because no common elems".format(tup))
+                            new_set_of_tuples.add(tuple(sorted(tup)))
+                    else:  # Not in merged
+                        # print("Able to add {} to new_set_of_tuples".format(tup))
                         new_set_of_tuples.add(tuple(sorted(tup)))
         return decompose_sets(new_set_of_tuples,set_of_tuples,merged)  # Recur
+
+
+def no_common_elems(set_of_tuples):
+    for tup1,tup2 in itertools.combinations(set_of_tuples,2):
+        for v1,v2 in itertools.product(tup1,tup2):
+            if v1 == v2:
+                return False
+    return True
+
+
+def check_common_tup_elems(target_tup, set_of_tuples):
+    """Checks whether a target tup has elems in any other tuples"""
+    to_remove = set()
+    to_remove.add(target_tup)
+    new_set = set_of_tuples - to_remove  # Difference of sets
+    for tup in new_set:
+        test_set = set()
+        test_set.add(target_tup)
+        test_set.add(tup)
+        if not no_common_elems(test_set):
+            return False
+    return True
 
 
 # This could probably be replaced by itertools.chain()

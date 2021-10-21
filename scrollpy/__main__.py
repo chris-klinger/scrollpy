@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 ###################################################################################
 ##
@@ -30,6 +29,8 @@ import argparse
 import datetime
 import logging
 
+# Launching directory
+from scrollpy import current_dir
 # Report project usage/information
 from scrollpy import get_argparse_descr
 from scrollpy import write_citation
@@ -67,7 +68,7 @@ from scrollpy import __license__
 from scrollpy import __citation__
 
 # Useful global
-current_dir = os.getcwd()
+# current_dir = os.getcwd()
 
 ##################################################################################
 # GET MODULE LOGGER NAMES
@@ -171,6 +172,12 @@ def main():
             choices = ["nexus", "clustal", "emboss"],  # EXPAND
             help = (
                 "Format of alignment file, if supplied. Defaults to 'fasta'."
+                ))
+    file_options.add_argument("-z", "--column_file",
+            nargs = '?',
+            metavar = "Column file",
+            help = (
+                "File with alignment column scores"
                 ))
     file_options.add_argument("-c", "--toplace",
             nargs = '?',
@@ -366,7 +373,7 @@ def main():
                 ))
     run_options.add_argument("--iter-method",
             nargs = '?',
-            choices = ["bisection", "histogram"],
+            choices = ["bisection", "exhaustive", "histogram"],
             default = "bisection",
             metavar = "Alignment Iteration Method",
             help = (
@@ -446,6 +453,15 @@ def main():
             help = (
                 "Whether to apply filtering to each group of sequences or to "
                 "all sequences combined."
+                ))
+    run_options.add_argument("--filter-length",
+            nargs = '?',
+            default = None,
+            choices = ("None", "short", "long"),
+            metavar = "Filter short/long only",
+            help = (
+                "When filtering by length, whether to filter sequences that are "
+                "shorter or longer than average only (instead of both). "
                 ))
     # Possible future feature for implementation
     # run_options.add_argument("-s", "--split-seqs",
@@ -939,6 +955,15 @@ def main():
             sarg = str(arg)  # ConfigParser demands strings
             sval = str(val)  # ConfigParser demands strings
             config.set("ARGS", sarg, sval)  # Assign to config dictionary!
+    arg_list = sys.argv[1:]
+    # Keep track of program call
+    scroll_log.log_message(
+            BraceMessage(
+                "ScrollPy called with: {}", arg_list),
+            1,
+            'INFO',
+            file_logger,
+            )
 
     # Load from config file
     # Call this later so that we can configure logging first!
@@ -1202,9 +1227,9 @@ def main():
         run_obj = get_analysis_object(start_seq_dict)
         # Run actual program execution now
         run_obj()
+        scroll_log.log_newlines(console_logger)
 
     # Write all possible output
-    scroll_log.log_newlines(console_logger)
     write_output_files(run_obj, filter_obj)
 
     # Finally run the finishing code
@@ -1228,16 +1253,35 @@ def run_cleanup(successful=True):
             or was stopped early by an error.
 
     """
-    for tmp_dir in tmps_to_remove:
-        try:
-            # tmp_dir.cleanup()
-            shutil.rmtree(tmp_dir)
-        except OSError:
+    for tmp_path in tmps_to_remove:
+        if os.path.isfile(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                scroll_log.log_message(
+                        BraceMessage("Failed to cleanup temporary file "
+                            "{}; may require manual removal".format(tmp_path)),
+                        1,
+                        'WARNING',
+                        file_logger,
+                        )
+        elif os.path.isdir(tmp_path):
+            try:
+                shutil.rmtree(tmp_path)
+            except OSError:
+                scroll_log.log_message(
+                        BraceMessage("Failed to cleanup temporary directory "
+                            "{}; may already have been deleted".format(tmp_path)),
+                        1,
+                        'INFO',
+                        file_logger,
+                        )
+        else:  # Should not happen, but just in case
             scroll_log.log_message(
-                    BraceMessage("Failed to cleanup temporary directory "
-                        "{}; may already have been deleted".format(tmp_dir)),
-                    2,
-                    'INFO',
+                    BraceMessage("Cannot remove {}, not a file or directory".format(
+                        tmp_path)),
+                    1,
+                    'WARNING',
                     file_logger,
                     )
     # Finally, exit the program
@@ -1248,6 +1292,7 @@ def run_cleanup(successful=True):
 
 
 if __name__ == '__main__':
+    # main()
     full_run = True  # Assume program runs fully
     try:
         main()
